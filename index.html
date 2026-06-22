@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily District — Daily Congressional District Game</title>
+  <!-- Barlow: closest freely available match to CMU's Gibson typeface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css?v=51" />
+  <!-- Preload the core map data so fetch starts before JS executes -->
+  <link rel="preload" href="districts-core.topojson" as="fetch" />
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-inner">
+    <!-- All icon-buttons on the left, Wordle-style -->
+    <div class="header-left">
+      <button id="how-to-btn" class="btn-icon" title="How to play">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+      </button>
+      <button id="leaderboard-btn" class="btn-icon" title="Leaderboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+      <button id="settings-btn" class="btn-icon" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.75 1.75 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.75 1.75 0 0 0-1.82-.33 1.75 1.75 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.75 1.75 0 0 0 9 19.4a1.75 1.75 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.75 1.75 0 0 0 4.68 15a1.75 1.75 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.75 1.75 0 0 0 4.6 9a1.75 1.75 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.75 1.75 0 0 0 9 4.68a1.75 1.75 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.75 1.75 0 0 0 1 1.51 1.75 1.75 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.75 1.75 0 0 0 19.4 9a1.75 1.75 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.75 1.75 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div class="account-wrap">
+        <button id="account-btn" class="account-btn hidden" title="Account" aria-haspopup="true" aria-expanded="false">
+          <span id="account-initials" class="account-initials">?</span>
+        </button>
+        <div id="account-menu" class="account-menu hidden" role="menu">
+          <div class="account-menu-header">
+            <div id="account-name" class="account-menu-name"></div>
+            <div id="account-email" class="account-menu-email"></div>
+          </div>
+          <button id="account-edit" class="account-menu-item" role="menuitem">Edit profile</button>
+          <button id="account-signout" class="account-menu-item" role="menuitem">Sign out</button>
+        </div>
+      </div>
+    </div>
+    <!-- Title centered in middle column -->
+    <h1>
+      <button id="title-home-btn" class="title-home-btn" title="Back to welcome screen">
+        <img src="logo.svg" class="game-logo" alt="" aria-hidden="true" />
+        <span class="header-wordmark">Daily District</span> <span class="beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
+      </button>
+    </h1>
+    <!-- Timer + donate link on the right -->
+    <div class="header-right">
+      <div id="timer-display" class="timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timer-value">0:00</span>
+      </div>
+      <a href="https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674"
+         class="donate-btn" target="_blank" rel="noopener">
+        <span class="donate-long">Donate to CMU</span>
+        <span class="donate-short">Donate</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Unofficial badge shown during archive (past-puzzle) play -->
+<div id="archive-badge" class="archive-badge hidden">Archive · unofficial — not counted</div>
+
+<!-- ===== LOGIN MODAL (shown only when DistrictBackend.ENABLED) ===== -->
+<div id="login-modal" class="modal hidden">
+  <div class="modal-content login-modal-content">
+    <button class="login-close" id="login-close" aria-label="Close">&times;</button>
+    <div class="login-logo" aria-hidden="true"></div>
+    <h2 class="login-title">Daily District</h2>
+    <p class="login-subtitle">Sign in to play today's puzzle.</p>
+    <div class="login-providers">
+      <button class="login-provider-btn" data-provider="google">Continue with Google</button>
+      <!-- Apple sign-in not configured yet — re-add when its provider is set up in Supabase:
+      <button class="login-provider-btn" data-provider="apple">Continue with Apple</button>
+      -->
+    </div>
+    <div class="login-divider"><span>or</span></div>
+    <form id="login-email-form" class="login-email-form" autocomplete="on">
+      <input id="login-email" type="email" placeholder="Email" required autocomplete="email" />
+      <input id="login-password" type="password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+      <div class="login-error" id="login-error"></div>
+      <button type="submit" class="login-submit" id="login-signin">Sign in</button>
+      <button type="button" class="login-secondary" id="login-signup">Create an account</button>
+    </form>
+    <p class="login-privacy">By continuing you agree to our
+      <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+      We collect basic device info (screen size, browser) to improve the game.</p>
+  </div>
+</div>
+
+<!-- ===== PROFILE MODAL (shown after sign-in to collect optional profile info) ===== -->
+<div id="profile-modal" class="modal hidden">
+  <div class="modal-content login-modal-content">
+    <h2 class="login-title">Complete your profile</h2>
+    <p class="login-subtitle">Optional — helps us improve the game. You can skip or edit later.</p>
+    <form id="profile-form" class="login-email-form" autocomplete="on">
+      <input id="profile-display-name" type="text" placeholder="Display name" autocomplete="name" />
+      <input id="profile-phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" />
+      <input id="profile-city" type="text" placeholder="City" autocomplete="address-level2" />
+      <input id="profile-region" type="text" placeholder="State / Province" autocomplete="address-level1" />
+      <input id="profile-country" type="text" placeholder="Country" autocomplete="country-name" />
+      <label class="profile-checkbox"><input id="profile-marketing" type="checkbox" /> Email me occasional updates</label>
+      <div class="login-error" id="profile-error"></div>
+      <button type="submit" class="login-submit" id="profile-save">Save</button>
+      <button type="button" class="login-secondary" id="profile-skip">Skip for now</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== WELCOME / SPLASH MODAL ===== -->
+<div id="welcome-modal" class="modal">
+  <div class="modal-content welcome-modal-content">
+    <div class="welcome-top-spacer"></div>
+    <div class="welcome-logo-wrap">
+      <img src="logo.svg" class="welcome-logo-svg" alt="" aria-hidden="true" />
+    </div>
+    <div class="welcome-wordmark">
+      <img src="wordmark.svg" class="welcome-wordmark-svg" alt="Daily District" />
+      <span class="beta-badge welcome-beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
+      <span class="welcome-back-text" id="welcome-back-text" hidden>Welcome Back</span>
+    </div>
+    <div class="welcome-slogan">Identify the district from its shape</div>
+    <div class="welcome-mid-spacer"></div>
+    <div class="welcome-buttons" id="welcome-buttons">
+      <div class="welcome-loading-container">
+        <span data-globe data-size="96" data-origin="bottom-right" data-direction="ccw" data-tiles="100" data-tilt="28" data-roll="22" data-empty="0.5" data-snap="0.7" data-scatter="0.18" data-gap="0.16" data-mode="tartan"></span>
+        <div class="welcome-loading-text">Loading...</div>
+      </div>
+    </div>
+    <button id="welcome-signin-btn" class="welcome-action-btn">Sign in to Play</button>
+    <div class="welcome-meta">
+      <div id="welcome-date-line" class="welcome-date-line"></div>
+      <div id="welcome-puzzle-num" class="welcome-puzzle-num"></div>
+      <div class="welcome-editor">Edited by Jonathan Cervas</div>
+    </div>
+    <div class="welcome-donate-spacer"></div>
+    <button class="welcome-how-to-link" id="welcome-how-to-btn">How to Play</button>
+    <a href="https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674"
+       class="welcome-donate-btn" target="_blank" rel="noopener">
+      Donate to Support this Game and Scholarship
+    </a>
+  </div>
+</div>
+<script>
+(function(){var E=new Date('2026-06-22T00:00:00-05:00'),n=new Date(),p=Math.floor((n-E)/864e5)+1,d=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),dl=document.getElementById('welcome-date-line'),nl=document.getElementById('welcome-puzzle-num');if(dl)dl.textContent=d;if(nl)nl.textContent='No. '+p;})();
+</script>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content settings-modal-content">
+    <div class="settings-header">
+      <span class="settings-title">SETTINGS</span>
+      <button id="settings-close" class="settings-close-btn" aria-label="Close settings">&#x2715;</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span class="settings-row-name">Dark Theme</span>
+        <div class="settings-row-desc"><button id="settings-reset-theme" class="settings-sub-link">Use system default</button></div>
+      </div>
+      <label class="settings-toggle-wrap" aria-label="Dark theme">
+        <input type="checkbox" id="settings-dark-toggle" class="settings-toggle-input">
+        <span class="settings-toggle-track"><span class="settings-toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-divider"></div>
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span class="settings-row-name">Hard Mode</span>
+        <div class="settings-row-desc">No hints revealed — 6 guesses, shape only</div>
+      </div>
+      <label class="settings-toggle-wrap" aria-label="Hard mode">
+        <input type="checkbox" id="settings-hard-toggle" class="settings-toggle-input">
+        <span class="settings-toggle-track"><span class="settings-toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-divider"></div>
+    <div class="settings-row">
+      <div class="settings-row-label">
+        <span class="settings-row-name">Confirm Selection</span>
+        <div class="settings-row-desc">Tap a state twice to submit — first tap highlights, second confirms</div>
+      </div>
+      <label class="settings-toggle-wrap" aria-label="Confirm selection">
+        <input type="checkbox" id="settings-confirm-toggle" class="settings-toggle-input">
+        <span class="settings-toggle-track"><span class="settings-toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-divider"></div>
+    <button id="settings-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
+    <div class="settings-footer">&copy; 2026 Jonathan Cervas &amp; Jason Fierman. All rights reserved.</div>
+  </div>
+</div>
+
+<!-- ===== HOW TO PLAY MODAL ===== -->
+<div id="how-to-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="result-modal-header"><button class="modal-close result-modal-close">← Back to map</button></div>
+    <h2>How to Play</h2>
+    <p>Identify the congressional district shown on the map using the 2026 district boundaries.</p>
+    <ul>
+      <li>You have <strong>6 guesses</strong> per day.</li>
+      <li>A new district appears every day — same for all players.</li>
+      <li>Click a state on the reference map to guess it first.</li>
+      <li>Once you nail the state, pick the district number.</li>
+      <li>Your timer starts when you submit your first guess.</li>
+      <li>Come back tomorrow for a new district!</li>
+    </ul>
+    <h3>Hot / Cold elimination</h3>
+    <p>Each wrong state guess tells you something geographic:</p>
+    <ul>
+      <li><strong>Hot / Adjacent</strong> — the correct state borders the one you guessed. Only neighboring states stay in play.</li>
+      <li><strong>Cold / Not adjacent</strong> — the correct state is far away. The guessed state <em>and</em> all its neighbors are eliminated.</li>
+    </ul>
+    <p style="margin-top:10px">Eliminated states grey out on the map and chip list automatically.</p>
+    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted)">&copy; 2026 Jonathan Cervas &amp; Jason Fierman. All rights reserved.</p>
+    <div class="how-to-footer">
+      <button id="how-to-got-it" class="got-it-btn">Got it!</button>
+      <span class="how-to-note">Opens automatically on first visit &mdash; use the ? button to re-open.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FEEDBACK MODAL ===== -->
+<div id="feedback-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="result-modal-header"><button class="modal-close result-modal-close">← Back</button></div>
+    <h2>How's it playing?</h2>
+    <p style="margin-bottom:16px;color:var(--muted);font-size:0.9rem">Help us improve Daily District — takes about 2 minutes.</p>
+    <form id="feedback-form">
+      <div class="form-group">
+        <label for="fb-name">Name <span class="form-optional">(optional)</span></label>
+        <input type="text" id="fb-name" placeholder="Your name" maxlength="60" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label for="fb-email">Email <span class="form-optional">(optional, for follow-up)</span></label>
+        <input type="email" id="fb-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+
+      <div class="fb-section-label">About the Game</div>
+
+      <div class="form-group">
+        <label>Overall experience <span class="form-optional">(optional)</span></label>
+        <div class="fb-rating-group" id="fb-overall-stars">
+          <label class="fb-star-label" data-val="1">★</label>
+          <label class="fb-star-label" data-val="2">★</label>
+          <label class="fb-star-label" data-val="3">★</label>
+          <label class="fb-star-label" data-val="4">★</label>
+          <label class="fb-star-label" data-val="5">★</label>
+          <input type="hidden" id="fb-overall" value="">
+        </div>
+        <div class="fb-scale-labels"><span>Poor</span><span>Excellent</span></div>
+      </div>
+
+      <div class="form-group">
+        <label>Difficulty <span class="form-optional">(optional)</span></label>
+        <div class="fb-rating-group" id="fb-difficulty-stars">
+          <label class="fb-star-label" data-val="1">★</label>
+          <label class="fb-star-label" data-val="2">★</label>
+          <label class="fb-star-label" data-val="3">★</label>
+          <label class="fb-star-label" data-val="4">★</label>
+          <label class="fb-star-label" data-val="5">★</label>
+          <input type="hidden" id="fb-difficulty" value="">
+        </div>
+        <div class="fb-scale-labels"><span>Too easy</span><span>Too hard</span></div>
+      </div>
+
+      <div class="fb-section-label">Gameplay Mechanics</div>
+
+      <div class="form-group">
+        <label>How easy was it to understand how to play? <span class="form-optional">(optional)</span></label>
+        <div class="fb-rating-group" id="fb-intuitive-stars">
+          <label class="fb-star-label" data-val="1">★</label>
+          <label class="fb-star-label" data-val="2">★</label>
+          <label class="fb-star-label" data-val="3">★</label>
+          <label class="fb-star-label" data-val="4">★</label>
+          <label class="fb-star-label" data-val="5">★</label>
+          <input type="hidden" id="fb-intuitive" value="">
+        </div>
+        <div class="fb-scale-labels"><span>Very confusing</span><span>Very clear</span></div>
+      </div>
+
+      <div class="form-group">
+        <label for="fb-mechanic">Did the Hot/Cold elimination mechanic make sense? <span class="form-optional">(optional)</span></label>
+        <select id="fb-mechanic">
+          <option value="">— select —</option>
+          <option value="yes">Yes, right away</option>
+          <option value="eventually">Eventually, after a few guesses</option>
+          <option value="no">No, it was confusing</option>
+          <option value="na">I haven't used it yet</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fb-challenge">What was the biggest challenge? <span class="form-optional">(optional)</span></label>
+        <select id="fb-challenge">
+          <option value="">— select —</option>
+          <option value="shapes">Recognizing district shapes</option>
+          <option value="states">Figuring out which state first</option>
+          <option value="controls">Map controls / navigation</option>
+          <option value="mobile">Playing on mobile</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fb-frequency">How often would you want to play? <span class="form-optional">(optional)</span></label>
+        <select id="fb-frequency">
+          <option value="">— select —</option>
+          <option value="daily">Every day</option>
+          <option value="few-week">A few times a week</option>
+          <option value="weekly">Once a week</option>
+          <option value="occasionally">Occasionally</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fb-recommend">Would you recommend this game to someone? <span class="form-optional">(optional)</span></label>
+        <select id="fb-recommend">
+          <option value="">— select —</option>
+          <option value="yes">Yes, definitely</option>
+          <option value="maybe">Maybe</option>
+          <option value="no">Probably not</option>
+        </select>
+      </div>
+
+      <div class="fb-section-label">Open Feedback</div>
+
+      <div class="form-group">
+        <label for="fb-enjoyed">What do you enjoy most? <span class="form-optional">(optional)</span></label>
+        <textarea id="fb-enjoyed" rows="2" placeholder="e.g. Learning district shapes, the daily challenge, the statistics…" maxlength="500"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="fb-improve">What should we improve or add? <span class="form-optional">(optional)</span></label>
+        <textarea id="fb-improve" rows="2" placeholder="e.g. Better hints, more map context, sharing, accessibility…" maxlength="500"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="fb-comment">Anything else — bugs, questions, ideas? <span class="form-optional">(optional)</span></label>
+        <textarea id="fb-comment" rows="2" placeholder="Anything goes…" maxlength="500"></textarea>
+      </div>
+
+      <div id="fb-error" class="form-error"></div>
+      <button type="submit" id="fb-submit">Send via Email</button>
+    </form>
+    <p class="form-note">Opens your email client · cervas@cmu.edu &amp; jafierman@gmail.com</p>
+  </div>
+</div>
+
+<!-- ===== HINTS MODAL ===== -->
+<div id="hints-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="result-modal-header"><button class="modal-close result-modal-close">← Back to map</button></div>
+    <h2>Hints</h2>
+    <div id="hints-clues-list"></div>
+  </div>
+</div>
+
+<!-- ===== LEADERBOARD MODAL ===== -->
+<div id="leaderboard-modal" class="modal hidden">
+  <div class="modal-content leaderboard-content">
+    <div class="result-modal-header"><button class="modal-close result-modal-close">← Back to map</button></div>
+    <h2>Leaderboard</h2>
+    <div id="lb-district-label" class="lb-district-label"></div>
+    <div class="leaderboard-tabs">
+      <button class="tab-btn active" data-tab="today">Today</button>
+      <button class="tab-btn" data-tab="alltime">All Time</button>
+      <button class="tab-btn" data-tab="personal">My Stats</button>
+    </div>
+    <div id="leaderboard-today" class="tab-panel active">
+      <div id="today-scores" class="scores-list">Loading…</div>
+    </div>
+    <div id="leaderboard-alltime" class="tab-panel">
+      <div id="alltime-scores" class="scores-list">Loading…</div>
+    </div>
+    <div id="leaderboard-personal" class="tab-panel">
+      <div id="personal-stats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== USERNAME PROMPT MODAL ===== -->
+<div id="username-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Welcome!</h2>
+    <p>Enter a display name for the leaderboard.</p>
+    <input type="text" id="username-input" placeholder="Your name" maxlength="20" autocomplete="off" />
+    <div id="username-error"></div>
+    <button id="username-submit">Start Playing</button>
+  </div>
+</div>
+
+<!-- Rotate-device overlay: shown on mobile landscape -->
+<div id="rotate-overlay" aria-hidden="true">
+  <div class="rotate-overlay-inner">
+    <svg viewBox="0 0 80 80" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="18" y="8" width="44" height="64" rx="6" stroke="currentColor" stroke-width="4"/>
+      <path d="M10 52 C6 44 6 32 14 24" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <polyline points="8,18 14,24 20,18" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <p>Rotate your device to play</p>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- Archive picker — play past daily puzzles (unofficial, not counted) -->
+  <div id="archive-modal" class="modal hidden">
+    <div class="modal-content archive-modal-content">
+      <div class="result-modal-header"><button class="modal-close" id="archive-close">← Back</button></div>
+      <h2>Play the Archive</h2>
+      <p class="archive-note">Replay past daily puzzles. These are unofficial — results don't count toward your stats.</p>
+      <div id="archive-list" class="archive-list"></div>
+    </div>
+  </div>
+
+  <!-- Game-over banner — shown after result modal is closed -->
+  <div id="already-played-banner" class="banner hidden">
+    <span id="banner-msg">Game over!</span>
+    <div class="banner-actions">
+      <button id="show-results-btn">View Result</button>
+      <button id="banner-new-map-btn">Play Archive</button>
+    </div>
+  </div>
+
+  <!-- #game-section and #gameover-modal are created dynamically by script.js -->
+
+  <!-- Result modal (opens on game end or "View Result" click) -->
+  <div id="result-modal" class="modal hidden">
+    <div class="modal-content result-modal-content">
+      <!-- Single district preview shared across all tabs -->
+      <div class="result-modal-header">
+        <button class="modal-close result-modal-close">← Back to map</button>
+      </div>
+      <div id="result-district-preview"></div>
+
+      <div class="result-modal-tabs">
+        <button class="result-tab-btn active" data-rtab="result">Result</button>
+        <button class="result-tab-btn" data-rtab="guesses">Guesses</button>
+        <button class="result-tab-btn" data-rtab="census">District Profile</button>
+      </div>
+
+      <div id="result-section" class="result-tab-pane active">
+        <div id="result-stats"></div>
+        <div id="result-message"></div>
+        <div id="result-personal-stats"></div>
+        <div class="result-action-row">
+          <button id="post-x-btn" class="post-x-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share
+          </button>
+          <button id="share-btn" class="post-x-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            Post
+          </button>
+          <button id="play-again-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Play Archive
+          </button>
+        </div>
+        <a href="https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674"
+           class="donate-btn result-donate-btn" target="_blank" rel="noopener">
+          Donate to CMU
+        </a>
+        <button id="result-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
+      </div>
+
+      <div id="guesses-section" class="result-tab-pane">
+        <div id="guesses-header"></div>
+        <div id="guess-history"></div>
+        <div id="guess-remaining"></div>
+      </div>
+
+      <div id="census-section" class="result-tab-pane">
+        <div id="census-header"></div>
+        <div id="census-loading">Fetching district data from the U.S. Census…</div>
+        <div id="census-data" class="hidden"></div>
+        <a href="https://givenow.cmu.edu/campaigns/42524/donations/new?a=8338674"
+           class="donate-btn result-donate-btn" target="_blank" rel="noopener">
+          Donate to CMU
+        </a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Floating tooltip for D3 state map hover -->
+<div id="us-ref-tooltip" class="us-ref-tooltip"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="globe.js" defer></script>
+<script src="backend.js?v=4" defer></script>
+<script src="login.js?v=6" defer></script>
+<script src="script.js?v=1.13.7" defer></script>
+</body>
+</html>
