@@ -470,6 +470,27 @@ function serverBoot() {
   return SERVER_MODE && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
 }
 
+// Temporary playtest instrumentation: capture a client-side error to telemetry so
+// failures hidden behind try/catch (e.g. the game-over reveal) are observable
+// server-side without the player's console. Safe to remove after the playtest.
+function reportClientError(where, err) {
+  try {
+    window.DistrictBackend?.logTelemetry?.('error', {
+      puzzleDate: (typeof todayKey !== 'undefined' ? todayKey : null),
+      payload: {
+        where,
+        message: (err && (err.message || String(err))) || 'unknown',
+        stack: (err && err.stack ? String(err.stack) : '').slice(0, 2000),
+        phase: (typeof gamePhase !== 'undefined' ? gamePhase : null),
+      },
+    });
+  } catch (_) { /* never disrupt */ }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => reportClientError('window_error', e.error || e.message));
+  window.addEventListener('unhandledrejection', (e) => reportClientError('unhandled_rejection', e.reason));
+}
+
 // Build the redacted "mystery" feature from server geometry — no identity.
 function serverMysteryFeature(geometry) {
   return { type: 'Feature', geometry, properties: {} };
@@ -2321,6 +2342,7 @@ function startGameOverTransition(won, dist) {
         }
       } catch (e) {
         console.error('game-over reveal error:', e);
+        reportClientError('gameover_reveal', e);
       } finally {
         svgEl.remove();
       }
