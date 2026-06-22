@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = fs.readFileSync(path.join(DIR, 'script.js'), 'utf8');
 const TOPO = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
-const STATE_ACS = path.resolve(DIR, '../../../createMaps/acs_by_state.csv');
+const STATE_ACS = path.resolve(DIR, '../createMaps/acs_by_state.csv');
 
 // ── Extract a `const NAME = { ... };` object literal from script.js and eval it ─
 function extractObject(name) {
@@ -160,8 +160,7 @@ const days = parseInt(process.argv[3] || '63', 10);
 const start = argStart ? new Date(argStart + 'T00:00:00Z') : new Date();
 start.setUTCDate(start.getUTCDate() - 1); // include yesterday for tz spread
 
-const sqlEsc = s => s.replace(/'/g, "''");
-const rows = [];
+const records = [];
 for (let i = 0; i < days; i++) {
   const dt = new Date(start);
   dt.setUTCDate(start.getUTCDate() + i);
@@ -169,21 +168,32 @@ for (let i = 0; i < days; i++) {
   const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   const idx = seededIndex(dateSeed(y, m, d), districts.length);
   const p = districts[idx];
-  const clues = buildClues(p);
-  const neighbors = (p.adj || '').split('|').filter(Boolean);
-  const stateNeighbors = STATE_ADJACENCY[p.state] || [];
-  rows.push(`(` +
-    `'${dateStr}', ${puzzleNumber(y, m, d)}, '${sqlEsc(p['state-district'])}', '${sqlEsc(p.state)}', ` +
-    `'${sqlEsc(JSON.stringify(neighbors))}'::jsonb, ` +
-    `'${sqlEsc(JSON.stringify(stateNeighbors))}'::jsonb, ` +
-    `'${sqlEsc(JSON.stringify(clues))}'::jsonb)`);
+  records.push({
+    date: dateStr,
+    puzzle_number: puzzleNumber(y, m, d),
+    district_id: p['state-district'],
+    state: p.state,
+    neighbors: (p.adj || '').split('|').filter(Boolean),
+    state_neighbors: STATE_ADJACENCY[p.state] || [],
+    clues: buildClues(p),
+  });
 }
 
-process.stdout.write(
-  `insert into public.puzzles (date, puzzle_number, district_id, state, neighbors, state_neighbors, clues) values\n` +
-  rows.join(',\n') +
-  `\non conflict (date) do update set\n` +
-  `  puzzle_number = excluded.puzzle_number, district_id = excluded.district_id, state = excluded.state,\n` +
-  `  neighbors = excluded.neighbors, state_neighbors = excluded.state_neighbors, clues = excluded.clues;\n`
-);
-process.stderr.write(`Generated ${rows.length} puzzle rows (${rows[0] ? '' : 'none'})\n`);
+// --json → JSON array (for POST to the load-puzzles function); else upsert SQL.
+if (process.argv.includes('--json')) {
+  process.stdout.write(JSON.stringify(records));
+} else {
+  const sqlEsc = s => s.replace(/'/g, "''");
+  const rows = records.map(r =>
+    `('${r.date}', ${r.puzzle_number}, '${sqlEsc(r.district_id)}', '${sqlEsc(r.state)}', ` +
+    `'${sqlEsc(JSON.stringify(r.neighbors))}'::jsonb, '${sqlEsc(JSON.stringify(r.state_neighbors))}'::jsonb, ` +
+    `'${sqlEsc(JSON.stringify(r.clues))}'::jsonb)`);
+  process.stdout.write(
+    `insert into public.puzzles (date, puzzle_number, district_id, state, neighbors, state_neighbors, clues) values\n` +
+    rows.join(',\n') +
+    `\non conflict (date) do update set\n` +
+    `  puzzle_number = excluded.puzzle_number, district_id = excluded.district_id, state = excluded.state,\n` +
+    `  neighbors = excluded.neighbors, state_neighbors = excluded.state_neighbors, clues = excluded.clues;\n`
+  );
+}
+process.stderr.write(`Generated ${records.length} puzzle rows\n`);
