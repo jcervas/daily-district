@@ -451,6 +451,18 @@ let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
 
+// ── Stage B: server-authoritative daily ──────────────────────────────────────
+// When SERVER_MODE is on AND the player is signed in, the daily puzzle's shape,
+// clues, guess validation and once-per-day all come from the backend (the answer
+// is never known to the client until the game ends). Off by default while the
+// client swap is being built; the legacy local path runs otherwise. Archive games
+// always use the legacy local path (past answers are public, replays don't count).
+let SERVER_MODE   = false;
+let serverPuzzle  = null;   // last /today response: { puzzleNumber, geometry, clues, cluesTotal, result, answer }
+function serverActive() {
+  return SERVER_MODE && !isArchiveGame && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
+}
+
 // ============================================================
 //  HELPERS
 // ============================================================
