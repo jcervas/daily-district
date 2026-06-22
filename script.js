@@ -2872,6 +2872,24 @@ function zoomUSRefMapToValid(animated = true) {
   if (!usRefSvgSel || !usRefZoom || !usRefProjection) return;
   const W = _usRefW, H = _usRefH;
 
+  // Server mode ships no district inner points, so state-phase zoom is driven by
+  // the geometry of the remaining valid STATES instead of getActiveDistrictKeys().
+  if (serverActive() && gamePhase === 'state') {
+    if (!usRefPathGen) return;
+    const feats = [...getValidStates()].map(a => topoStates[a]).filter(Boolean);
+    if (!feats.length) return;
+    const bbox = usRefPathGen.bounds({ type: 'FeatureCollection', features: feats });
+    const t = zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 });
+    usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
+    if (animated) {
+      usRefSvgSel.transition().duration(700).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
+    } else {
+      usRefSvgSel.call(usRefZoom.transform, t);
+    }
+    if (!_usRefFullFitTransform) _usRefFullFitTransform = t;
+    return;
+  }
+
   // In state phase with no eliminations, fit the full US geographic bounds to the
   // actual container dimensions instead of using identity (which crops on mobile with slice).
   if (gamePhase === 'state' && eliminatedStates.size === 0) {
