@@ -15,7 +15,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 // D3 US reference map coordinate space (viewBox dimensions)
 const REF_VB_W = 960;
 const REF_VB_H = 400;
-const VERSION_NUMBER = '1.13';
+const VERSION_NUMBER = '1.14.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
