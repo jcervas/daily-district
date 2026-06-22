@@ -24,7 +24,17 @@
       throw new Error('supabase-js not loaded before backend.js');
     }
     _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      // Implicit flow (tokens in the URL hash) instead of the default PKCE: on
+      // mobile the PKCE code_verifier saved in localStorage at sign-in time is
+      // often gone when the OAuth redirect returns (in-app browser / fresh tab),
+      // which yields "OAuth state not found or expired" and bounces back to the
+      // splash. Implicit flow delivers tokens directly, no cross-context storage.
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'implicit',
+      },
     });
     return _client;
   }
