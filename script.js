@@ -2309,12 +2309,20 @@ function startGameOverTransition(won, dist) {
     .ease(d3.easeCubicInOut)
     .attrTween('d', () => t => toPath(interp(t)))
     .on('end', () => {
-      endGame(won, { skipAnims: true });
-      svgEl.remove();
-      showGameoverModal();
-      if (_gameOverAnimsCallback) {
-        _gameOverAnimsCallback();
-        _gameOverAnimsCallback = null;
+      // Remove the full-viewport flash overlay in a finally so an error in
+      // endGame()/showGameoverModal() can never leave the screen locked on the
+      // gold/red reveal.
+      try {
+        endGame(won, { skipAnims: true });
+        showGameoverModal();
+        if (_gameOverAnimsCallback) {
+          _gameOverAnimsCallback();
+          _gameOverAnimsCallback = null;
+        }
+      } catch (e) {
+        console.error('game-over reveal error:', e);
+      } finally {
+        svgEl.remove();
       }
     });
 }
