@@ -10,8 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css?v=51" />
-  <!-- Preload the core map data so fetch starts before JS executes -->
-  <link rel="preload" href="districts-core.topojson" as="fetch" />
+  <!-- Preload the server-mode map data so fetch starts before JS executes.
+       Stage B (SERVER_MODE) ships states-only geometry + district names; the
+       district topojson (districts-core / districts-overlay / counties-lines) is
+       NO LONGER fetched by the client and should be removed from the deploy as the
+       final fingerprint-hardening step (it still carries district geometry). -->
+  <link rel="preload" href="states.topojson" as="fetch" />
+  <link rel="preload" href="district-names.json" as="fetch" />
 </head>
 <body>
 
@@ -498,8 +503,8 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="globe.js" defer></script>
-<script src="backend.js?v=4" defer></script>
+<script src="backend.js?v=5" defer></script>
 <script src="login.js?v=6" defer></script>
-<script src="script.js?v=1.13.7" defer></script>
+<script src="script.js?v=1.14.1" defer></script>
 </body>
 </html>

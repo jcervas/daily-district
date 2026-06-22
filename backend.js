@@ -67,7 +67,16 @@
       body: { phase, value, seconds },
     });
     if (error) throw error;
-    return data; // { correct, adjacent, phase, guesses, guessesLeft, completed, won, clues, answer }
+    return data; // { correct, adjacent, phase, guesses, guessesLeft, completed, won, clues, state, answer }
+  }
+  // District shapes for one state — gated server-side: only returns once the
+  // caller has correctly guessed that state today (or completed the puzzle).
+  async function stateShapes(state) {
+    const { data, error } = await client().functions.invoke('state-shapes', {
+      body: { state },
+    });
+    if (error) throw error;
+    return data; // { state, districts: [{ districtId, state, number, geometry, adj }] }
   }
 
   // Leaderboard: { user, today, allTime }. `user` is the signed-in player's own
@@ -145,7 +154,7 @@
     client,
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut,
-    today, guess, leaderboard,
+    today, guess, stateShapes, leaderboard,
     logTelemetry, getProfile, updateProfile,
   };
 

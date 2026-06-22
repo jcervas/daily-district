@@ -457,10 +457,355 @@ let isArchiveGame       = false;  // true while playing a past puzzle from the a
 // is never known to the client until the game ends). Off by default while the
 // client swap is being built; the legacy local path runs otherwise. Archive games
 // always use the legacy local path (past answers are public, replays don't count).
-let SERVER_MODE   = false;
+let SERVER_MODE   = true;
 let serverPuzzle  = null;   // last /today response: { puzzleNumber, geometry, clues, cluesTotal, result, answer }
+let serverState   = null;   // the correctly-guessed state abbr (known only after a correct state guess / completion)
+let serverAnswer  = null;   // revealed answer once completed: { districtId, state, census } (drives the game-over census panel)
 function serverActive() {
   return SERVER_MODE && !isArchiveGame && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
+}
+// True when the daily should boot from the server (independent of isArchiveGame,
+// used by init() to decide the boot path before any game has started).
+function serverBoot() {
+  return SERVER_MODE && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
+}
+
+// Build the redacted "mystery" feature from server geometry — no identity.
+function serverMysteryFeature(geometry) {
+  return { type: 'Feature', geometry, properties: {} };
+}
+
+// Server bootstrap: load states-only shapes + district names, fetch /today, and
+// either restore the in-progress/finished game or start fresh. The answer's
+// identity is never present client-side until the server reveals it.
+async function initServer() {
+  todayKey = getTodayKey();
+  username = getUsername();
+
+  // Archive / replay are unavailable in server mode (they pick a local district
+  // from the full topojson, which isn't shipped). Hide their entry points.
+  ['archive-btn', 'play-again-btn', 'banner-new-map-btn', 'gameover-new-map-btn']
+    .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  document.querySelector('[data-action="archive"]')?.classList.add('hidden');
+
+  // 1. States-only topojson + district-names.json (no district geometry shipped).
+  try {
+    const [statesTopo, names] = await Promise.all([
+      fetch('./states.topojson').then(r => { if (!r.ok) throw new Error(`states ${r.status}`); return r.json(); }),
+      fetch('./district-names.json').then(r => { if (!r.ok) throw new Error(`names ${r.status}`); return r.json(); }),
+    ]);
+    rawTopo    = statesTopo;
+    topoStates = {};
+    topojson.feature(statesTopo, statesTopo.objects.states).features.forEach(f => {
+      if (f.properties.state) topoStates[f.properties.state] = f;
+    });
+    stateDistrictMap = names;   // { state: ['01','02', …] } — same shape as buildStateDistrictMap
+    districts        = [];      // no district shapes client-side until a state is unlocked
+    districtPoints   = {};
+    adjMap           = new Map();
+  } catch (err) {
+    console.error('Server asset load failed:', err);
+    alert(`Failed to load map data (${err.message}). Please refresh.`);
+    return;
+  }
+
+  // 2. Today's puzzle from the server (answer withheld).
+  let resp;
+  try {
+    resp = await window.DistrictBackend.today();
+  } catch (err) {
+    console.error('today() failed:', err);
+    alert("Could not load today's puzzle. Please refresh.");
+    return;
+  }
+  serverPuzzle  = resp;
+  todayDistrict = serverMysteryFeature(resp.geometry);
+
+  initMap();
+  setTimeout(() => { if (map) map.invalidateSize(); }, 50);
+  requestAnimationFrame(() => { initUSRefMap(); zoomUSRefMapToValid(false); });
+
+  // 3. Restore an in-progress or finished game from the server result.
+  const r = resp.result;
+  if (r && ((r.guess_history && r.guess_history.length) || r.completed)) {
+    await restoreServerGame(r, resp.answer);
+    return;
+  }
+
+  // 4. Fresh game.
+  renderDistrict(todayDistrict);
+  renderClues();
+  renderGuessHistory();
+  document.getElementById('guess-remaining').textContent = `${MAX_GUESSES} guesses`;
+}
+
+// Fetch + inject the guessed state's district shapes (gated server-side). Populates
+// `districts`, `adjMap`, `districtPoints` for that one state so the existing
+// district-phase map/tiles work. The answer among them is still unknown to the client.
+async function loadServerStateShapes(state) {
+  if (districts.some(f => f.properties.state === state)) return;
+  const data = await window.DistrictBackend.stateShapes(state);
+  (data.districts || []).forEach(d => {
+    const feat = { type: 'Feature', geometry: d.geometry, properties: { state: d.state, 'state-district': d.districtId } };
+    districts.push(feat);
+    adjMap.set(d.districtId, d.adj || []);
+    // Inner point for tile layout — centroid of the largest sub-polygon.
+    const geom = d.geometry;
+    let pt;
+    if (geom && geom.type === 'MultiPolygon' && geom.coordinates.length) {
+      const largest = geom.coordinates.reduce((a, b) =>
+        d3.geoArea({ type: 'Polygon', coordinates: a }) >= d3.geoArea({ type: 'Polygon', coordinates: b }) ? a : b);
+      pt = d3.geoCentroid({ type: 'Feature', geometry: { type: 'Polygon', coordinates: largest } });
+    } else {
+      pt = d3.geoCentroid(feat);
+    }
+    districtPoints[d.districtId] = pt;
+  });
+}
+
+// Did a (wrong) district guess come back hot (adjacent to the answer)? In server
+// mode the flag is stored on the guess; legacy falls back to the adjacency graph.
+function guessWasAdjacent(guess, answerNeighbors) {
+  if (typeof guess.adjacent === 'boolean') return guess.adjacent;
+  return !!(answerNeighbors && answerNeighbors.has(guess.text));
+}
+
+// Mark a state correct (server-validated): reveal the state, fetch its shapes,
+// and enter the district phase. `instant` skips the fade for restore.
+async function enterServerDistrictPhase(state, instant = false) {
+  serverState = state;
+  todayDistrict.properties.state = state;        // safe: the player guessed it
+  correctStateGuessed = true;
+  try { await loadServerStateShapes(state); }
+  catch (err) { console.error('stateShapes() failed:', err); }
+  lockStateDropdown(state, instant);
+}
+
+// Rebuild the board from the server result (in-progress or finished). Replays the
+// stored guess history; fetches state shapes if a state was solved or the game is done.
+async function restoreServerGame(result, answer) {
+  _gameStarted   = true;
+  guessHistory   = (result.guess_history || []).map(g => ({
+    text: String(g.text), correct: !!g.correct, phase: g.phase, adjacent: !!g.adjacent,
+  }));
+  guessCount     = result.guesses != null ? result.guesses
+                   : guessHistory.filter(g => !g.correct).length;
+  elapsedSeconds = result.seconds || 0;
+  gameOver       = !!result.completed;
+
+  const tvEl  = document.getElementById('timer-value');        if (tvEl)  tvEl.textContent  = formatTime(elapsedSeconds);
+  const tvElI = document.getElementById('timer-value-inline'); if (tvElI) tvElI.textContent = formatTime(elapsedSeconds);
+
+  // The solved/answer state (if any).
+  const correctStateGuess = guessHistory.find(g => g.phase === 'state' && g.correct);
+  const knownState = (answer && answer.state) || (correctStateGuess && correctStateGuess.text) || null;
+
+  // Reconstruct state eliminations from the wrong state guesses (public adjacency only).
+  eliminatedStates = new Set();
+  const wrongGuessedSoFar = new Set();
+  guessHistory.filter(g => g.phase === 'state' && !g.correct).forEach(g => {
+    wrongGuessedSoFar.add(g.text);
+    eliminatedStates.add(g.text);
+    const nbrs = STATE_ADJACENCY[g.text] || [];
+    if (g.adjacent) {
+      const neighborSet = new Set(nbrs);
+      for (const s of Object.keys(stateDistrictMap)) {
+        if (s !== knownState && !neighborSet.has(s)) eliminatedStates.add(s);
+      }
+    } else {
+      for (const n of nbrs) if (n !== knownState) eliminatedStates.add(n);
+    }
+  });
+
+  // Reveal answer identity if completed.
+  if (gameOver && answer) {
+    serverAnswer = answer;
+    todayDistrict.properties.state = answer.state;
+    todayDistrict.properties['state-district'] = answer.districtId;
+  }
+
+  if (knownState) {
+    await loadServerStateShapes(knownState);
+    serverState = knownState;
+    todayDistrict.properties.state = knownState;
+  }
+
+  const wrongCount = guessHistory.filter(g => !g.correct).length;
+  applyMapStage(wrongCount, gameOver);
+  renderDistrict(todayDistrict);
+  renderGuessHistory();
+  renderClues();
+
+  if (knownState) {
+    correctStateGuessed = true;
+    lockStateDropdown(knownState, true);   // renders the district map (game-over highlight when gameOver)
+  }
+
+  if (gameOver) {
+    cluesRevealed = FACT_DEFS.length;
+    stopTimer();
+    lastGameWon = guessHistory.some(g => g.phase === 'district' && g.correct);
+    renderClues();
+    showResult(lastGameWon, false);
+    showGameoverModal();
+    fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
+  }
+}
+
+// On any guess error (network blip, or a 409 because the day was completed in
+// another tab), re-sync the board from the authoritative server state.
+function serverGuessFailed(err) {
+  console.error('server guess failed — resyncing:', err);
+  _guessLocked = false; _distLocked = false;
+  return initServer();
+}
+
+// ── State guess via /guess ──────────────────────────────────────
+async function submitStateGuessServer(abbr) {
+  _guessLocked = true;
+  if (!timerRunning) startTimer();
+  let resp;
+  try { resp = await window.DistrictBackend.guess('state', abbr, elapsedSeconds); }
+  catch (err) { return serverGuessFailed(err); }
+
+  const isCorrect = !!resp.correct;
+  const pathEl = usRefLayers[abbr];
+  if (pathEl) pathEl.attr('fill', isCorrect ? '#FDB515' : '#C41230').attr('fill-opacity', 0.9);
+  const panel = document.getElementById('us-ref-map');
+  panel.classList.add(isCorrect ? 'flash-correct' : 'flash-wrong');
+  setTimeout(() => panel.classList.remove('flash-correct', 'flash-wrong'), 700);
+
+  setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 650);
+}
+
+function processStateGuessServer(abbr, resp) {
+  serverPuzzle.clues = resp.clues || serverPuzzle.clues;
+  guessHistory.push({ text: abbr, correct: !!resp.correct, phase: 'state', adjacent: !!resp.adjacent });
+  guessCount = resp.guesses;
+
+  if (resp.correct) {
+    const state = resp.state || abbr;
+    // Correct state on the final guess: no district turn remains — reveal + lose.
+    if (resp.completed && !resp.won) { renderGuessHistory(); renderClues(); finishServerLoss(resp); return; }
+    const isAtLarge = (stateDistrictMap[state] || []).length === 1;
+    renderGuessHistory();
+    renderClues();
+    enterServerDistrictPhase(state).then(() => {
+      if (isAtLarge) {
+        // At-large: the lone district is the answer; the server still wants a
+        // district guess to record the win, so auto-submit it once tiles exist.
+        setTimeout(() => submitDistrictTileServer('01'), 700);
+      }
+    });
+    return;
+  }
+
+  // Wrong state — eliminate from the public adjacency graph using the server's
+  // hot/cold flag. The answer is always retained (it is a neighbor when hot, and
+  // not a neighbor when cold), so no knowledge of the answer is needed.
+  eliminatedStates.add(abbr);
+  const neighbors = STATE_ADJACENCY[abbr] || [];
+  if (resp.adjacent) {
+    const neighborSet = new Set(neighbors);
+    for (const s of [...getValidStates()]) {
+      if (!neighborSet.has(s)) eliminatedStates.add(s);
+    }
+  } else {
+    for (const n of neighbors) eliminatedStates.add(n);
+  }
+
+  applyMapStage(guessHistory.filter(g => !g.correct).length);
+  renderGuessHistory();
+  renderClues();
+  zoomUSRefMapToValid();
+
+  if (resp.completed) { finishServerLoss(resp); return; }
+
+  // Elimination narrowed to one state → it must be the answer; confirm via server.
+  const remaining = getValidStates();
+  if (remaining.size === 1) {
+    const only = [...remaining][0];
+    setTimeout(() => { if (!gameOver && !correctStateGuessed) submitStateGuess(only); }, 900);
+  }
+}
+
+// ── District guess via /guess ───────────────────────────────────
+async function submitDistrictTileServer(dist) {
+  if (gameOver || !correctStateGuessed || _distLocked) return;
+  _distLocked = true;
+  if (!timerRunning) startTimer();
+  const state     = serverState || todayDistrict.properties.state;
+  const fullGuess = `${state}-${dist}`;
+  let resp;
+  try { resp = await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds); }
+  catch (err) { return serverGuessFailed(err); }
+
+  const tilesEl     = document.getElementById('district-tiles');
+  const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
+  const tileCircle  = clickedTile?.querySelector('circle');
+
+  if (resp.correct) {
+    if (tileCircle) {
+      tileCircle.classList.add('tile-correct-pop');
+      const ns = 'http://www.w3.org/2000/svg';
+      const checkEl = document.createElementNS(ns, 'text');
+      checkEl.setAttribute('text-anchor', 'middle');
+      checkEl.setAttribute('dominant-baseline', 'central');
+      const svgEl = tilesEl.querySelector('svg');
+      const curK = svgEl ? d3.zoomTransform(svgEl).k : 1;
+      checkEl.setAttribute('font-size', String(10 / Math.max(curK, 1)));
+      checkEl.setAttribute('font-weight', '900');
+      checkEl.setAttribute('fill', '#1a1a1a');
+      checkEl.setAttribute('pointer-events', 'none');
+      checkEl.setAttribute('class', 'tile-correct-check');
+      checkEl.textContent = '✓';
+      clickedTile.appendChild(checkEl);
+    }
+    setTimeout(() => { _distLocked = false; processDistrictGuessServer(dist, fullGuess, resp); }, 650);
+  } else {
+    if (tileCircle) tileCircle.classList.add('tile-wrong-shake');
+    setTimeout(() => {
+      tileCircle?.classList.remove('tile-wrong-shake');
+      _distLocked = false;
+      processDistrictGuessServer(dist, fullGuess, resp);
+    }, 480);
+  }
+}
+
+function processDistrictGuessServer(dist, fullGuess, resp) {
+  serverPuzzle.clues = resp.clues || serverPuzzle.clues;
+  guessHistory.push({ text: fullGuess, correct: !!resp.correct, phase: 'district', adjacent: !!resp.adjacent });
+  guessCount = resp.guesses;
+  if (resp.answer) { serverAnswer = resp.answer; todayDistrict.properties['state-district'] = resp.answer.districtId; }
+
+  if (resp.correct) { startGameOverTransition(true, dist); return; }
+
+  applyMapStage(guessHistory.filter(g => !g.correct).length);
+
+  if (resp.completed) {
+    renderGuessHistory();
+    renderClues();
+    startGameOverTransition(false, dist);
+    return;
+  }
+
+  document.querySelector('.mzb-fit')?.classList.add('at-active-fit');
+  requestAnimationFrame(() => { buildDistrictD3Map(serverState || todayDistrict.properties.state); });
+  renderGuessHistory();
+  renderClues();
+}
+
+// State phase exhausted (6 guesses, no district phase entered) — reveal + lose.
+async function finishServerLoss(resp) {
+  if (resp.answer) {
+    serverAnswer = resp.answer;
+    try { await loadServerStateShapes(resp.answer.state); } catch (_) {}
+    serverState = resp.answer.state;
+    todayDistrict.properties.state = resp.answer.state;
+    todayDistrict.properties['state-district'] = resp.answer.districtId;
+  }
+  endGame(false);
+  showGameoverModal();
 }
 
 // ============================================================
@@ -624,7 +969,7 @@ function getActiveDistrictKeys() {
     let possible = new Set(stateFeatures.map(f => f.properties['state-district']));
     for (const guess of wrongGuesses) {
       const key = guess.text;
-      if (answerNeighbors.has(key)) {
+      if (guessWasAdjacent(guess, answerNeighbors)) {
         const nbrSet = new Set(adjMap.get(key) || []);
         for (const k of [...possible]) { if (k !== key && !nbrSet.has(k)) possible.delete(k); }
         possible.delete(key);
@@ -650,6 +995,9 @@ function getActiveDistrictKeys() {
 //  STORAGE
 // ============================================================
 function saveGameState() {
+  // Server mode persists progress server-side (results table); the local daily
+  // save is unused and would conflict with the once-per-day server gate.
+  if (serverActive()) return;
   // Archive (past-puzzle) games are unofficial: never persist them, so the
   // official daily save is never overwritten.
   if (isArchiveGame) return;
@@ -998,6 +1346,24 @@ function renderDistrict(feature) {
 // ============================================================
 async function getDistrictCensusData() {
   if (!todayDistrict) return null;
+  // Server mode: census for the day's district is served (pre-aggregated, matching
+  // the 2026 boundaries) only once the game is over, via the revealed answer.
+  if (serverActive()) {
+    if (!serverAnswer || !serverAnswer.census) return null;
+    const c = serverAnswer.census;
+    return {
+      name:       serverAnswer.districtId,
+      pop:        c.pop,
+      income:     c.income,
+      whiteNH:    c.whiteNH,
+      black:      c.black,
+      asian:      c.asian,
+      hispanic:   c.hispanic,
+      medianHome: c.medianHome,
+      bach:       c.bach,
+      master:     c.master,
+    };
+  }
   const p = todayDistrict.properties;
   if (p.pop == null) return null;
   return {
@@ -1310,6 +1676,45 @@ function renderHintBar() {
   if (!_gameStarted) { bar.innerHTML = ''; return; }
 
   bar.innerHTML = '';
+
+  // Server mode: clues are pre-computed {icon,label,value}; `serverPuzzle.clues`
+  // holds the unlocked-so-far set, `cluesTotal` the full count (rest are locked).
+  if (serverActive() && serverPuzzle) {
+    const unlocked = serverPuzzle.clues || [];
+    const total    = serverPuzzle.cluesTotal || unlocked.length;
+    for (let i = 0; i < total; i++) {
+      const def      = unlocked[i];
+      const revealed = i < unlocked.length;
+      const isLatest = revealed && i === unlocked.length - 1;
+      const card = document.createElement('div');
+      card.className = 'hint-card' + (revealed ? ' revealed' + (isLatest ? ' latest' : '') : ' locked');
+      card.setAttribute('role', 'listitem');
+      if (revealed) {
+        card.innerHTML = `
+          <div class="hint-card-header">
+            <span class="hint-card-icon">${svgIcon(def.icon, 'clue-icon-svg')}</span>
+            <span class="hint-card-label">${def.label}</span>
+          </div>
+          <div class="hint-card-val"><span>${def.value}</span></div>`;
+        if (!isLatest) {
+          card.addEventListener('click', () => {
+            renderHintsModal();
+            document.getElementById('hints-modal')?.classList.remove('hidden');
+          });
+        }
+      } else {
+        card.innerHTML = `<div class="hint-card-header"><span class="hint-card-icon">${svgIcon('lock', 'clue-icon-svg')}</span></div>`;
+      }
+      bar.appendChild(card);
+    }
+    const latest = bar.querySelectorAll('.hint-card.revealed');
+    if (latest.length) latest[latest.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    return;
+  }
+  // Server mode but the puzzle hasn't loaded yet — never fall to the local
+  // (census-derived) clue path, which would read the redacted mystery feature.
+  if (serverActive()) { bar.innerHTML = ''; return; }
+
   const distData = districtDataFor(todayDistrict);
 
   FACT_DEFS.forEach((def, i) => {
@@ -1389,6 +1794,32 @@ function renderHintsModal() {
   const list = document.getElementById('hints-clues-list');
   if (!list) return;
   list.innerHTML = '';
+
+  if (serverActive() && serverPuzzle) {
+    const unlocked = serverPuzzle.clues || [];
+    const total    = serverPuzzle.cluesTotal || unlocked.length;
+    for (let i = 0; i < total; i++) {
+      const def      = unlocked[i];
+      const revealed = i < unlocked.length;
+      const div = document.createElement('div');
+      if (revealed) {
+        div.className = 'clue-item revealed';
+        div.innerHTML = `
+          <span class="clue-icon">${svgIcon(def.icon, 'clue-icon-svg')}</span>
+          <span class="clue-text">
+            <span class="clue-label">${def.label}</span>
+            <span class="clue-val">${def.value}</span>
+          </span>`;
+      } else {
+        div.className = 'clue-item locked';
+        div.innerHTML = `<span class="clue-icon">${svgIcon('lock', 'clue-icon-svg locked')}</span><span class="clue-text">Locked — make a guess to reveal</span>`;
+      }
+      list.appendChild(div);
+    }
+    return;
+  }
+  if (serverActive()) { return; }
+
   const distData = districtDataFor(todayDistrict);
   for (let i = 0; i < FACT_DEFS.length; i++) {
     const def = FACT_DEFS[i];
@@ -1488,11 +1919,16 @@ function renderGuessHistory() {
     const distLabel  = (stateDistrictMap[guessState] || []).length === 1
       ? 'At-Large' : `District ${parseInt(distPart, 10)}`;
     let distHint = '';
+    // Server mode stores the hot/cold flag on the guess (the answer is unknown to
+    // the client); legacy infers it from the answer's adjacency graph.
+    const distAdjacent = (typeof g.adjacent === 'boolean')
+      ? g.adjacent
+      : (answerNeighbors ? answerNeighbors.has(g.text) : null);
     if (g.correct) {
       distHint = `<span class="guess-hint hot">Correct!</span>`;
-    } else if (answerNeighbors && answerNeighbors.has(g.text)) {
+    } else if (distAdjacent === true) {
       distHint = `<span class="guess-hint hot">${svgIcon('flame','hint-icon')} Adjacent</span>`;
-    } else if (answerNeighbors) {
+    } else if (distAdjacent === false) {
       distHint = `<span class="guess-hint cold">${svgIcon('snowflake','hint-icon')} Not adjacent</span>`;
     }
     return `<div class="guess-row ${cls}">
@@ -1594,6 +2030,7 @@ function handleStateSelection(abbr) {
 let _guessLocked = false; // prevent double-submit during animation
 function submitStateGuess(abbr) {
   if (gameOver || correctStateGuessed || _guessLocked) return;
+  if (serverActive()) { submitStateGuessServer(abbr); return; }
   _guessLocked = true;
 
   const isCorrect = abbr === todayDistrict.properties.state;
@@ -1708,6 +2145,7 @@ let _distLocked = false; // prevent double-tap during tile animation
 
 function submitDistrictTile(dist) {
   if (gameOver || !correctStateGuessed || _distLocked) return;
+  if (serverActive()) { submitDistrictTileServer(dist); return; }
   dbg(`submitDistrictTile dist=${dist} today=${todayDistrict?.properties?.['state-district']} guessCount=${guessCount}`);
 
   _distLocked = true;
@@ -2637,7 +3075,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   for (const guess of wrongGuesses) {
     const key  = guess.text;
     const dist = key.split('-').slice(1).join('-');
-    if (answerNeighbors.has(key)) {
+    if (guessWasAdjacent(guess, answerNeighbors)) {
       hotGuessKeys.add(dist);
       const nbrSet = new Set(adjMap.get(key) || []);
       for (const k of [...possibleKeys]) {
@@ -4214,6 +4652,19 @@ function resetGame(newIdx) {
 //  INIT
 // ============================================================
 async function init() {
+  // Stage B: server-authoritative daily. Boot from /today instead of picking the
+  // answer locally. Requires a signed-in session; if not yet signed in, wait for
+  // the auth event login.js dispatches (the game UI is auth-locked meanwhile).
+  if (serverBoot()) {
+    let user = null;
+    try { user = await window.DistrictBackend.getUser(); } catch (_) {}
+    if (!user) {
+      window.addEventListener('district-auth', () => { init(); }, { once: true });
+      return;
+    }
+    return initServer();
+  }
+
   todayKey = getTodayKey();
   username = getUsername();
 
@@ -4445,6 +4896,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Build + open the archive list: every past daily (newest first).
   function openArchive() {
+    // Archive is a local replay path that needs the full district topojson, which
+    // server-authoritative mode does not ship. Disabled there (past answers are
+    // public, but the client has no shapes to render them with).
+    if (serverBoot()) return;
     const list = document.getElementById('archive-list');
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayNum = Math.floor((Date.now() - ARCHIVE_EPOCH) / 86400000) + 1;

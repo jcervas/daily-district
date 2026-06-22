@@ -2,18 +2,22 @@
 // seed-puzzles.mjs
 // Generates Supabase `puzzles` upsert SQL for a window of dates.
 //
-// Replicates the client's daily schedule (seededIndex/dateSeed over the
-// districts.topojson order) and the FACT_DEFS clue text EXACTLY, by extracting
-// the real STATE_* maps and helpers from script.js so they never drift.
+// Schedule: a fixed shuffled permutation of all 435 districts (puzzle-order.json,
+// built by build-puzzle-order.mjs). Puzzle No. N = order[(N-1) % 435], so every
+// district appears exactly once before any repeat. Clue text / census mirror the
+// FACT_DEFS in script.js EXACTLY, by extracting the real STATE_* maps + props so
+// they never drift.
 //
 //   node seed-puzzles.mjs [startDate] [days]  > puzzles.sql
 //   defaults: startDate = today (UTC), days = 63 (yesterday .. +61)
+//   For a full non-repeating cycle: node seed-puzzles.mjs 2026-06-22 436
 //
 // Then run puzzles.sql against the daily-district Supabase project.
 // ============================================================
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = fs.readFileSync(path.join(DIR, 'script.js'), 'utf8');
@@ -36,13 +40,6 @@ const STATE_TIMEZONES = extractObject('STATE_TIMEZONES');
 const STATE_NAMES     = extractObject('STATE_NAMES');
 const STATE_ADJACENCY = extractObject('STATE_ADJACENCY');
 
-// ── Helpers copied verbatim from script.js (pure; uint32 hash matches in Node) ─
-function seededIndex(seed, max) {
-  let s = (seed ^ 0xdeadbeef) >>> 0;
-  s = Math.imul(s ^ (s >>> 15), s | 1);
-  s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
-  return Math.abs((s ^ (s >>> 14)) >>> 0) % max;
-}
 const formatNumber   = n => parseInt(n, 10).toLocaleString('en-US');
 const formatCurrency = n => '$' + parseInt(n, 10).toLocaleString('en-US');
 
@@ -54,6 +51,13 @@ const stateDistrictMap = {};
 for (const p of districts) {
   (stateDistrictMap[p.state] ||= []).push(p['state-district']);
 }
+
+// Puzzle schedule (puzzle-schedule.mjs): endless run of 435-day cycles, each its
+// own shuffled permutation, so every district appears once per cycle and no two
+// cycles share an order. district id for puzzle No. N = districtIdForPuzzle(N, ids).
+const SCHED_IDS = baseIds(TOPO);
+const byId = {};
+for (const p of districts) byId[p['state-district']] = p;
 
 // ── State ACS facts ────────────────────────────────────────────────────────────
 const acs = {};
@@ -147,12 +151,23 @@ function buildClues(p) {
   return out;
 }
 
+// Per-district census snapshot (pre-aggregated to 2026 boundaries via BAF, read
+// straight from the topojson props). Served by the today/guess functions at
+// game-over to drive the result census panel without a (boundary-mismatched) API call.
+function buildCensus(p) {
+  const num = v => (v != null ? Number(v) : null);
+  return {
+    pop: num(p.pop), income: num(p.income), whiteNH: num(p.whiteNH),
+    black: num(p.black), asian: num(p.asian), hispanic: num(p.hispanic),
+    medianHome: num(p.medianHome), bach: num(p.bach), master: num(p.master),
+  };
+}
+
 // ── Schedule math ───────────────────────────────────────────────────────────────
 const EPOCH_UTC = Date.UTC(2026, 5, 22);
 function puzzleNumber(y, m, d) {
   return Math.floor((Date.UTC(y, m - 1, d) - EPOCH_UTC) / 86400000) + 1;
 }
-function dateSeed(y, m, d) { return y * 10000 + m * 100 + d; }
 
 // ── Emit upsert SQL for the window ───────────────────────────────────────────────
 const argStart = process.argv[2];
@@ -166,16 +181,17 @@ for (let i = 0; i < days; i++) {
   dt.setUTCDate(start.getUTCDate() + i);
   const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1, d = dt.getUTCDate();
   const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const idx = seededIndex(dateSeed(y, m, d), districts.length);
-  const p = districts[idx];
+  const num = puzzleNumber(y, m, d);
+  const p = byId[districtIdForPuzzle(num, SCHED_IDS)];
   records.push({
     date: dateStr,
-    puzzle_number: puzzleNumber(y, m, d),
+    puzzle_number: num,
     district_id: p['state-district'],
     state: p.state,
     neighbors: (p.adj || '').split('|').filter(Boolean),
     state_neighbors: STATE_ADJACENCY[p.state] || [],
     clues: buildClues(p),
+    census: buildCensus(p),
   });
 }
 
@@ -187,13 +203,14 @@ if (process.argv.includes('--json')) {
   const rows = records.map(r =>
     `('${r.date}', ${r.puzzle_number}, '${sqlEsc(r.district_id)}', '${sqlEsc(r.state)}', ` +
     `'${sqlEsc(JSON.stringify(r.neighbors))}'::jsonb, '${sqlEsc(JSON.stringify(r.state_neighbors))}'::jsonb, ` +
-    `'${sqlEsc(JSON.stringify(r.clues))}'::jsonb)`);
+    `'${sqlEsc(JSON.stringify(r.clues))}'::jsonb, '${sqlEsc(JSON.stringify(r.census))}'::jsonb)`);
   process.stdout.write(
-    `insert into public.puzzles (date, puzzle_number, district_id, state, neighbors, state_neighbors, clues) values\n` +
+    `insert into public.puzzles (date, puzzle_number, district_id, state, neighbors, state_neighbors, clues, census) values\n` +
     rows.join(',\n') +
     `\non conflict (date) do update set\n` +
     `  puzzle_number = excluded.puzzle_number, district_id = excluded.district_id, state = excluded.state,\n` +
-    `  neighbors = excluded.neighbors, state_neighbors = excluded.state_neighbors, clues = excluded.clues;\n`
+    `  neighbors = excluded.neighbors, state_neighbors = excluded.state_neighbors, clues = excluded.clues,\n` +
+    `  census = excluded.census;\n`
   );
 }
 process.stderr.write(`Generated ${records.length} puzzle rows\n`);
