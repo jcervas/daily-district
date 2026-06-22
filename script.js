@@ -3625,7 +3625,7 @@ function _renderShareBlob() {
   txt(W/2, mapH + 100, 'DAILY DISTRICT',  32, '800', 0.65);
   txt(W/2, mapH + 230, outcome,           52, '700', 1);
   txt(W/2, mapH + 340, grid,              40, '400', 1);
-  txt(W/2, mapH + 490, 'jcervas.github.io/games/district-guess', 22, '400', 0.45);
+  txt(W/2, mapH + 490, 'daily-district.com', 22, '400', 0.45);
 
   return _svgToBlob(svg.node(), W, H);
 }
@@ -3886,7 +3886,7 @@ function buildShareText() {
   const unusedCount = won ? MAX_GUESSES - guessCount : 0;
   const grid = [...usedSlots, ...Array(unusedCount).fill('⬜')].join(' ');
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
-  return `🗺️ Daily District — ${outcome}\n${grid}\nCan you identify it? https://jcervas.github.io/games/district-guess/`;
+  return `🗺️ Daily District — ${outcome}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }
 
 // ============================================================
