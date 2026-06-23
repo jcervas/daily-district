@@ -75,34 +75,44 @@ const acs = {};
   }
 }
 
-// ── Clue builders — mirror FACT_DEFS in script.js (order + text must match) ─────
-function buildClues(p) {
+// ── Clue builders ───────────────────────────────────────────────────────────────
+// Two independent 6-clue decks. The hint bar holds 6 slots for the whole game and
+// reveals one clue per guess (none before the first guess). While the player is
+// guessing the STATE it shows the state deck; once the state is solved the same
+// slots swap to the DISTRICT deck. Never the literal state name (that would give
+// the state phase away). Each clue is { icon, label, value }; ordered broad → most
+// revealing so later guesses earn sharper hints.
+function buildStateClues(p) {
   const state = p.state;
   const s = acs[state];
   const out = [];
   const add = (icon, label, value) => out.push({ icon, label, value });
 
-  // State delegation size
+  if (s) {
+    const mi = s.landAreaSqMi;
+    const band = mi < 10000 ? 'Small state' : mi < 50000 ? 'Mid-size state'
+               : mi < 100000 ? 'Large state' : 'Very large state';
+    add('ruler', 'State land area', `${band} — ~${mi.toLocaleString('en-US')} sq mi`);
+  }
+  add('clock', 'Time zone', STATE_TIMEZONES[state] ? `${STATE_TIMEZONES[state]} Time` : '—');
+  if (s) {
+    add('dollar', 'Median gross rent (state)', `${formatCurrency(s.medianRent)}/mo`);
+    add('clock', 'Average commute (state)', `${s.meanTravelTime} min to work`);
+    add('people', 'Foreign-born residents (state)', `${s.foreignBorn_pct}% born outside the U.S.`);
+  }
+  // State delegation size — most revealing (narrows the state hard), so last.
   {
     const count = stateDistrictMap[state]?.length || 1;
     add('building', 'State delegation size', count === 1
       ? 'At-large: only congressional district in its state'
       : `One of ${count} congressional districts in its state`);
   }
-  // Time zone
-  add('clock', 'Time zone', STATE_TIMEZONES[state] ? `${STATE_TIMEZONES[state]} Time` : '—');
+  return out.slice(0, 6);
+}
 
-  // State land area
-  if (s) {
-    const mi = s.landAreaSqMi;
-    const band = mi < 10000 ? 'Small state' : mi < 50000 ? 'Mid-size state'
-               : mi < 100000 ? 'Large state' : 'Very large state';
-    add('ruler', 'State land area', `${band} — ~${mi.toLocaleString('en-US')} sq mi`);
-    add('people', 'Foreign-born residents (state)', `${s.foreignBorn_pct}% born outside the U.S.`);
-    add('dollar', 'Median gross rent (state)', `${formatCurrency(s.medianRent)}/mo`);
-    add('clock', 'Average commute (state)', `${s.meanTravelTime} min to work`);
-    add('building', 'College-educated (state)', `${s.bachPlus_pct}% hold a bachelor's degree or higher`);
-  }
+function buildDistrictClues(p) {
+  const out = [];
+  const add = (icon, label, value) => out.push({ icon, label, value });
 
   // District size
   {
@@ -112,6 +122,11 @@ function buildClues(p) {
       : a < 2000 ? `Small: ~${a.toLocaleString('en-US')} sq mi`
       : a < 15000 ? `Mid-size: ~${a.toLocaleString('en-US')} sq mi`
       : `Large: ~${a.toLocaleString('en-US')} sq mi`);
+  }
+  // District population
+  {
+    const pop = parseInt(p.pop, 10);
+    add('people', 'District population', pop > 0 ? `~${pop.toLocaleString('en-US')} residents` : 'N/A');
   }
   // 2024 Presidential vote
   {
@@ -132,8 +147,10 @@ function buildClues(p) {
   // Median household income
   add('dollar', 'Median household income',
     parseInt(p.income, 10) > 0 ? formatCurrency(p.income) + '/yr' : 'N/A');
-
-  // Largest racial/ethnic group (plurality)
+  // Median home value
+  add('dollar', 'Median home value',
+    parseInt(p.medianHome, 10) > 0 ? formatCurrency(p.medianHome) : 'N/A');
+  // Largest racial/ethnic group (plurality) — most specific, last
   {
     const total = parseInt(p.pop, 10);
     const groups = [
@@ -145,10 +162,7 @@ function buildClues(p) {
     add('people', 'Largest racial/ethnic group',
       (total && groups.length) ? `${Math.round(groups[0].val / total * 100)}% ${groups[0].name} plurality` : 'N/A');
   }
-  // State (name) — most revealing, last
-  add('mappin', 'State', STATE_NAMES[state] || state);
-
-  return out;
+  return out.slice(0, 6);
 }
 
 // Per-district census snapshot (pre-aggregated to 2026 boundaries via BAF, read
@@ -190,7 +204,7 @@ for (let i = 0; i < days; i++) {
     state: p.state,
     neighbors: (p.adj || '').split('|').filter(Boolean),
     state_neighbors: STATE_ADJACENCY[p.state] || [],
-    clues: buildClues(p),
+    clues: { state: buildStateClues(p), district: buildDistrictClues(p) },
     census: buildCensus(p),
   });
 }

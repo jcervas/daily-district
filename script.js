@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.8';
+const VERSION_NUMBER = '1.14.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -600,6 +600,22 @@ async function enterServerDistrictPhase(state, instant = false) {
   correctStateGuessed = true;
   try { await loadServerStateShapes(state); }
   catch (err) { console.error('stateShapes() failed:', err); }
+
+  // Pre-build the district tiles (hidden) now that we have the state's shapes, so
+  // lockStateDropdown()'s reveal takes the smooth cached-SVG zoom path instead of
+  // building a whole new map mid-transition. (Legacy pre-builds at init; server
+  // mode only has the shapes once the state is guessed.) Skipped on instant
+  // restore, which doesn't animate anyway.
+  if (!instant && !gameOver) {
+    const tilesEl = document.getElementById('district-tiles');
+    if (tilesEl) {
+      tilesEl.classList.remove('hidden');
+      tilesEl.style.opacity = '0';
+      tilesEl.style.pointerEvents = 'none';
+      buildDistrictD3Map(state, false, false);
+    }
+  }
+
   lockStateDropdown(state, instant);
 }
 
@@ -702,6 +718,7 @@ async function submitStateGuessServer(abbr) {
 
 function processStateGuessServer(abbr, resp) {
   serverPuzzle.clues = resp.clues || serverPuzzle.clues;
+  if (resp.cluesTotal != null) serverPuzzle.cluesTotal = resp.cluesTotal;
   guessHistory.push({ text: abbr, correct: !!resp.correct, phase: 'state', adjacent: !!resp.adjacent });
   guessCount = resp.guesses;
 
@@ -796,6 +813,7 @@ async function submitDistrictTileServer(dist) {
 
 function processDistrictGuessServer(dist, fullGuess, resp) {
   serverPuzzle.clues = resp.clues || serverPuzzle.clues;
+  if (resp.cluesTotal != null) serverPuzzle.cluesTotal = resp.cluesTotal;
   guessHistory.push({ text: fullGuess, correct: !!resp.correct, phase: 'district', adjacent: !!resp.adjacent });
   guessCount = resp.guesses;
   if (resp.answer) { serverAnswer = resp.answer; todayDistrict.properties['state-district'] = resp.answer.districtId; }
