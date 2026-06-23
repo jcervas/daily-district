@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.15';
+const VERSION_NUMBER = '1.14.16';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -725,7 +725,14 @@ async function submitStateGuessServer(abbr) {
 
   const isCorrect = !!resp.correct;
   const pathEl = usRefLayers[abbr];
-  if (pathEl) pathEl.attr('fill', isCorrect ? '#FDB515' : '#C41230').attr('fill-opacity', 0.9);
+  // Add a bold white outline (raised above the border mesh) on top of the fill so the
+  // tapped state is unmistakable — on touch the wrong-flash red sits close to the
+  // in-play state fill. Reset on the next render in processStateGuessServer.
+  if (pathEl) {
+    pathEl.attr('fill', isCorrect ? '#FDB515' : '#C41230').attr('fill-opacity', 0.9)
+          .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
+          .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+  }
   const panel = document.getElementById('us-ref-map');
   panel.classList.add(isCorrect ? 'flash-correct' : 'flash-wrong');
   setTimeout(() => panel.classList.remove('flash-correct', 'flash-wrong'), 700);
@@ -2065,13 +2072,20 @@ function setConfirmPending(abbr) {
   // Highlight the pending state in blue ("selected — tap again to confirm"),
   // restore others. NOT gold (#FDB515) — gold is the correct-answer/win color and
   // reading a pending wrong pick as "correct" is confusing.
+  // Use a stroke outline, not a fill — on touch the wrong-flash red is close to the
+  // in-play state fill, so a fill change is hard to see; an outline reads clearly.
+  // raise() lifts the path above the white border mesh so the outline isn't clipped.
   const PENDING = '#007BC0';
   Object.entries(usRefLayers).forEach(([a, pathEl]) => {
-    if (a === abbr) pathEl.attr('fill', PENDING).attr('fill-opacity', 0.85);
-    else _applyStateStyle(pathEl, a);
+    if (a === abbr) {
+      pathEl.attr('stroke', PENDING).attr('stroke-width', 3)
+            .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+    } else {
+      _applyStateStyle(pathEl, a);   // resets stroke to none
+    }
   });
   Object.entries(usRefCallouts).forEach(([a, co]) => {
-    if (a === abbr) co.circle.attr('fill', PENDING).attr('fill-opacity', 1);
+    if (a === abbr) co.circle.attr('stroke', PENDING).attr('stroke-width', 2.5).raise();
     else _applyCalloutStyle(a);
   });
 }
