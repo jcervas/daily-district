@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.19';
+const VERSION_NUMBER = '1.14.20';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();

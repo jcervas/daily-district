@@ -41,7 +41,18 @@
 
   // ── Auth ─────────────────────────────────────────────────────────────────
   async function getUser() {
-    const { data } = await client().auth.getUser();
+    const { data, error } = await client().auth.getUser();
+    if (error) {
+      // A stored session whose user no longer exists server-side (e.g. deleted in
+      // the dashboard) returns "User from sub claim in JWT does not exist" and keeps
+      // failing on every refresh — wedging the app on the login splash. Purge the
+      // dead session locally so a fresh sign-in can take hold.
+      const msg = (error && error.message) || '';
+      if (/sub claim|does not exist|not found|user_not_found|JWT/i.test(msg)) {
+        try { await client().auth.signOut({ scope: 'local' }); } catch (_) {}
+      }
+      return null;
+    }
     return data?.user ?? null;
   }
   function onAuthChange(cb) {
