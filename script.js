@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.2';
+const VERSION_NUMBER = '2.2.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -913,34 +913,40 @@ async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
 
-  // Optimistic wrong-feedback: paint the tapped state red and shake the map IMMEDIATELY
-  // on tap, before the /guess round-trip — otherwise the shake lags ~half a second
-  // behind the click. Most state guesses are wrong; if the server says correct we clear
-  // this and go straight into the reward zoom.
+  // Optimistic "registered" cue: a NEUTRAL shake (motion only, no colour) plus a press
+  // highlight on the tapped state, applied IMMEDIATELY so the tap never feels laggy. The
+  // wrong-colour (red) escalation is added only once the server confirms a miss, so a
+  // correct guess never flashes red.
   const pressedEl = usRefLayers[abbr];
   if (pressedEl) {
-    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
-             .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
+    pressedEl.attr('stroke', '#007BC0').attr('stroke-width', 3)
              .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
   }
   const panel = document.getElementById('us-ref-map');
-  panel.classList.remove('flash-wrong');
+  panel.classList.remove('shake');
   void panel.offsetWidth;            // restart the shake animation on rapid re-taps
-  panel.classList.add('flash-wrong');
+  panel.classList.add('shake');
 
   let resp;
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { panel.classList.remove('flash-wrong'); return serverGuessFailed(err); }
+  catch (err) { panel.classList.remove('shake'); return serverGuessFailed(err); }
 
-  // Correct: the optimistic shake was wrong — cancel it and go straight into the zoom.
+  // Correct: clear the neutral cue and go straight into the reward zoom — no red.
   if (resp.correct) {
-    panel.classList.remove('flash-wrong');
+    panel.classList.remove('shake');
     _guessLocked = false;
     processStateGuessServer(abbr, resp);
     return;
   }
 
-  setTimeout(() => panel.classList.remove('flash-wrong'), 450);
+  // Wrong: escalate the tapped state to the unmistakable red miss colour. The neutral
+  // shake already supplied the motion, so don't re-trigger another shake.
+  if (pressedEl) {
+    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
+             .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
+             .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+  }
+  setTimeout(() => panel.classList.remove('shake'), 450);
   setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
 }
 
