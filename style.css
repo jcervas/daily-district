@@ -399,15 +399,18 @@ main:has(#already-played-banner:not(.hidden)) {
   display: flex;
   gap: 8px;
   padding: 6px 0 2px;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: visible;
   scrollbar-width: none;
 }
 #hint-bar::-webkit-scrollbar { display: none; }
 
+/* Collapsed by default: previous/locked clues shrink to a tappable icon strip; only
+   the latest clue expands to fill the remaining horizontal space (see .latest below).
+   This keeps the whole bar fitting the width with the current hint big and readable. */
 .hint-card {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 44px;
+  min-width: 44px;
   min-height: 40px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -436,6 +439,25 @@ main:has(#already-played-banner:not(.hidden)) {
 .hint-card.revealed.latest {
   border-color: var(--accent);
 }
+
+/* The current (latest) clue grows to fill all remaining width so it's big and legible;
+   collapsed cards keep their icon-strip width set on .hint-card above. Applies at all
+   viewport sizes (the mobile media query only fine-tunes the collapsed width). */
+.hint-card.latest {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.hint-card.locked .hint-card-header,
+.hint-card.revealed:not(.latest):not(.expanded) .hint-card-header {
+  justify-content: center;
+}
+.hint-card.locked .hint-card-label,
+.hint-card.locked .hint-card-val,
+.hint-card.revealed:not(.latest):not(.expanded) .hint-card-label,
+.hint-card.revealed:not(.latest):not(.expanded) .hint-card-val {
+  display: none;
+}
+.hint-card.revealed:not(.latest) { cursor: pointer; }
 
 @keyframes hintReveal {
   from { opacity: 0; transform: translateY(4px); }
@@ -502,28 +524,14 @@ main:has(#already-played-banner:not(.hidden)) {
 
 /* ── Mobile hint bar ─────────────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Latest clue gets most of the bar */
-  .hint-card.latest { flex: 3 1 0; }
-
-  /* Locked and collapsed-previous cards shrink to icon strip */
-  .hint-card.locked,
-  .hint-card.revealed:not(.latest):not(.expanded) {
+  /* Collapse/expand behaviour is universal (above); on mobile just tighten the
+     collapsed icon strip so the latest clue keeps as much width as possible. */
+  .hint-card {
     flex: 0 0 30px;
     min-width: 30px;
     padding: 8px 6px;
-    overflow: hidden;
   }
-  .hint-card.locked .hint-card-header,
-  .hint-card.revealed:not(.latest):not(.expanded) .hint-card-header {
-    justify-content: center;
-  }
-  .hint-card.revealed:not(.latest):not(.expanded) .hint-card-label,
-  .hint-card.revealed:not(.latest):not(.expanded) .hint-card-val {
-    display: none;
-  }
-
-  /* Previous revealed cards are tappable (open hints modal) */
-  .hint-card.revealed:not(.latest) { cursor: pointer; }
+  .hint-card.latest { flex: 1 1 0; min-width: 0; }
 }
 
 /* ---- Banner ---- */
