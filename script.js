@@ -3342,13 +3342,17 @@ function _drawGameOverMap(ctx, animateReveal) {
       .attr('fill', dark ? 'rgba(255,255,255,0.06)' : 'rgba(100,100,120,0.12)')
       .attr('stroke', 'none');
 
-    // Clip roads/urban to the US land boundary
+    // Clip roads/urban to the US land boundary. The district topo (and the
+    // roads/urban/counties overlays) only exist in legacy mode; server mode
+    // ships a states-only topo, so skip the district-geometry merge there.
     const clipId = 'gameover-us-land-clip';
-    let defs = svg.select('defs');
-    if (defs.empty()) defs = svg.insert('defs', ':first-child');
-    defs.selectAll(`#${clipId}`).remove();
-    defs.append('clipPath').attr('id', clipId)
-      .append('path').datum(topojson.merge(rawTopo, rawTopo.objects.districts.geometries)).attr('d', pathGen);
+    if (rawTopo.objects.districts) {
+      let defs = svg.select('defs');
+      if (defs.empty()) defs = svg.insert('defs', ':first-child');
+      defs.selectAll(`#${clipId}`).remove();
+      defs.append('clipPath').attr('id', clipId)
+        .append('path').datum(topojson.merge(rawTopo, rawTopo.objects.districts.geometries)).attr('d', pathGen);
+    }
 
     if (topoUrban) {
       g.append('g').attr('class', 'context-urban')
@@ -3383,13 +3387,18 @@ function _drawGameOverMap(ctx, animateReveal) {
       g.select('.context-urban').attr('opacity', fOp);
     }
 
-    g.append('path')
-      .datum(topojson.mesh(rawTopo, rawTopo.objects.districts,
-        (a, b) => a !== b && a.properties?.state === b.properties?.state && a.properties?.state !== stateAbbr))
-      .attr('class', 'context-district-lines').attr('d', pathGen)
-      .attr('fill', 'none')
-      .attr('stroke', dark ? 'rgba(255,255,255,0.22)' : 'rgba(60,60,90,0.50)')
-      .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
+    // National district-boundary mesh (legacy topo only; server mode has no
+    // nationwide district geometry — the target state's own districts still
+    // draw below from stateFeatures).
+    if (rawTopo.objects.districts) {
+      g.append('path')
+        .datum(topojson.mesh(rawTopo, rawTopo.objects.districts,
+          (a, b) => a !== b && a.properties?.state === b.properties?.state && a.properties?.state !== stateAbbr))
+        .attr('class', 'context-district-lines').attr('d', pathGen)
+        .attr('fill', 'none')
+        .attr('stroke', dark ? 'rgba(255,255,255,0.22)' : 'rgba(60,60,90,0.50)')
+        .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
+    }
 
     g.append('g').attr('class', 'context-state-borders').attr('pointer-events', 'none')
       .selectAll('path').data(allStateFills).join('path').attr('d', pathGen)
