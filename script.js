@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.6';
+const VERSION_NUMBER = '2.2.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3918,6 +3918,11 @@ function buildGameoverMap() {
 
 async function showGameoverModal() {
   destroyGameSection();
+  // Remove any existing game-over modal first. buildGameoverDiv() inserts a fresh node
+  // without de-duping, so a second call would leave TWO #gameover-modal elements;
+  // getElementById() then updates the stale (DOM-first) one — its map + countdown —
+  // while the visible newest modal stays blank with a frozen "—:—:—" countdown.
+  destroyGameoverDiv();
   _gameOverAnimsCallback = null;  // animations ran on district-tiles which is now gone
   buildGameoverDiv();
 
