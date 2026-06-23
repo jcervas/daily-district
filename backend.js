@@ -47,8 +47,14 @@
       // the dashboard) returns "User from sub claim in JWT does not exist" and keeps
       // failing on every refresh — wedging the app on the login splash. Purge the
       // dead session locally so a fresh sign-in can take hold.
+      //
+      // BUT never purge while an OAuth redirect is being processed: the tokens in the
+      // URL may not have been exchanged into a session yet, and signing out here would
+      // wipe the session that's about to be established (bouncing back to the splash).
+      const url = location.hash + location.search;
+      const midOAuth = /[#&?](access_token|refresh_token|code|provider_token)=/.test(url);
       const msg = (error && error.message) || '';
-      if (/sub claim|does not exist|not found|user_not_found|JWT/i.test(msg)) {
+      if (!midOAuth && /sub claim|does not exist|not found|user_not_found/i.test(msg)) {
         try { await client().auth.signOut({ scope: 'local' }); } catch (_) {}
       }
       return null;
