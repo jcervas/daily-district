@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.9';
+const VERSION_NUMBER = '1.14.10';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2928,6 +2928,24 @@ function zoomUSRefMapToValid(animated = true) {
       usRefSvgSel.call(usRefZoom.transform, t);
     }
     if (!_usRefFullFitTransform) _usRefFullFitTransform = t;
+    return;
+  }
+
+  // Server district phase: the ref map cross-fades into the district-tiles map (both
+  // share the national AlbersUSA projection), so zoom it to the guessed state's
+  // geometry to match the tiles' state-bbox view for a seamless zoom (no district
+  // inner points shipped, so getActiveDistrictKeys() can't drive this).
+  if (serverActive() && gamePhase === 'district' && serverState && usRefPathGen) {
+    const feat = topoStates[serverState];
+    if (!feat) return;
+    const bbox = usRefPathGen.bounds(feat);
+    const t = zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 });
+    usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
+    if (animated) {
+      usRefSvgSel.transition().duration(700).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
+    } else {
+      usRefSvgSel.call(usRefZoom.transform, t);
+    }
     return;
   }
 
