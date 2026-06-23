@@ -125,7 +125,14 @@
   var last=performance.now();
   (function loop(now){
     var dt=Math.min((now-last)/1000,0.05); last=now;
-    for(var i=0;i<TiledGlobe._list.length;i++) TiledGlobe._list[i].step(dt);
+    // Iterate backwards so detached globes (e.g. the welcome loader once the game replaces
+    // #welcome-buttons) can be dropped from the list — otherwise they keep stepping +
+    // rendering to an orphaned canvas every frame for the life of the page.
+    for(var i=TiledGlobe._list.length-1;i>=0;i--){
+      var gl=TiledGlobe._list[i];
+      if(gl.canvas && !gl.canvas.isConnected){ TiledGlobe._list.splice(i,1); continue; }
+      gl.step(dt);
+    }
     requestAnimationFrame(loop);
   })(last);
 

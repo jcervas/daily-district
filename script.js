@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.14';
+const VERSION_NUMBER = '2.2.15';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3900,6 +3900,10 @@ function buildGameoverMap(_retry = 0) {
 
   // ── Badge inside zoom group — pans/zooms with map, scale(1/k) keeps it constant size ─
   // Badge is anchored at district right-edge in data (projection) space.
+  // TODO: position the go-badge-layer wholly WITHIN the gameover-map viewport, placed in
+  // open space near the district boundary (not always to the right) — e.g. pick the side
+  // with the most empty room between the district bbox and the map edges so the pill never
+  // clips off-canvas. Right edge is fine only when that's where the open space is.
   let badgeLayer = null;
   let badgeDataX = 0, badgeDataY = 0;
   if (answerF) {
