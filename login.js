@@ -109,9 +109,16 @@
       try { await B.signOut(); } catch (_) {}
     });
 
+    const signinBtnHeader = $('header-signin-btn');
     async function refreshAccount() {
       const user = await B.getUser();
-      if (!user) { accBtn.classList.add('hidden'); closeMenu(); return; }
+      if (!user) {
+        accBtn.classList.add('hidden');
+        signinBtnHeader && signinBtnHeader.classList.remove('hidden');  // show Sign in
+        closeMenu();
+        return;
+      }
+      signinBtnHeader && signinBtnHeader.classList.add('hidden');       // signed in → hide Sign in
       let prof = null;
       try { prof = await B.getProfile(); } catch (_) {}
       $('account-initials').textContent = initialsFor(prof, user);
@@ -156,6 +163,7 @@
     // Close returns to the welcome splash (which still has the Sign-in button).
     $('login-close').addEventListener('click', () => { err.textContent = ''; hideGate(); });
     $('welcome-signin-btn').addEventListener('click', () => { err.textContent = ''; showGate(); });
+    signinBtnHeader && signinBtnHeader.addEventListener('click', () => { err.textContent = ''; showGate(); });
 
     // ---- React to auth state ------------------------------------------------
     B.onAuthChange((user) => {
