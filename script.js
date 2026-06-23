@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.1.0';
+const VERSION_NUMBER = '2.1.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -530,6 +530,51 @@ function serverMysteryFeature(geometry) {
 // the browser is the only place the game state lives. We send the prior guesses with
 // each /guess call and the server recomputes correctness statelessly.
 let isAnonymousPlayer = false;
+
+// Live ticker for the "new district at midnight ET" countdown on the game-over screen.
+let _nextDistrictTimer = null;
+
+// Seconds remaining until the next puzzle rolls over — midnight in America/New_York,
+// the same timezone the server uses to pick the daily puzzle. DST-safe: we read the
+// current wall-clock time in ET and count down to the next ET midnight.
+function secondsUntilEasternMidnight() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t) => parseInt(parts.find(p => p.type === t)?.value || '0', 10);
+  let h = get('hour'); if (h === 24) h = 0; // some runtimes emit '24' at midnight
+  const elapsed = h * 3600 + get('minute') * 60 + get('second');
+  return Math.max(0, 86400 - elapsed);
+}
+
+// Drives the game-over countdown label. When it hits zero a fresh puzzle is live, so
+// nudge the player to reload.
+function startNextDistrictCountdown() {
+  stopNextDistrictCountdown();
+  const label = document.getElementById('gameover-next-countdown');
+  const sub   = document.querySelector('#gameover-next .gameover-next-sub');
+  if (!label) return;
+  const tick = () => {
+    const s = secondsUntilEasternMidnight();
+    if (s <= 0) {
+      if (sub) sub.innerHTML = 'A new district is ready &middot; <a href="#" id="gameover-reload-link">refresh to play</a>';
+      document.getElementById('gameover-reload-link')?.addEventListener('click', (e) => { e.preventDefault(); location.reload(); });
+      stopNextDistrictCountdown();
+      return;
+    }
+    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    label.textContent = `${hh}:${mm}:${ss}`;
+  };
+  tick();
+  _nextDistrictTimer = setInterval(tick, 1000);
+}
+
+function stopNextDistrictCountdown() {
+  if (_nextDistrictTimer) { clearInterval(_nextDistrictTimer); _nextDistrictTimer = null; }
+}
 
 // Prior guesses in the shape the server expects for anonymous validation. Returns
 // undefined for signed-in players (the server uses their persisted result instead).
@@ -1390,6 +1435,17 @@ function buildGameoverDiv() {
             </span>
           </div>
         </div>
+        <div id="gameover-next" class="gameover-next">
+          <button id="gameover-next-close" class="gameover-next-close" aria-label="Dismiss">&times;</button>
+          <div class="gameover-next-main">
+            <span class="gameover-next-title">That's today's district!</span>
+            <span class="gameover-next-sub">New district in <strong id="gameover-next-countdown">--:--:--</strong> &middot; midnight ET</span>
+          </div>
+          <div id="gameover-next-cta" class="gameover-next-cta hidden">
+            <span>Sign in to keep track of your stats and see how you compare with other players.</span>
+            <button id="gameover-next-signin" class="gameover-next-signin">Sign in / Sign up</button>
+          </div>
+        </div>
         <div id="gameover-map-wrap">
           <div id="gameover-map"></div>
           <div class="map-zoom-btns">
@@ -1408,6 +1464,7 @@ function buildGameoverDiv() {
 function destroyGameoverDiv() {
   _goZoom = null;
   _goZoomInitial = null;
+  stopNextDistrictCountdown();
   document.getElementById('gameover-modal')?.remove();
 }
 
@@ -4283,6 +4340,19 @@ async function showGameoverModal() {
   // Time
   const timeEl = document.getElementById('gameover-time');
   if (timeEl) timeEl.textContent = formatTime(elapsedSeconds);
+
+  // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
+  // sign-in nudge (track stats / compare); signed-in players just see the countdown.
+  const nextCta = document.getElementById('gameover-next-cta');
+  if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
+  document.getElementById('gameover-next-signin')?.addEventListener('click', () => {
+    document.getElementById('login-modal')?.classList.remove('hidden');
+  });
+  document.getElementById('gameover-next-close')?.addEventListener('click', () => {
+    document.getElementById('gameover-next')?.remove();
+    stopNextDistrictCountdown();
+  });
+  startNextDistrictCountdown();
 
   const mapWrap = document.getElementById('gameover-map-wrap');
 
