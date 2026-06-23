@@ -1316,8 +1316,9 @@ circle.tile-pressed {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 360px;
-  overflow-y: auto;
+  width: 100%;
+  /* No max-height/overflow here: the enclosing .tab-panel already scrolls. A cap here
+     clips the lower part of the panel (e.g. the 5/6/X guess-distribution rows). */
 }
 .score-row {
   display: grid;

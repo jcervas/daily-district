@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.26';
+const VERSION_NUMBER = '2.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -803,6 +803,10 @@ async function startServerArchive(date, num, label) {
   elapsedSeconds     = 0;
   gameOver           = false;
   correctStateGuessed = false;
+  // Reset to the state phase or zoomUSRefMapToValid skips the national-fit branch
+  // (which requires gamePhase === 'state') and the ref map opens zoomed-in/stale
+  // when an archive game is launched after finishing the daily.
+  gamePhase          = 'state';
   eliminatedStates   = new Set();
   _gameStarted       = true;
   districts          = [];
@@ -4726,20 +4730,23 @@ function renderDistBars(dist, highlightKey) {
 // Today / All Time — aggregate across ALL players.
 function renderAggregatePanel(d, emptyMsg) {
   const headCount = d ? (d.games != null ? d.games : d.players) : 0;
-  if (!d || !headCount) return `<div class="lb-empty">${emptyMsg}</div>`;
-  const avgGuesses = d.avgGuessesWin != null ? Number(d.avgGuessesWin).toFixed(1) : '—';
-  const avgTime    = d.avgSeconds != null ? formatTime(d.avgSeconds) : '—';
-  const headLabel  = d.games != null ? 'Games' : 'Players';
+  const avgGuesses = d && d.avgGuessesWin != null ? Number(d.avgGuessesWin).toFixed(1) : '—';
+  const avgTime    = d && d.avgSeconds != null ? formatTime(d.avgSeconds) : '—';
+  const headLabel  = d && d.games != null ? 'Games' : 'Players';
+  // Even with no games yet, still show the full guess-distribution skeleton (all
+  // possible outcomes 1–6 and X) so the histogram always represents every guess.
+  const emptyNote = !headCount ? `<div class="lb-empty">${emptyMsg}</div>` : '';
   return `
+    ${emptyNote}
     <div class="personal-grid">
       <div class="stat-card"><div class="stat-val">${headCount}</div><div class="stat-label">${headLabel}</div></div>
-      <div class="stat-card"><div class="stat-val">${d.winPct ?? 0}%</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-card"><div class="stat-val">${(d && d.winPct) ?? 0}%</div><div class="stat-label">Win Rate</div></div>
       <div class="stat-card"><div class="stat-val">${avgGuesses}</div><div class="stat-label">Avg Guesses</div></div>
       <div class="stat-card"><div class="stat-val">${avgTime}</div><div class="stat-label">Avg Time</div></div>
     </div>
     <div class="result-dist">
       <h4>Guess Distribution · all players</h4>
-      ${renderDistBars(d.dist)}
+      ${renderDistBars(d && d.dist)}
     </div>`;
 }
 
