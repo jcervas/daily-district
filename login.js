@@ -175,9 +175,23 @@
       }
     });
 
+    // Guest preview hatch: ?guest=<token> signs in anonymously so server features
+    // can be exercised without a real login. The token keeps it non-obvious; remove
+    // GUEST_TOKEN (or the block) to close the hatch. Anonymous sign-ins must be
+    // enabled in Supabase Auth settings.
+    const GUEST_TOKEN = 'dd_guest_7Kp3xQ';
+    async function maybeGuest() {
+      if (new URLSearchParams(location.search).get('guest') !== GUEST_TOKEN) return false;
+      if (await B.getUser()) return false;               // already signed in
+      try { const { error } = await B.signInAnonymously(); if (error) throw error; return true; }
+      catch (e) { console.error('guest sign-in failed:', e); return false; }
+      // onAuthChange (above) unlocks + dispatches district-auth on success.
+    }
+
     const user = await B.getUser();
     refreshAccount();
     if (user) { unlock(); maybePromptProfile(); }
+    else if (await maybeGuest()) { /* onAuthChange will unlock + boot */ }
     else if (active) { lock(); showSplash(); }
   });
 })();
