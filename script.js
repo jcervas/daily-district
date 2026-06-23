@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.10';
+const VERSION_NUMBER = '2.2.11';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1022,6 +1022,28 @@ function processStateGuessServer(abbr, resp) {
   }
 }
 
+// Append a short stack of expanding "sonar" rings to a tapped district-tile group,
+// centered on its circle. Returns the layer so it can be removed when the guess resolves.
+function startTileRipple(group, baseCircle) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const cx = baseCircle.getAttribute('cx');
+  const cy = baseCircle.getAttribute('cy');
+  const r  = baseCircle.getAttribute('r');
+  const layer = document.createElementNS(ns, 'g');
+  layer.setAttribute('class', 'tile-ripple-layer');
+  layer.setAttribute('pointer-events', 'none');
+  for (let i = 0; i < 2; i++) {
+    const ring = document.createElementNS(ns, 'circle');
+    ring.setAttribute('cx', cx); ring.setAttribute('cy', cy); ring.setAttribute('r', r);
+    ring.setAttribute('class', 'tile-ripple');
+    ring.style.animationDelay = `${i * 0.42}s`;
+    layer.appendChild(ring);
+  }
+  // Behind the tile circle so the rings radiate out from under it.
+  group.insertBefore(layer, group.firstChild);
+  return layer;
+}
+
 // ── District guess via /guess ───────────────────────────────────
 async function submitDistrictTileServer(dist) {
   if (gameOver || !correctStateGuessed || _distLocked) return;
@@ -1030,18 +1052,28 @@ async function submitDistrictTileServer(dist) {
   const state     = serverState || todayDistrict.properties.state;
   const fullGuess = `${state}-${dist}`;
 
-  // Optimistic feedback before the /guess round-trip: highlight the tapped tile
-  // immediately so the click feels instant (the response resolves it to the
-  // correct-pop or the wrong-shake below).
+  // Optimistic feedback before the /guess round-trip: a ripple/sonar ping radiates from
+  // the tapped tile and the other tiles dim, so the click feels instant without
+  // recolouring the tile (the response resolves it to the correct-pop or wrong-shake).
   const tilesEl     = document.getElementById('district-tiles');
   const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
   const tileCircle  = clickedTile?.querySelector('circle');
-  if (tileCircle) tileCircle.classList.add('tile-pressed');
+  let rippleLayer = null;
+  if (clickedTile && tileCircle) {
+    clickedTile.classList.add('tile-active');
+    tilesEl.classList.add('tiles-pinging');
+    rippleLayer = startTileRipple(clickedTile, tileCircle);
+  }
+  const clearPing = () => {
+    clickedTile?.classList.remove('tile-active');
+    tilesEl.classList.remove('tiles-pinging');
+    rippleLayer?.remove();
+  };
 
   let resp;
   try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { return serverGuessFailed(err); }
-  if (tileCircle) tileCircle.classList.remove('tile-pressed');
+  catch (err) { clearPing(); return serverGuessFailed(err); }
+  clearPing();
 
   if (resp.correct) {
     if (tileCircle) {

@@ -796,13 +796,29 @@ circle.tile-wrong-shake {
   fill: #c41230 !important;
 }
 
-/* Optimistic press: instant feedback on tap while the /guess request is in flight,
-   so the click doesn't feel laggy. Replaced by the pop/shake once the server replies. */
-circle.tile-pressed {
-  stroke: #000000 !important;
-  stroke-width: 2px !important;
-  filter: drop-shadow(0 0 4px rgba(0,0,0,0.7));
+/* Optimistic press: instant feedback on tap while the /guess request is in flight, so
+   the click doesn't feel laggy. A ripple/sonar ping radiates from the tapped tile and
+   the other tiles dim — no recolouring of the tile itself. Replaced by the pop/shake
+   once the server replies. */
+@keyframes tileRipple {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  70%  { opacity: 0.12; }
+  100% { transform: scale(2.8);  opacity: 0; }
 }
+circle.tile-ripple {
+  fill: none;
+  stroke: var(--red, #C41230);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tileRipple 0.85s ease-out infinite;
+  pointer-events: none;
+}
+/* While a tile's guess is in flight, dim the other (un-tapped) tiles. The tiles carry an
+   inline opacity from the build/fade code, so !important is needed to override it. */
+#district-tiles g.district-tile { transition: opacity 0.18s ease; }
+#district-tiles.tiles-pinging g.district-tile:not(.tile-active) { opacity: 0.4 !important; }
 
 /* ---- Result section ---- */
 /* ---- Result modal ---- */
