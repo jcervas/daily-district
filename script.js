@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.4';
+const VERSION_NUMBER = '2.2.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -937,7 +937,8 @@ async function submitStateGuessServer(abbr) {
   // correct guess never flashes red.
   const pressedEl = usRefLayers[abbr];
   if (pressedEl) {
-    pressedEl.attr('stroke', '#007BC0').attr('stroke-width', 3)
+    // Neutral press outline: black on light, white on dark so it reads in both modes.
+    pressedEl.attr('stroke', isDarkMode() ? '#ffffff' : '#000000').attr('stroke-width', 3)
              .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
   }
   const panel = document.getElementById('us-ref-map');
@@ -2180,7 +2181,7 @@ function setConfirmPending(abbr) {
   // Use a stroke outline, not a fill — on touch the wrong-flash red is close to the
   // in-play state fill, so a fill change is hard to see; an outline reads clearly.
   // raise() lifts the path above the white border mesh so the outline isn't clipped.
-  const PENDING = '#007BC0';
+  const PENDING = isDarkMode() ? '#ffffff' : '#000000';
   Object.entries(usRefLayers).forEach(([a, pathEl]) => {
     if (a === abbr) {
       pathEl.attr('stroke', PENDING).attr('stroke-width', 3)
