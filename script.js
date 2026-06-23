@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.22';
+const VERSION_NUMBER = '1.14.23';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -560,7 +560,10 @@ async function initServer() {
   // 2. Today's puzzle from the server (answer withheld).
   let resp;
   try {
-    resp = await window.DistrictBackend.today();
+    // ?dev=1 asks the server to reset today's result so the puzzle can be replayed.
+    // The reset is gated to allowlisted test accounts server-side; harmless for anyone else.
+    const devReset = new URLSearchParams(location.search).get('dev') === '1';
+    resp = await window.DistrictBackend.today({ reset: devReset });
   } catch (err) {
     console.error('today() failed:', err);
     alert("Could not load today's puzzle. Please refresh.");

@@ -84,10 +84,13 @@
 
   // ── API (Edge Functions) ───────────────────────────────────────────────────
   // Both require a signed-in session; functions-js attaches the auth header.
-  async function today() {
-    const { data, error } = await client().functions.invoke('today', { body: {} });
+  async function today(opts = {}) {
+    // opts.reset:true asks the server to wipe today's result first so the puzzle can
+    // be replayed (gated server-side to allowlisted test accounts; ignored otherwise).
+    const body = opts.reset ? { reset: true } : {};
+    const { data, error } = await client().functions.invoke('today', { body });
     if (error) throw error;
-    return data; // { date, puzzleNumber, clues, cluesTotal, result, answer }
+    return data; // { date, puzzleNumber, clues, cluesTotal, result, answer, tester, didReset }
   }
   async function guess(phase, value, seconds) {
     const { data, error } = await client().functions.invoke('guess', {
