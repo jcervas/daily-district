@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.11';
+const VERSION_NUMBER = '2.2.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -931,16 +931,14 @@ async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
 
-  // Optimistic "registered" cue: a NEUTRAL shake (motion only, no colour) plus a press
-  // highlight on the tapped state, applied IMMEDIATELY so the tap never feels laggy. The
-  // wrong-colour (red) escalation is added only once the server confirms a miss, so a
-  // correct guess never flashes red.
+  // Optimistic "registered" cue: dim the other states so the tapped one stands out
+  // (no stroke/recolour), plus a NEUTRAL shake, applied IMMEDIATELY so the tap never
+  // feels laggy. The wrong-colour (red) escalation is added only once the server
+  // confirms a miss, so a correct guess never flashes red.
   const pressedEl = usRefLayers[abbr];
-  if (pressedEl) {
-    // Neutral press outline: black on light, white on dark so it reads in both modes.
-    pressedEl.attr('stroke', isDarkMode() ? '#ffffff' : '#000000').attr('stroke-width', 3)
-             .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
-  }
+  for (const [a, el] of Object.entries(usRefLayers)) el.style('opacity', a === abbr ? null : 0.3);
+  pressedEl?.raise();
+  const clearDim = () => { for (const el of Object.values(usRefLayers)) el.style('opacity', null); };
   const panel = document.getElementById('us-ref-map');
   panel.classList.remove('shake');
   void panel.offsetWidth;            // restart the shake animation on rapid re-taps
@@ -948,25 +946,27 @@ async function submitStateGuessServer(abbr) {
 
   let resp;
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { panel.classList.remove('shake'); return serverGuessFailed(err); }
+  catch (err) { clearDim(); panel.classList.remove('shake'); return serverGuessFailed(err); }
 
-  // Correct: clear the neutral cue and go straight into the reward zoom — no red.
+  // Correct: clear the cue and go straight into the reward zoom — no red.
   if (resp.correct) {
+    clearDim();
     panel.classList.remove('shake');
     _guessLocked = false;
     processStateGuessServer(abbr, resp);
     return;
   }
 
-  // Wrong: escalate the tapped state to the unmistakable red miss colour. The neutral
-  // shake already supplied the motion, so don't re-trigger another shake.
+  // Wrong: escalate the tapped state to the unmistakable red miss colour while the others
+  // stay dimmed; the neutral shake already supplied the motion. processStateGuessServer
+  // re-renders shortly after, clearing the inline opacity + red.
   if (pressedEl) {
     pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
              .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
              .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
   }
   setTimeout(() => panel.classList.remove('shake'), 450);
-  setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
+  setTimeout(() => { clearDim(); _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
 }
 
 function processStateGuessServer(abbr, resp) {
