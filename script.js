@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.8';
+const VERSION_NUMBER = '2.2.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3684,10 +3684,16 @@ function _previewProjection(W, H, pad, { centerOnCentroid = false } = {}) {
   return projection;
 }
 
-function buildGameoverMap() {
+function buildGameoverMap(_retry = 0) {
   if (!todayDistrict || !rawTopo) return;
   const container = document.getElementById('gameover-map');
   if (!container) return;
+  // Guard a degenerate render: with no state geometry yet (or a not-yet-laid-out, zero-
+  // size container) the AlbersUSA fitExtent collapses and the map comes out blank. Retry
+  // on the next frame a few times rather than painting nothing.
+  const notReady = !Object.keys(topoStates || {}).length
+    || !container.clientWidth || !container.clientHeight;
+  if (notReady && _retry < 10) { requestAnimationFrame(() => buildGameoverMap(_retry + 1)); return; }
   container.innerHTML = '';
 
   // Use actual container dimensions for responsive viewBox
@@ -3831,7 +3837,7 @@ function buildGameoverMap() {
             .attr('r', 0).style('opacity', 0).remove();
       }
 
-      const LAPS = 5, LAP_MS = 3000, t0 = performance.now();
+      const LAPS = 5, LAP_MS = 5000, t0 = performance.now();
       let emberToggle = false;
       (function frame(now) {
         const elapsed = now - t0;
@@ -3918,6 +3924,9 @@ function buildGameoverMap() {
 
 async function showGameoverModal() {
   destroyGameSection();
+  // A hover tooltip can get stuck "visible" if the map is torn down mid-hover, leaving a
+  // stray "State (XX)" label floating over the game-over screen — hide it.
+  document.getElementById('us-ref-tooltip')?.classList.remove('visible');
   // Remove any existing game-over modal first. buildGameoverDiv() inserts a fresh node
   // without de-duping, so a second call would leave TWO #gameover-modal elements;
   // getElementById() then updates the stale (DOM-first) one — its map + countdown —
