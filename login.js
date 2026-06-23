@@ -2,9 +2,9 @@
 // login.js — auth UI: the login gate, the account menu (initials → dropdown),
 // and the profile modal (collect on first sign-in, edit anytime).
 //
-// The account menu + profile editing run whenever a user is signed in, in any
-// mode. The forced login gate only appears when the backend is active
-// (DistrictBackend.ENABLED, or the ?login=1 test hatch).
+// The account menu + profile editing run whenever a user is signed in. Sign-in is
+// optional: there is no forced gate — anonymous players can play (nothing is recorded
+// for them), and the welcome splash / results screen offer a way to sign in.
 // ============================================================
 (function () {
   function ready(fn) {
@@ -27,14 +27,14 @@
     if (!B) return;
 
     const $ = (id) => document.getElementById(id);
-    const active = B.ENABLED || new URLSearchParams(location.search).get('login') === '1';
 
-    // When login is required, hide the game (and welcome splash) until signed in
-    // so there is nothing to interact with behind the gate. Locked synchronously
-    // up front to avoid a flash of the game before the auth check resolves.
-    const lock = () => document.body.classList.add('auth-locked');
-    const unlock = () => document.body.classList.remove('auth-locked');
-    if (active) lock();
+    // Sign-in is OPTIONAL: anyone can play anonymously (the game records nothing for
+    // them). Signing in binds the daily result to an account and the leaderboard. The
+    // game UI is never gated behind auth — the welcome splash offers a "Sign in" link,
+    // and the results screen invites anonymous players to sign in afterwards.
+    const signinBtn = $('welcome-signin-btn');
+    // Show the splash "Sign in" affordance only while signed out.
+    const updateSigninAffordance = (user) => { if (signinBtn) signinBtn.hidden = !!user; };
 
     // ---- Profile modal (shared: first-time collection + later editing) ------
     const pModal = $('profile-modal');
@@ -157,27 +157,22 @@
     $('login-close').addEventListener('click', () => { err.textContent = ''; hideGate(); });
     $('welcome-signin-btn').addEventListener('click', () => { err.textContent = ''; showGate(); });
 
-    // When locked, make sure the welcome splash is the visible fallback.
-    const showSplash = () => $('welcome-modal').classList.remove('hidden');
-
     // ---- React to auth state ------------------------------------------------
     B.onAuthChange((user) => {
       refreshAccount();
+      updateSigninAffordance(user);
       if (user) {
-        unlock();
         hideGate();
         maybePromptProfile();
+        // script.js listens for this to re-bind an in-progress anonymous game to the
+        // newly signed-in account.
         window.dispatchEvent(new CustomEvent('district-auth', { detail: { user } }));
-      } else if (active) {
-        lock();
-        hideGate();
-        showSplash();
       }
     });
 
     const user = await B.getUser();
     refreshAccount();
-    if (user) { unlock(); maybePromptProfile(); }
-    else if (active) { lock(); showSplash(); }
+    updateSigninAffordance(user);
+    if (user) maybePromptProfile();
   });
 })();

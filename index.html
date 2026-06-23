@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=57" />
+  <link rel="stylesheet" href="style.css?v=58" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -149,7 +149,7 @@
         </div>
       </div>
     </div>
-    <button id="welcome-signin-btn" class="welcome-action-btn">Sign in to Play</button>
+    <button id="welcome-signin-btn" class="welcome-action-btn secondary">Sign in</button>
     <div class="welcome-meta">
       <div id="welcome-date-line" class="welcome-date-line"></div>
       <div id="welcome-puzzle-num" class="welcome-puzzle-num"></div>
@@ -464,6 +464,14 @@
         <div id="result-stats"></div>
         <div id="result-message"></div>
         <div id="result-personal-stats"></div>
+        <!-- Shown only for anonymous players: invite them to sign in to save + compare. -->
+        <div id="result-anon-cta" class="result-anon-cta hidden">
+          <div class="result-anon-cta-text">
+            <strong>Want to save your stats?</strong>
+            <span>Sign in to track your streak and compare with other players.</span>
+          </div>
+          <button id="result-anon-signin-btn" class="result-anon-cta-btn">Sign in / Sign up</button>
+        </div>
         <div class="result-action-row">
           <button id="post-x-btn" class="post-x-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
@@ -513,8 +521,8 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="globe.js" defer></script>
-<script src="backend.js?v=12" defer></script>
-<script src="login.js?v=8" defer></script>
-<script src="script.js?v=2.0.1" defer></script>
+<script src="backend.js?v=13" defer></script>
+<script src="login.js?v=9" defer></script>
+<script src="script.js?v=2.1.0" defer></script>
 </body>
 </html>

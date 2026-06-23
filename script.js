@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.0.1';
+const VERSION_NUMBER = '2.1.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -526,6 +526,18 @@ function serverMysteryFeature(geometry) {
   return { type: 'Feature', geometry, properties: {} };
 }
 
+// Anonymous (not-signed-in) play: the server records nothing for these players, so
+// the browser is the only place the game state lives. We send the prior guesses with
+// each /guess call and the server recomputes correctness statelessly.
+let isAnonymousPlayer = false;
+
+// Prior guesses in the shape the server expects for anonymous validation. Returns
+// undefined for signed-in players (the server uses their persisted result instead).
+function anonGuessOpts() {
+  if (!isAnonymousPlayer) return {};
+  return { history: guessHistory.map(g => ({ phase: g.phase, value: g.text })) };
+}
+
 // Server bootstrap: load states-only shapes + district names, fetch /today, and
 // either restore the in-progress/finished game or start fresh. The answer's
 // identity is never present client-side until the server reveals it.
@@ -570,6 +582,8 @@ async function initServer() {
     return;
   }
   serverPuzzle  = resp;
+  // Trust the server's view of whether this caller is signed in.
+  isAnonymousPlayer = !!resp.anonymous;
   todayDistrict = serverMysteryFeature(resp.geometry);
 
   initMap();
@@ -852,8 +866,12 @@ async function startServerArchive(date, num, label) {
 // On any guess error (network blip, or a 409 because the day was completed in
 // another tab), re-sync the board from the authoritative server state.
 function serverGuessFailed(err) {
-  console.error('server guess failed — resyncing:', err);
+  console.error('server guess failed:', err);
   _guessLocked = false; _distLocked = false;
+  // Signed-in: re-sync from the authoritative server result. Anonymous: there is no
+  // server-side state to re-sync from, and re-initing would discard the in-progress
+  // game held only in the browser — so just unlock and let the player retry the tap.
+  if (isAnonymousPlayer) return;
   return initServer();
 }
 
@@ -873,7 +891,7 @@ async function submitStateGuessServer(abbr) {
   }
 
   let resp;
-  try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds); }
+  try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { return serverGuessFailed(err); }
 
   const isCorrect = !!resp.correct;
@@ -897,9 +915,9 @@ async function submitStateGuessServer(abbr) {
   }
   const panel = document.getElementById('us-ref-map');
   panel.classList.add('flash-wrong');
-  setTimeout(() => panel.classList.remove('flash-wrong'), 700);
+  setTimeout(() => panel.classList.remove('flash-wrong'), 450);
 
-  setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 650);
+  setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
 }
 
 function processStateGuessServer(abbr, resp) {
@@ -950,7 +968,7 @@ function processStateGuessServer(abbr, resp) {
   const remaining = getValidStates();
   if (remaining.size === 1) {
     const only = [...remaining][0];
-    setTimeout(() => { if (!gameOver && !correctStateGuessed) submitStateGuess(only); }, 900);
+    if (!gameOver && !correctStateGuessed) submitStateGuess(only);
   }
 }
 
@@ -971,7 +989,7 @@ async function submitDistrictTileServer(dist) {
   if (tileCircle) tileCircle.classList.add('tile-pressed');
 
   let resp;
-  try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds); }
+  try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds, anonGuessOpts()); }
   catch (err) { return serverGuessFailed(err); }
   if (tileCircle) tileCircle.classList.remove('tile-pressed');
 
@@ -992,14 +1010,14 @@ async function submitDistrictTileServer(dist) {
       checkEl.textContent = '✓';
       clickedTile.appendChild(checkEl);
     }
-    setTimeout(() => { _distLocked = false; processDistrictGuessServer(dist, fullGuess, resp); }, 650);
+    setTimeout(() => { _distLocked = false; processDistrictGuessServer(dist, fullGuess, resp); }, 380);
   } else {
     if (tileCircle) tileCircle.classList.add('tile-wrong-shake');
     setTimeout(() => {
       tileCircle?.classList.remove('tile-wrong-shake');
       _distLocked = false;
       processDistrictGuessServer(dist, fullGuess, resp);
-    }, 480);
+    }, 380);
   }
 }
 
@@ -3920,8 +3938,9 @@ function endGame(won, { skipAnims = false } = {}) {
   // Add 1 for the winning guess itself; wrong guesses are already counted
   if (won) guessCount += 1;
   // Save stats BEFORE showResult so renderInlinePersonalStats shows current game.
-  // Archive games are unofficial — never counted.
-  if (!isArchiveGame) savePersonalStats(won, guessCount, elapsedSeconds);
+  // Archive games are unofficial — never counted. Anonymous players record nothing
+  // (their outcomes are not saved anywhere) — the results screen invites them to sign in.
+  if (!isArchiveGame && !isAnonymousPlayer) savePersonalStats(won, guessCount, elapsedSeconds);
   lastGameWon = won;
   // Render result content now, but don't auto-open the modal — let the user watch the
   // map-ref reveal animation (boundary draw-in + shake/pulse) on the game-over screen,
@@ -3942,8 +3961,9 @@ function endGame(won, { skipAnims = false } = {}) {
   }
   saveGameState();
 
-  // Submit to Firebase and render census data
-  submitScore(won, guessCount, elapsedSeconds);
+  // Submit to Firebase and render census data. Anonymous outcomes are never submitted
+  // (no leaderboard entry); telemetry still fires elsewhere.
+  if (!isAnonymousPlayer) submitScore(won, guessCount, elapsedSeconds);
   fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
 }
 
@@ -4651,6 +4671,13 @@ function showResult(won, autoOpen = true) {
 
   // Wordle-style statistics + distribution
   renderInlinePersonalStats();
+
+  // Anonymous players: hide the (empty) personal-stats block and invite them to sign
+  // in. Signed-in players see their stats and no CTA.
+  const anonCta = document.getElementById('result-anon-cta');
+  const personalStats = document.getElementById('result-personal-stats');
+  if (anonCta) anonCta.classList.toggle('hidden', !isAnonymousPlayer);
+  if (personalStats) personalStats.classList.toggle('hidden', isAnonymousPlayer);
 }
 
 function buildShareText() {
@@ -5017,14 +5044,17 @@ function loadDecorativeOverlays() {
 
 async function init() {
   // Stage B: server-authoritative daily. Boot from /today instead of picking the
-  // answer locally. Requires a signed-in session; if not yet signed in, wait for
-  // the auth event login.js dispatches (the game UI is auth-locked meanwhile).
+  // answer locally. Signed-in players get the persisted, leaderboard-recorded game;
+  // anyone else plays anonymously (nothing recorded server-side). If an anonymous
+  // player signs in before making a guess, re-bind to their account by re-initing.
   if (serverBoot()) {
     let user = null;
     try { user = await window.DistrictBackend.getUser(); } catch (_) {}
-    if (!user) {
-      window.addEventListener('district-auth', () => { init(); }, { once: true });
-      return;
+    isAnonymousPlayer = !user;
+    if (isAnonymousPlayer) {
+      window.addEventListener('district-auth', () => {
+        if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) init();
+      }, { once: true });
     }
     return initServer();
   }
@@ -5382,6 +5412,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('leaderboard-btn').addEventListener('click', openLeaderboard);
   document.getElementById('show-results-btn').addEventListener('click', openResultModal);
 
+  // Anonymous results CTA → open the login modal (login.js wires the form/providers).
+  document.getElementById('result-anon-signin-btn')?.addEventListener('click', () => {
+    document.getElementById('login-modal')?.classList.remove('hidden');
+  });
+
   // Result modal tabs
   document.querySelectorAll('.result-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchResultTab(btn.dataset.rtab));
@@ -5542,13 +5577,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Close modal on backdrop click — but never while the auth gate is up (the
-  // welcome splash + login form must not be dismissable into a blank locked
-  // screen; the login form has its own × button instead).
+  // Close modal on backdrop click — except the welcome splash, which must start the
+  // game through its Play button (so the map gets sized correctly) rather than a
+  // bare backdrop dismiss.
   document.querySelectorAll('.modal').forEach(modal => {
     modal.addEventListener('click', e => {
       if (e.target !== modal) return;
-      if (document.body.classList.contains('auth-locked')) return;
+      if (modal.id === 'welcome-modal') return;
       modal.classList.add('hidden');
       if (modal.id === 'result-modal' && gameOver) {
         document.getElementById('gameover-modal')?.classList.remove('hidden');

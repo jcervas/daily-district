@@ -1733,14 +1733,36 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   white-space: nowrap;
 }
 /* ===== Auth lock: block the game until signed in, fall back to the splash ===== */
-/* Hide the game itself, plus the splash's Play buttons; the welcome splash stays
-   visible and shows a Sign-in button so there's always a way to log in. */
-body.auth-locked main,
-body.auth-locked #welcome-buttons { display: none !important; }
-#welcome-signin-btn { display: none; }
-body.auth-locked #welcome-signin-btn {
+/* Sign-in is optional — the splash always shows a secondary "Sign in" link while
+   signed out (login.js sets [hidden] once a user is present). */
+#welcome-signin-btn {
   display: block;
   margin: 0 auto clamp(16px, 3vh, 28px);
+}
+#welcome-signin-btn[hidden] { display: none; }
+
+/* Anonymous results-screen sign-in CTA */
+.result-anon-cta {
+  display: flex; align-items: center; gap: 12px;
+  margin: 14px 0; padding: 14px 16px;
+  border: 1px solid var(--border, #d8d8e0);
+  border-radius: 12px;
+  background: var(--card-bg, rgba(196,18,48,0.05));
+  text-align: left;
+}
+.result-anon-cta-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.result-anon-cta-text strong { font-size: 0.98rem; color: var(--text, #111); }
+.result-anon-cta-text span { font-size: 0.82rem; color: var(--muted, #666); }
+.result-anon-cta-btn {
+  flex: 0 0 auto; cursor: pointer;
+  padding: 10px 16px; border: none; border-radius: 999px;
+  background: var(--red, #C41230); color: #fff;
+  font-weight: 700; font-size: 0.88rem; white-space: nowrap;
+}
+.result-anon-cta-btn:hover { filter: brightness(1.08); }
+@media (max-width: 420px) {
+  .result-anon-cta { flex-direction: column; align-items: stretch; text-align: center; }
+  .result-anon-cta-text { align-items: center; }
 }
 
 .login-close {

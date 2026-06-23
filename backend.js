@@ -92,12 +92,15 @@
     if (error) throw error;
     return data; // { date, puzzleNumber, clues, cluesTotal, result, answer, tester, didReset }
   }
-  async function guess(phase, value, seconds) {
-    const { data, error } = await client().functions.invoke('guess', {
-      body: { phase, value, seconds },
-    });
+  async function guess(phase, value, seconds, opts = {}) {
+    // opts.history (anonymous only): the player's prior guesses as [{ phase, value }].
+    // The server (verify_jwt off) recomputes correctness from these values and persists
+    // nothing — signed-in callers omit it and the server uses the stored result instead.
+    const body = { phase, value, seconds };
+    if (Array.isArray(opts.history)) body.history = opts.history;
+    const { data, error } = await client().functions.invoke('guess', { body });
     if (error) throw error;
-    return data; // { correct, adjacent, phase, guesses, guessesLeft, completed, won, clues, state, answer }
+    return data; // { correct, adjacent, phase, guesses, guessesLeft, completed, won, clues, state, answer, anonymous }
   }
   // District shapes for one state — gated server-side: only returns once the
   // caller has correctly guessed that state today (or completed the puzzle).
