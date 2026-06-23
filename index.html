@@ -164,7 +164,9 @@
   </div>
 </div>
 <script>
-(function(){var E=new Date('2026-06-23T00:00:00-05:00'),n=new Date(),p=Math.floor((n-E)/864e5)+1,d=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),dl=document.getElementById('welcome-date-line'),nl=document.getElementById('welcome-puzzle-num');if(dl)dl.textContent=d;if(nl)nl.textContent='No. '+p;})();
+/* Instant date on the splash. The puzzle number is authoritative from the server
+   (stamped by initServer once /today returns) — no client-side date epoch. */
+(function(){var n=new Date(),d=n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),dl=document.getElementById('welcome-date-line');if(dl)dl.textContent=d;})();
 </script>
 
 <!-- ===== SETTINGS MODAL ===== -->
@@ -523,6 +525,6 @@
 <script src="globe.js" defer></script>
 <script src="backend.js?v=13" defer></script>
 <script src="login.js?v=9" defer></script>
-<script src="script.js?v=2.1.2" defer></script>
+<script src="script.js?v=2.2.0" defer></script>
 </body>
 </html>

@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.1.2';
+const VERSION_NUMBER = '2.2.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -452,13 +452,12 @@ let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
 
-// ── Stage B: server-authoritative daily ──────────────────────────────────────
-// When SERVER_MODE is on AND the player is signed in, the daily puzzle's shape,
-// clues, guess validation and once-per-day all come from the backend (the answer
-// is never known to the client until the game ends). Off by default while the
-// client swap is being built; the legacy local path runs otherwise. Archive games
-// always use the legacy local path (past answers are public, replays don't count).
-let SERVER_MODE   = true;
+// ── Server-authoritative daily ────────────────────────────────────────────────
+// The daily puzzle's shape, clues, guess validation and once-per-day all come from
+// the backend (the answer is never known to the client until the game ends). Signed-in
+// players get a persisted, leaderboard-recorded game; anyone else plays anonymously
+// (nothing recorded server-side). Archive replays of PAST puzzles validate locally
+// (past answers are public, replays don't count).
 let serverPuzzle  = null;   // last /today response: { puzzleNumber, geometry, clues, cluesTotal, result, answer }
 let serverState   = null;   // the correctly-guessed state abbr (known only after a correct state guess / completion)
 let serverAnswer  = null;   // revealed answer once completed: { districtId, state, census } (drives the game-over census panel)
@@ -467,21 +466,6 @@ let serverAnswer  = null;   // revealed answer once completed: { districtId, sta
 // guesses validate locally (unofficial — no /guess, no saved result). Shape:
 // { date, puzzleNumber, answer:{districtId,state,census}, clues:{state:[],district:[]} }.
 let serverArchive = null;
-function serverActive() {
-  return SERVER_MODE && !isArchiveGame && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
-}
-// True when rendering should use the server data model (mystery shape, server clues,
-// injected per-state shapes) — the live daily OR a server-backed archive replay.
-// Collapses to exactly serverActive() when not in an archive, so the daily flow is
-// unchanged. (serverActive() stays false during archive so /guess is never called.)
-function serverRender() {
-  return serverActive() || !!serverArchive;
-}
-// True when the daily should boot from the server (independent of isArchiveGame,
-// used by init() to decide the boot path before any game has started).
-function serverBoot() {
-  return SERVER_MODE && !!(window.DistrictBackend && window.DistrictBackend.ENABLED);
-}
 
 // Temporary playtest instrumentation: capture a client-side error to telemetry so
 // failures hidden behind try/catch (e.g. the game-over reveal) are observable
@@ -629,6 +613,12 @@ async function initServer() {
   serverPuzzle  = resp;
   // Trust the server's view of whether this caller is signed in.
   isAnonymousPlayer = !!resp.anonymous;
+  // Stamp the authoritative puzzle number on the welcome splash (server is the source
+  // of truth — no client-side date epoch).
+  if (resp.puzzleNumber != null) {
+    const numLine = document.getElementById('welcome-puzzle-num');
+    if (numLine) numLine.textContent = `No. ${resp.puzzleNumber}`;
+  }
   todayDistrict = serverMysteryFeature(resp.geometry);
 
   initMap();
@@ -1289,34 +1279,10 @@ function getActiveDistrictKeys() {
 // ============================================================
 //  STORAGE
 // ============================================================
-function saveGameState() {
-  // Server mode persists progress server-side (results table); the local daily
-  // save is unused and would conflict with the once-per-day server gate.
-  if (serverRender()) return;
-  // Archive (past-puzzle) games are unofficial: never persist them, so the
-  // official daily save is never overwritten.
-  if (isArchiveGame) return;
-  const state = {
-    key: todayKey,
-    guessCount,
-    guessHistory,
-    cluesRevealed,
-    elapsedSeconds,
-    gameOver,
-    won: gameOver && guessHistory.some(g => g.correct),
-  };
-  localStorage.setItem(STORAGE_PREFIX + 'today', JSON.stringify(state));
-}
-
-function loadGameState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + 'today');
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    if (s.key !== todayKey) return null; // different day
-    return s;
-  } catch { return null; }
-}
+// Progress is persisted server-side (results table) for signed-in players; anonymous
+// games live only in memory. There is no local daily save, so this is a no-op kept
+// only because it's called from many places in the game flow.
+function saveGameState() {}
 
 function savePersonalStats(won, guesses, seconds) {
   try {
@@ -1653,41 +1619,25 @@ function renderDistrict(feature) {
 // ============================================================
 async function getDistrictCensusData() {
   if (!todayDistrict) return null;
-  // Server mode: census for the day's district is served (pre-aggregated, matching
-  // the 2026 boundaries) only once the game is over, via the revealed answer.
-  if (serverRender()) {
-    if (!serverAnswer || !serverAnswer.census) return null;
-    const c = serverAnswer.census;
-    return {
-      name:       serverAnswer.districtId,
-      pop:        c.pop,
-      income:     c.income,
-      whiteNH:    c.whiteNH,
-      black:      c.black,
-      asian:      c.asian,
-      hispanic:   c.hispanic,
-      medianHome: c.medianHome,
-      bach:       c.bach,
-      master:     c.master,
-      area_sqmi:      c.area_sqmi,
-      Margin2024Pres: c.Margin2024Pres,
-      DemPct2024Pres: c.DemPct2024Pres,
-      RepPct2024Pres: c.RepPct2024Pres,
-    };
-  }
-  const p = todayDistrict.properties;
-  if (p.pop == null) return null;
+  // Census for the day's district is served (pre-aggregated, matching the 2026
+  // boundaries) only once the game is over, via the revealed answer.
+  if (!serverAnswer || !serverAnswer.census) return null;
+  const c = serverAnswer.census;
   return {
-    name:       p['state-district'],
-    pop:        p.pop,
-    income:     p.income,
-    whiteNH:    p.whiteNH,
-    black:      p.black,
-    asian:      p.asian,
-    hispanic:   p.hispanic,
-    medianHome: p.medianHome,
-    bach:       p.bach,
-    master:     p.master,
+    name:       serverAnswer.districtId,
+    pop:        c.pop,
+    income:     c.income,
+    whiteNH:    c.whiteNH,
+    black:      c.black,
+    asian:      c.asian,
+    hispanic:   c.hispanic,
+    medianHome: c.medianHome,
+    bach:       c.bach,
+    master:     c.master,
+    area_sqmi:      c.area_sqmi,
+    Margin2024Pres: c.Margin2024Pres,
+    DemPct2024Pres: c.DemPct2024Pres,
+    RepPct2024Pres: c.RepPct2024Pres,
   };
 }
 
@@ -1992,7 +1942,7 @@ function renderHintBar() {
 
   // Server mode: clues are pre-computed {icon,label,value}; `serverPuzzle.clues`
   // holds the unlocked-so-far set, `cluesTotal` the full count (rest are locked).
-  if (serverRender() && serverPuzzle) {
+  if (serverPuzzle) {
     const unlocked = serverPuzzle.clues || [];
     const total    = serverPuzzle.cluesTotal || unlocked.length;
     for (let i = 0; i < total; i++) {
@@ -2024,75 +1974,8 @@ function renderHintBar() {
     if (latest.length) latest[latest.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     return;
   }
-  // Server mode but the puzzle hasn't loaded yet — never fall to the local
-  // (census-derived) clue path, which would read the redacted mystery feature.
-  if (serverRender()) { bar.innerHTML = ''; return; }
-
-  const distData = districtDataFor(todayDistrict);
-
-  FACT_DEFS.forEach((def, i) => {
-    const revealed = i <= cluesRevealed;
-    const isLatest = revealed && i === Math.min(cluesRevealed, FACT_DEFS.length - 1);
-
-    const card = document.createElement('div');
-    card.className = 'hint-card' + (revealed ? ' revealed' + (isLatest ? ' latest' : '') : ' locked');
-    card.setAttribute('role', 'listitem');
-
-    if (revealed) {
-      card.innerHTML = `
-        <div class="hint-card-header">
-          <span class="hint-card-icon">${svgIcon(def.icon, 'clue-icon-svg')}</span>
-          <span class="hint-card-label">${def.label}</span>
-        </div>
-        <div class="hint-card-val"><span>…</span></div>`;
-    } else {
-      card.innerHTML = `<div class="hint-card-header"><span class="hint-card-icon">${svgIcon('lock', 'clue-icon-svg')}</span></div>`;
-    }
-
-    if (revealed) {
-      const spanEl = card.querySelector('.hint-card-val > span');
-      const val = def.fn(distData);
-      if (val instanceof Promise) {
-        val.then(v => { if (spanEl) spanEl.textContent = v; });
-      } else {
-        spanEl.textContent = val;
-      }
-    }
-
-    // Tap any previous revealed card → open hints modal showing all clues
-    if (revealed && !isLatest) {
-      card.addEventListener('click', () => {
-        renderHintsModal();
-        document.getElementById('hints-modal')?.classList.remove('hidden');
-      });
-    }
-
-    bar.appendChild(card);
-  });
-
-  // Measure overflow and enable auto-scroll after all cards are in DOM
-  function applyScrollMeasure(root) {
-    const els = root ? root.querySelectorAll('.hint-card-val') : bar.querySelectorAll('.hint-card-val');
-    els.forEach(el => {
-      el.classList.remove('auto-scroll');
-      const inner = el.querySelector('span');
-      if (!inner) return;
-      requestAnimationFrame(() => {
-        const overflow = inner.scrollWidth - el.clientWidth;
-        if (overflow > 4) {
-          const duration = Math.max(3, overflow / 40);
-          el.style.setProperty('--scroll-dist', `-${overflow}px`);
-          el.style.setProperty('--scroll-duration', `${duration}s`);
-          el.classList.add('auto-scroll');
-        }
-      });
-    });
-  }
-  requestAnimationFrame(() => applyScrollMeasure(null));
-
-  // Scroll latest revealed card into view
-  const latest = bar.querySelectorAll('.hint-card.revealed');
-  if (latest.length) latest[latest.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  // Puzzle hasn't loaded yet — render nothing rather than read the redacted shape.
+  bar.innerHTML = '';
 }
 
 function renderClues() {
@@ -2108,7 +1991,7 @@ function renderHintsModal() {
   if (!list) return;
   list.innerHTML = '';
 
-  if (serverRender() && serverPuzzle) {
+  if (serverPuzzle) {
     const unlocked = serverPuzzle.clues || [];
     const total    = serverPuzzle.cluesTotal || unlocked.length;
     for (let i = 0; i < total; i++) {
@@ -2130,33 +2013,6 @@ function renderHintsModal() {
       list.appendChild(div);
     }
     return;
-  }
-  if (serverRender()) { return; }
-
-  const distData = districtDataFor(todayDistrict);
-  for (let i = 0; i < FACT_DEFS.length; i++) {
-    const def = FACT_DEFS[i];
-    const revealed = i <= cluesRevealed;
-    const div = document.createElement('div');
-    if (revealed) {
-      div.className = 'clue-item revealed';
-      div.innerHTML = `
-        <span class="clue-icon">${svgIcon(def.icon, 'clue-icon-svg')}</span>
-        <span class="clue-text">
-          <span class="clue-label">${def.label}</span>
-          <span class="clue-val">…</span>
-        </span>`;
-      const val = def.fn(distData);
-      if (val instanceof Promise) {
-        val.then(v => { const el = div.querySelector('.clue-val'); if (el) el.textContent = v; });
-      } else {
-        div.querySelector('.clue-val').textContent = val;
-      }
-    } else {
-      div.className = 'clue-item locked';
-      div.innerHTML = `<span class="clue-icon">${svgIcon('lock', 'clue-icon-svg locked')}</span><span class="clue-text">${def.label}</span>`;
-    }
-    list.appendChild(div);
   }
 }
 
@@ -2353,114 +2209,7 @@ function handleStateSelection(abbr) {
 let _guessLocked = false; // prevent double-submit during animation
 function submitStateGuess(abbr) {
   if (gameOver || correctStateGuessed || _guessLocked) return;
-  if (serverActive() || serverArchive) { submitStateGuessServer(abbr); return; }
-  _guessLocked = true;
-
-  const isCorrect = abbr === todayDistrict.properties.state;
-
-  // Flash the state — CMU Gold (correct) or Carnegie Red (wrong)
-  const pathEl = usRefLayers[abbr];
-  if (pathEl) {
-    pathEl
-      .attr('fill',         isCorrect ? '#FDB515' : '#C41230')
-      .attr('fill-opacity', 0.9);
-  }
-
-  // Animate the reference panel
-  const panel = document.getElementById('us-ref-map');
-  panel.classList.add(isCorrect ? 'flash-correct' : 'flash-wrong');
-  setTimeout(() => panel.classList.remove('flash-correct', 'flash-wrong'), 700);
-
-  // Process the guess after a brief pause so the animation is visible
-  setTimeout(() => {
-    _guessLocked = false;
-    processStateGuess(abbr, isCorrect);
-  }, 650);
-}
-
-function processStateGuess(abbr, correct) {
-  if (!timerRunning) startTimer();
-
-  const correctState = todayDistrict.properties.state;
-  const neighbors    = STATE_ADJACENCY[abbr] || [];
-  const isAdjacent   = neighbors.includes(correctState);
-
-  if (!correct) guessCount++;   // correct state unlocks district phase — not a counted guess
-  guessHistory.push({ text: abbr, correct, phase: 'state', adjacent: isAdjacent });
-
-  if (correct) {
-    const isAtLarge = (stateDistrictMap[abbr] || []).length === 1;
-    if (isAtLarge) {
-      // At-large state — state guess IS the district guess; win immediately
-      const fullGuess = `${abbr}-AL`;
-      guessHistory.push({ text: fullGuess, correct: true, phase: 'district' });
-      correctStateGuessed = true;
-      renderGuessHistory();
-      renderClues();
-      saveGameState();
-      endGame(true);
-      return;
-    }
-    correctStateGuessed = true;
-    lockStateDropdown(abbr);
-  } else {
-    eliminatedStates.add(abbr);
-
-    if (isAdjacent) {
-      // HOT: correct state is adjacent to this guess — keep only neighbors.
-      const neighborSet = new Set(neighbors);
-      for (const s of [...getValidStates()]) {
-        if (s !== correctState && !neighborSet.has(s)) eliminatedStates.add(s);
-      }
-    } else {
-      // COLD: correct state is not adjacent — eliminate this guess and all its neighbors.
-      for (const n of neighbors) {
-        if (n !== correctState) eliminatedStates.add(n);
-      }
-    }
-
-    // Dead-end cleanup: a state whose every adjacency neighbor has been explicitly
-    // guessed wrong can't be the answer. Only uses intentional wrong guesses so
-    // cold-eliminated neighbors don't cascade into false dead-ends.
-    const wrongGuessed = new Set(
-      guessHistory.filter(g => g.phase === 'state' && !g.correct).map(g => g.text)
-    );
-    let _changed = true;
-    while (_changed) {
-      _changed = false;
-      for (const s of [...getValidStates()]) {
-        if (s === correctState) continue;
-        const sN = STATE_ADJACENCY[s] || [];
-        if (sN.length > 0 && sN.every(n => wrongGuessed.has(n))) {
-          eliminatedStates.add(s);
-          _changed = true;
-        }
-      }
-    }
-
-    const wrongCount = guessHistory.filter(g => !g.correct).length;
-    if (!hardMode) cluesRevealed = Math.min(wrongCount, FACT_DEFS.length);
-    applyMapStage(wrongCount);
-    if (guessCount >= MAX_GUESSES) { endGame(false); showGameoverModal(); return; }
-  }
-
-  renderGuessHistory();
-  renderClues();        // also calls updateUSRefMap() + renderStateChips()
-  zoomUSRefMapToValid(); // zoom D3 map to remaining valid states
-  saveGameState();
-
-  // If elimination narrowed the field to exactly 1 state, auto-confirm it
-  const _autoRemaining = getValidStates();
-  if (_autoRemaining.size === 1 && !correctStateGuessed) {
-    const _onlyState = [..._autoRemaining][0];
-    setTimeout(() => {
-      guessHistory.push({ text: _onlyState, correct: true, phase: 'state', adjacent: false });
-      correctStateGuessed = true;
-      renderGuessHistory();
-      saveGameState();
-      lockStateDropdown(_onlyState);
-    }, 900);
-  }
+  submitStateGuessServer(abbr);
 }
 
 // ── Phase 2: district tile input ──────────────────────────────
@@ -2468,96 +2217,11 @@ let _distLocked = false; // prevent double-tap during tile animation
 
 function submitDistrictTile(dist) {
   if (gameOver || !correctStateGuessed || _distLocked) return;
-  if (serverActive() || serverArchive) { submitDistrictTileServer(dist); return; }
-  dbg(`submitDistrictTile dist=${dist} today=${todayDistrict?.properties?.['state-district']} guessCount=${guessCount}`);
-
-  _distLocked = true;
-  if (!timerRunning) startTimer();
-
-  const stateAbbr = todayDistrict.properties.state;
-  const fullGuess = `${stateAbbr}-${dist}`;
-  const correct   = fullGuess === todayDistrict.properties['state-district'];
-
-  const tilesEl = document.getElementById('district-tiles');
-
-  const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
-  const tileCircle  = clickedTile?.querySelector('circle');
-
-  if (correct) {
-    if (tileCircle) {
-      tileCircle.classList.add('tile-correct-pop');
-      // ✓ overlaid as SVG text in the group
-      const ns = 'http://www.w3.org/2000/svg';
-      const checkEl = document.createElementNS(ns, 'text');
-      checkEl.setAttribute('text-anchor', 'middle');
-      checkEl.setAttribute('dominant-baseline', 'central');
-      const svgEl = tilesEl.querySelector('svg');
-      const curK = svgEl ? d3.zoomTransform(svgEl).k : 1;
-      checkEl.setAttribute('font-size', String(10 / Math.max(curK, 1)));
-      checkEl.setAttribute('font-weight', '900');
-      checkEl.setAttribute('fill', '#1a1a1a');
-      checkEl.setAttribute('pointer-events', 'none');
-      checkEl.setAttribute('class', 'tile-correct-check');
-      checkEl.textContent = '✓';
-      clickedTile.appendChild(checkEl);
-    }
-  } else {
-    if (tileCircle) {
-      tileCircle.classList.add('tile-wrong-shake');
-    }
-  }
-
-  if (correct) {
-    setTimeout(() => {
-      _distLocked = false;
-      processDistrictGuessTile(dist, fullGuess, true);
-    }, 650);
-  } else {
-    setTimeout(() => {
-      tileCircle?.classList.remove('tile-wrong-shake');
-      _distLocked = false;
-      processDistrictGuessTile(dist, fullGuess, false);
-    }, 480);
-  }
+  submitDistrictTileServer(dist);
 }
 
 // Alias used by the D3 map click handlers
 const submitDistrictGuess = submitDistrictTile;
-
-function processDistrictGuessTile(dist, fullGuess, correct) {
-  if (!correct) guessCount++;
-  guessHistory.push({ text: fullGuess, correct, phase: 'district' });
-  dbg(`processDistrictGuessTile guess=${fullGuess} correct=${correct} guessCount=${guessCount}`);
-
-  if (correct) {
-    startGameOverTransition(true, dist);
-    return;
-  }
-
-  const wrongCount = guessHistory.filter(g => !g.correct).length;
-  if (!hardMode) cluesRevealed = Math.min(wrongCount, FACT_DEFS.length);
-  applyMapStage(wrongCount);
-
-  if (guessCount >= MAX_GUESSES) {
-    renderGuessHistory();
-    renderClues();
-    saveGameState();
-    startGameOverTransition(false, dist);
-    return;
-  }
-
-  // Non-game-over wrong guess: rebuild SVG. _applyDistrictZoom (called inside
-  // buildDistrictD3Map) snaps to the current zoom then smoothly transitions to the
-  // new active-district bbox — no flash, no competing second transition.
-  document.querySelector('.mzb-fit')?.classList.add('at-active-fit');
-  requestAnimationFrame(() => {
-    buildDistrictD3Map(todayDistrict.properties.state);
-  });
-
-  renderGuessHistory();
-  renderClues();
-  saveGameState();
-}
 
 // Animated game-over reveal: the clicked tile morphs from a circle into a full-viewport
 // rectangle via D3 shape tweening (4 cubic bezier segments, same structure on both ends
@@ -3200,9 +2864,9 @@ function zoomUSRefMapToValid(animated = true) {
   if (!usRefSvgSel || !usRefZoom || !usRefProjection) return;
   const W = _usRefW, H = _usRefH;
 
-  // Server mode ships no district inner points, so state-phase zoom is driven by
-  // the geometry of the remaining valid STATES instead of getActiveDistrictKeys().
-  if (serverRender() && gamePhase === 'state') {
+  // No district inner points are shipped, so state-phase zoom is driven by the
+  // geometry of the remaining valid STATES instead of getActiveDistrictKeys().
+  if (gamePhase === 'state') {
     if (!usRefPathGen) return;
     const feats = [...getValidStates()].map(a => topoStates[a]).filter(Boolean);
     if (!feats.length) return;
@@ -3222,7 +2886,7 @@ function zoomUSRefMapToValid(animated = true) {
   // share the national AlbersUSA projection), so zoom it to the guessed state's
   // geometry to match the tiles' state-bbox view for a seamless zoom (no district
   // inner points shipped, so getActiveDistrictKeys() can't drive this).
-  if (serverRender() && gamePhase === 'district' && serverState && usRefPathGen) {
+  if (gamePhase === 'district' && serverState && usRefPathGen) {
     const feat = topoStates[serverState];
     if (!feat) return;
     const bbox = usRefPathGen.bounds(feat);
@@ -3235,27 +2899,6 @@ function zoomUSRefMapToValid(animated = true) {
     }
     return;
   }
-
-  // In state phase with no eliminations, fit the full US geographic bounds to the
-  // actual container dimensions instead of using identity (which crops on mobile with slice).
-  if (gamePhase === 'state' && eliminatedStates.size === 0) {
-    const allKeys = new Set(Object.keys(districtPoints));
-    const bbox = innerPointBBox(usRefProjection, allKeys);
-    const t = bbox ? zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 }) : d3.zoomIdentity;
-    usRefZoom.scaleExtent([t.k, Infinity]);
-    if (animated) {
-      usRefSvgSel.transition().duration(700).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
-    } else {
-      usRefSvgSel.call(usRefZoom.transform, t);
-    }
-    _usRefFullFitTransform = t;
-    return;
-  }
-
-  const activeKeys = getActiveDistrictKeys();
-  if (!activeKeys.size) return;
-  const t = fitToActiveKeys(usRefSvgSel, usRefZoom, usRefProjection, W, H, activeKeys, { animated, duration: 700, margin: 0.95 * 1.6 });
-  if (t && !_usRefFullFitTransform) _usRefFullFitTransform = t;
 }
 
 function updateUSRefMap() {
@@ -3369,26 +3012,13 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   tilesEl.style.pointerEvents = '';
 
   if (preBuilt) {
-    if (zoomIn && _districtSvgSel && serverRender() && _districtPathGen && _districtStateFeatures) {
-      // Server mode: position the tiles at the state's GEOGRAPHIC bbox directly.
-      // The inner-point path (getActiveDistrictKeys + fitToActiveKeys) can come back
-      // empty here and leave the tiles at the national identity transform ("went back
-      // to full nation zoom"). Geometry bounds are reliable. Instant — the ref map's
-      // zoom is the visible animation and the hard-swap reveals the tiles already here.
+    if (zoomIn && _districtSvgSel && _districtPathGen && _districtStateFeatures) {
+      // Position the tiles at the state's GEOGRAPHIC bbox directly. Instant — the ref
+      // map's zoom is the visible animation and the hard-swap reveals the tiles already here.
       const fc = { type: 'FeatureCollection', features: _districtStateFeatures };
       const stateFit = zoomToBBox(_districtPathGen.bounds(fc), _districtW, _districtH, { margin: 0.9 });
       districtSavedTransform = stateFit;
       _districtSvgSel.call(districtZoomBehavior.transform, stateFit);
-    } else if (zoomIn && _districtSvgSel && _districtProjection) {
-      // Legacy: zoom animation on the cached SVG using inner points, same as fresh build.
-      const activeKeys = getActiveDistrictKeys();
-      const entryTransform = fitToActiveKeys(null, null, _districtProjection, _districtW, _districtH, activeKeys, { margin: 0.85 });
-      if (entryTransform) {
-        districtSavedTransform = entryTransform;
-        _districtSvgSel.call(districtZoomBehavior.transform, districtStateFitTransform || d3.zoomIdentity);
-        _districtSvgSel.transition().duration(700).ease(d3.easeCubicInOut)
-          .call(districtZoomBehavior.transform, entryTransform);
-      }
     }
   } else {
     buildDistrictD3Map(stateAbbr, animateReveal, zoomIn);
@@ -3397,7 +3027,7 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   if (instant) {
     mapEl.classList.add('hidden');
     tilesEl.style.opacity = '1';
-  } else if (serverRender()) {
+  } else {
     // No cross-fade. The ref map and the pre-built tiles share the same projection
     // and both sit at the guessed state's bbox, so the ref map's zoom-into-the-state
     // (kicked off by zoomUSRefMapToValid just before this) IS the transition. Once it
@@ -3411,15 +3041,6 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
       mapEl.classList.add('hidden');
       requestAnimationFrame(() => { tilesEl.style.transition = ''; });
     }, 720);                                   // ≥ the 700ms ref-map zoom
-  } else {
-    // Legacy cross-fade: both maps share REF_VB coordinate space so they align during the fade.
-    mapEl.style.opacity = '0';
-    setTimeout(() => { mapEl.classList.add('hidden'); }, 370);
-    tilesEl.style.opacity = '0';
-    tilesEl.classList.remove('hidden');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      tilesEl.style.opacity = '1';
-    }));
   }
 }
 
@@ -4876,214 +4497,12 @@ function renderUserStats(u) {
     <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong></div>`;
 }
 
-// ============================================================
-//  RESTORE SAVED GAME
-// ============================================================
-function restoreGame(saved) {
-  _gameStarted   = true;
-  guessCount     = saved.guessCount;
-  guessHistory   = saved.guessHistory;
-  cluesRevealed  = saved.cluesRevealed;
-  elapsedSeconds = saved.elapsedSeconds || 0;
-  gameOver       = saved.gameOver;
-
-  const tvEl = document.getElementById('timer-value');
-  if (tvEl) tvEl.textContent = formatTime(elapsedSeconds);
-  const tvElI = document.getElementById('timer-value-inline');
-  if (tvElI) tvElI.textContent = formatTime(elapsedSeconds);
-
-  // Reconstruct eliminations by replaying each wrong state guess through the same
-  // "keep-only-neighbors + dead-end cleanup" logic used in processStateGuess.
-  eliminatedStates = new Set();
-  const _rc = todayDistrict.properties.state; // correct state — always protected
-  const _wrongGuesses = guessHistory.filter(g => g.phase === 'state' && !g.correct);
-  const _wrongGuessedSoFar = new Set();
-  _wrongGuesses.forEach(g => {
-    _wrongGuessedSoFar.add(g.text);
-    eliminatedStates.add(g.text);
-    const _nbrs = STATE_ADJACENCY[g.text] || [];
-    if (g.adjacent) {
-      // HOT restore: keep only neighbors
-      const neighborSet = new Set(_nbrs);
-      for (const s of Object.keys(stateDistrictMap)) {
-        if (s !== _rc && !neighborSet.has(s)) eliminatedStates.add(s);
-      }
-    } else {
-      // COLD restore: eliminate guess and its neighbors
-      for (const n of _nbrs) {
-        if (n !== _rc) eliminatedStates.add(n);
-      }
-    }
-    // Dead-end: only when ALL neighbors have been explicitly guessed wrong
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const s of Object.keys(stateDistrictMap)) {
-        if (eliminatedStates.has(s) || s === _rc) continue;
-        const sN = STATE_ADJACENCY[s] || [];
-        if (sN.length > 0 && sN.every(n => _wrongGuessedSoFar.has(n))) {
-          eliminatedStates.add(s); changed = true;
-        }
-      }
-    }
-  });
-
-  // Reconstruct state-lock from guess history
-  const correctState = todayDistrict.properties.state;
-  const stateFound   = guessHistory.some(g => g.phase === 'state' ? g.correct : g.text.split('-')[0] === correctState);
-  if (stateFound) {
-    correctStateGuessed = true;
-    // instant=true: skip fade animation on page restore
-    lockStateDropdown(correctState, true);
-  }
-
-  // Reconstruct map stage
-  const wrongCount = guessHistory.filter(g => !g.correct).length;
-  applyMapStage(wrongCount, gameOver);
-
-  renderDistrict(todayDistrict);
-  renderGuessHistory();
-  renderClues();
-
-  if (gameOver) {
-    lastGameWon = saved.won;
-    showResult(saved.won, false);      // populate result modal content but don't open it
-    showGameoverModal();               // show the game-over modal directly
-    fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
-  }
-}
-
-// ============================================================
-//  USERNAME FLOW
-// ============================================================
-function promptUsername(callback) {
-  const modal   = document.getElementById('username-modal');
-  const input   = document.getElementById('username-input');
-  const submit  = document.getElementById('username-submit');
-  const errEl   = document.getElementById('username-error');
-  modal.classList.remove('hidden');
-
-  submit.onclick = () => {
-    const name = input.value.trim();
-    if (!name || name.length < 2) { errEl.textContent = 'Please enter at least 2 characters.'; return; }
-    errEl.textContent = '';
-    setUsername(name);
-    username = name;
-    modal.classList.add('hidden');
-    callback();
-  };
-  input.onkeydown = e => { if (e.key === 'Enter') submit.onclick(); };
-}
-
-// ============================================================
-//  PLAY AGAIN — reset all state and start a fresh district
-// ============================================================
-function resetGame(newIdx) {
-  // Stop any running timer
-  stopTimer();
-
-  // Reset all mutable game state
-  guessCount          = 0;
-  guessHistory        = [];
-  cluesRevealed       = 0;
-  correctStateGuessed = false;
-  gameOver            = false;
-  _gameStarted        = true;   // Play Again always goes straight to game
-  elapsedSeconds      = 0;
-  districtGameOverTransform  = null;
-  districtSavedTransform     = null;
-  districtStateFitTransform  = null;
-  districtUserZoomed         = false;
-  _usRefFullFitTransform     = null;
-  gamePhase                 = 'state';
-  _districtBuiltState       = null;
-  _districtSvgSel           = null;
-  _districtPathSnap         = null;
-  _districtStateFSnap       = null;
-  _gameOverTime             = 0;
-  document.querySelector('.mzb-fit')?.classList.remove('at-national');
-  document.querySelector('.gameover-results-arrow')?.remove();
-  eliminatedStates    = new Set();
-  _distLocked         = false;
-  _guessLocked        = false;
-  _resultConfettiFired  = false;
-  _gameOverAnimsCallback = null;
-
-  // Pick the new district
-  todayDistrict = districts[newIdx];
-
-  // Remove saved game so restoreGame() won't trigger on this key.
-  // Skip for archive games so the official daily save is preserved.
-  if (!isArchiveGame) localStorage.removeItem(STORAGE_PREFIX + 'today');
-
-  // Clear census cache so District Profile loads fresh data for the new district
-  _cachePromise = null;
-
-  // --- UI resets ---
-
-  // Hide modals / banners
-  document.getElementById('result-modal').classList.add('hidden');
-  document.getElementById('already-played-banner').classList.add('hidden');
-
-  // Timer
-  const tvEl = document.getElementById('timer-value');
-  if (tvEl) tvEl.textContent = '0:00';
-  document.getElementById('timer-display').classList.remove('running');
-
-  // Reset Leaflet map: remove district layer; renderDistrict below will fitBounds to new district
-  if (districtLayer) { map.removeLayer(districtLayer); districtLayer = null; }
-  currentMapStage = 0;
-  applyMapStage(0);
-
-  // Reset US reference map (clear the SVG so initUSRefMap rebuilds it)
-  const refMapEl = document.getElementById('us-ref-map');
-  refMapEl.innerHTML = '';
-  refMapEl.classList.remove('hidden');
-  refMapEl.style.opacity = '';
-  usRefMap       = null;
-  usRefMapGroup  = null;
-  usRefLayers    = {};
-  usRefCallouts  = {};
-  usRefZoom      = null;
-  usRefSvgSel    = null;
-
-  // Reset district tiles
-  const tilesEl = document.getElementById('district-tiles');
-  tilesEl.innerHTML = '';
-  tilesEl.classList.add('hidden');
-  tilesEl.style.opacity = '';
-
-  // Re-show state chips section
-  document.getElementById('state-chips-section').classList.remove('hidden');
-
-  // Reset reference label
-  const labelEl = document.getElementById('ref-label');
-  if (labelEl) labelEl.textContent = 'Click a state to select it';
-
-  // Re-initialise reference map and render
-  initUSRefMap();
-  renderDistrict(todayDistrict);
-  renderClues();
-  renderGuessHistory();  // also calls updateGuessCounter()
-  document.getElementById('guess-remaining').textContent = `${MAX_GUESSES} guesses`;
-
-  // Pre-build district tiles for the new district in the background so the
-  // state→district transition on correct guess is a reveal, not a rebuild.
-  requestAnimationFrame(() => {
-    const tilesEl = document.getElementById('district-tiles');
-    tilesEl.classList.remove('hidden');
-    tilesEl.style.opacity = '0';
-    tilesEl.style.pointerEvents = 'none';
-    buildDistrictD3Map(todayDistrict.properties.state, false, false);
-  });
-}
 
 // ============================================================
 //  INIT
 // ============================================================
 // Lazy-load decorative overlays (roads + urban, county lines) — non-blocking.
-// Used by both the legacy and server boot paths; only needed for district-phase
-// and game-over maps, so it never blocks first paint.
+// Only needed for district-phase and game-over maps, so it never blocks first paint.
 function loadDecorativeOverlays() {
   // Roads + urban.
   fetch('./districts-overlay.topojson')
@@ -5113,143 +4532,18 @@ function loadDecorativeOverlays() {
 }
 
 async function init() {
-  // Stage B: server-authoritative daily. Boot from /today instead of picking the
-  // answer locally. Signed-in players get the persisted, leaderboard-recorded game;
-  // anyone else plays anonymously (nothing recorded server-side). If an anonymous
-  // player signs in before making a guess, re-bind to their account by re-initing.
-  if (serverBoot()) {
-    let user = null;
-    try { user = await window.DistrictBackend.getUser(); } catch (_) {}
-    isAnonymousPlayer = !user;
-    if (isAnonymousPlayer) {
-      window.addEventListener('district-auth', () => {
-        if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) init();
-      }, { once: true });
-    }
-    return initServer();
+  // Server-authoritative daily. Signed-in players get the persisted, leaderboard-
+  // recorded game; anyone else plays anonymously (nothing recorded server-side). If an
+  // anonymous player signs in before making a guess, re-bind to their account by re-initing.
+  let user = null;
+  try { user = await window.DistrictBackend.getUser(); } catch (_) {}
+  isAnonymousPlayer = !user;
+  if (isAnonymousPlayer) {
+    window.addEventListener('district-auth', () => {
+      if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) init();
+    }, { once: true });
   }
-
-  todayKey = getTodayKey();
-  username = getUsername();
-
-  // Load core TopoJSON (districts + states + points) — game is playable once this completes.
-  // Roads and urban are lazy-loaded afterwards as a non-blocking overlay.
-  try {
-    const coreUrl = './districts-core.topojson';
-    const res = await fetch(coreUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const topo = await res.json();
-    rawTopo = topo;
-    const data = topojson.feature(topo, topo.objects.districts);
-    districts = data.features.filter(f => f.properties.state && f.properties.state !== 'DC');
-
-    // Store inner points keyed by state-district for use in buildDistrictD3Map
-    if (topo.objects.points) {
-      topojson.feature(topo, topo.objects.points).features.forEach(f => {
-        const key = f.properties['state-district'];
-        if (key) districtPoints[key] = f.geometry.coordinates;
-      });
-    }
-
-    // Correct inner points that land in enclosed water bodies.
-    // For MultiPolygon districts (islands, coastal districts), check if the inner point
-    // is inside the largest sub-polygon; if not, fall back to that polygon's centroid.
-    // For single Polygon districts, same check against the whole polygon.
-    districts.forEach(f => {
-      const key  = f.properties['state-district'];
-      const geom = f.geometry;
-      if (!key || !geom) return;
-      const inner = POINT_OVERRIDES[key] || districtPoints[key];
-      if (geom.type === 'MultiPolygon' && geom.coordinates.length > 0) {
-        const largest = geom.coordinates.reduce((a, b) =>
-          d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: a } }) >=
-          d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: b } }) ? a : b
-        );
-        const largestF = { type: 'Feature', geometry: { type: 'Polygon', coordinates: largest } };
-        if (!inner || !d3.geoContains(largestF, inner)) {
-          districtPoints[key] = d3.geoCentroid(largestF);
-        }
-      } else if (geom.type === 'Polygon') {
-        if (inner && !d3.geoContains(f, inner)) {
-          districtPoints[key] = d3.geoCentroid(f);
-        }
-      }
-    });
-    if (topo.objects.states) {
-      topojson.feature(topo, topo.objects.states).features.forEach(f => {
-        if (f.properties.state) topoStates[f.properties.state] = f;
-      });
-    }
-  } catch (err) {
-    console.error('TopoJSON load failed:', err);
-    alert(`Failed to load district data (${err.message}). Please refresh.`);
-    return;
-  }
-
-  loadDecorativeOverlays();
-
-  // Build state→district lookup
-  stateDistrictMap = buildStateDistrictMap(districts);
-
-  // Build district adjacency lookup from embedded `adj` property
-  adjMap = new Map(
-    districts.map(f => [
-      f.properties['state-district'],
-      (f.properties.adj || '').split('|').filter(Boolean)
-    ])
-  );
-
-  // Restore replayCount from sessionStorage so hard-reload resumes the same map
-  const savedReplay = parseInt(sessionStorage.getItem(SESSION_REPLAY_KEY) || '0', 10);
-  replayCount = isNaN(savedReplay) ? 0 : savedReplay;
-
-  // Pick the district: daily (replayCount=0) uses a date seed shared by all players;
-  // subsequent "New Map" games use a per-user random seed stored in sessionStorage.
-  let idx;
-  if (replayCount === 0) {
-    idx = seededIndex(dateSeed(), districts.length);
-  } else {
-    const stored = parseInt(sessionStorage.getItem(SESSION_RANDSEED_KEY) || '0', 10);
-    idx = seededIndex(stored || Date.now(), districts.length);
-  }
-  todayDistrict = districts[idx];
-
-  initMap();
-  // Leaflet caches container size at init; flex layout may not be settled yet
-  setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-  // Defer initUSRefMap one frame so flex layout is settled — same reason as the
-  // Leaflet invalidateSize() setTimeout above.  zoomUSRefMapToValid is called inside
-  // so the map is positioned correctly the first time it's drawn.
-  requestAnimationFrame(() => {
-    initUSRefMap();
-    zoomUSRefMapToValid(false);
-  });
-
-  // Check for saved game from today — must happen before the rAF pre-build so we can
-  // skip the pre-build when restoring (the rAF fires after restoreGame completes and
-  // would otherwise clobber the restored district tiles with opacity=0).
-  const saved = loadGameState();
-  if (saved) {
-    restoreGame(saved);
-    return;
-  }
-
-  // Fresh game: pre-build district tiles in the background so the state→district
-  // transition on first correct guess is a reveal+zoom rather than a DOM rebuild.
-  // The tiles start invisible (opacity 0, not hidden) so layout dimensions are real.
-  requestAnimationFrame(() => {
-    const tilesEl = document.getElementById('district-tiles');
-    tilesEl.classList.remove('hidden');
-    tilesEl.style.opacity = '0';
-    tilesEl.style.pointerEvents = 'none';
-    buildDistrictD3Map(todayDistrict.properties.state, false, false);
-  });
-
-  // Fresh game — start immediately (username/login will be added later)
-  renderDistrict(todayDistrict);
-  renderClues();         // also calls renderStateChips()
-  renderGuessHistory();
-  document.getElementById('guess-remaining').textContent = `${MAX_GUESSES} guesses`;
+  return initServer();
 }
 
 // ============================================================
@@ -5261,18 +4555,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   buildGameSection();
 
-  // Show welcome splash immediately — game loads in background behind it
+  // Show welcome splash immediately — game loads in background behind it. The puzzle
+  // number is authoritative from the server (stamped by initServer once /today returns);
+  // we only fill the date instantly here.
   (function showWelcomeImmediately() {
     const wm = document.getElementById('welcome-modal');
     if (!wm) return;
-    const EPOCH = new Date('2026-06-23T00:00:00-05:00');
-    const now   = new Date();
-    const puzzleNum = Math.floor((now - EPOCH) / 86400000) + 1;
+    const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dateLine = document.getElementById('welcome-date-line');
-    const numLine  = document.getElementById('welcome-puzzle-num');
     if (dateLine) dateLine.textContent = dateStr;
-    if (numLine)  numLine.textContent  = `No. ${puzzleNum}`;
   })();
 
   const _initPromise = init();
@@ -5286,110 +4578,34 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Play Archive — replay a past daily puzzle (unofficial, not counted) ────
-  // Same epoch the welcome splash uses, so puzzle numbers match exactly.
-  const ARCHIVE_EPOCH = new Date('2026-06-23T00:00:00-05:00');
-
-  // Stamp the welcome splash meta for an archive puzzle (re-applied at each stage
-  // because the deferred resetGame/render path otherwise restamps today's number).
-  function applyArchiveMeta(meta) {
-    if (!meta) return;
-    const numLine  = document.getElementById('welcome-puzzle-num');
-    const dateLine = document.getElementById('welcome-date-line');
-    if (numLine)  numLine.textContent  = `No. ${meta.num} · Archive`;
-    if (dateLine) dateLine.textContent = meta.label;
-  }
-
-  // Shared launch: show the splash, rebuild the game section, then start at idx.
-  function launchGameAtIndex(newIdx, archive, meta) {
-    isArchiveGame = !!archive;
-    document.getElementById('archive-badge')?.classList.toggle('hidden', !archive);
-    document.getElementById('result-modal')?.classList.add('hidden');
-    document.getElementById('archive-modal')?.classList.add('hidden');
-    destroyGameoverDiv();
-    gameOver = false;
-    guessCount = 0;
-    correctStateGuessed = false;
-    _gameStarted = false;
-    buildWelcomeButtons();
-    welcomeModal.classList.remove('hidden');
-    applyArchiveMeta(meta);
-
-    buildGameSection();
-    initMap();
-    setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-
-    setTimeout(() => {
-      resetGame(newIdx);
-      applyArchiveMeta(meta);
-      requestAnimationFrame(() => {
-        if (map) map.invalidateSize();
-        if (districtLayer) map.fitBounds(districtLayer.getBounds(), { padding: [40, 40], animate: false });
-        applyArchiveMeta(meta);
-      });
-    }, 350);
-  }
-
-  // Start a chosen archive puzzle. The seed reproduces that date's daily answer.
-  function startArchiveGame(seed, num, label) {
-    launchGameAtIndex(seededIndex(seed, districts.length), true, { num, label });
-  }
-
-  // Build + open the archive list: every past daily (newest first).
+  // Build + open the archive list: every past daily (newest first), fetched from the
+  // `archive` endpoint. Past answers are public, so this is safe.
   async function openArchive() {
-    // Server mode: fetch the list of past puzzles from the `archive` endpoint (the
-    // client has no local topojson). Past answers are public, so this is safe.
-    if (serverBoot()) {
-      const list = document.getElementById('archive-list');
-      list.innerHTML = '<div class="lb-empty">Loading…</div>';
-      document.getElementById('result-modal')?.classList.add('hidden');
-      document.getElementById('archive-modal').classList.remove('hidden');
-      let resp;
-      try { resp = await window.DistrictBackend.archiveList(); }
-      catch (e) { list.innerHTML = '<div class="lb-empty">Could not load the archive.</div>'; return; }
-      const puzzles = (resp && resp.puzzles) || [];
-      let html = '', curMonth = '';
-      for (const p of puzzles) {
-        const d = new Date(p.date + 'T00:00:00');
-        const month = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-        if (month !== curMonth) { curMonth = month; html += `<div class="archive-month">${month}</div>`; }
-        const dayLabel  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const fullLabel = d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-        html += `<button class="archive-item" data-date="${p.date}" data-num="${p.puzzleNumber}" data-label="${fullLabel}">` +
-                `<span class="archive-num">No. ${p.puzzleNumber}</span><span class="archive-date">${dayLabel}</span></button>`;
-      }
-      list.innerHTML = html || '<div class="lb-empty">No past puzzles yet.</div>';
-      return;
-    }
     const list = document.getElementById('archive-list');
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todayNum = Math.floor((Date.now() - ARCHIVE_EPOCH) / 86400000) + 1;
-    let html = '';
-    let curMonth = '';
-    for (let k = 1; k < todayNum; k++) {
-      const d = new Date(today); d.setDate(today.getDate() - k);
-      const num = todayNum - k;
-      const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    list.innerHTML = '<div class="lb-empty">Loading…</div>';
+    document.getElementById('result-modal')?.classList.add('hidden');
+    document.getElementById('archive-modal').classList.remove('hidden');
+    let resp;
+    try { resp = await window.DistrictBackend.archiveList(); }
+    catch (e) { list.innerHTML = '<div class="lb-empty">Could not load the archive.</div>'; return; }
+    const puzzles = (resp && resp.puzzles) || [];
+    let html = '', curMonth = '';
+    for (const p of puzzles) {
+      const d = new Date(p.date + 'T00:00:00');
       const month = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
       if (month !== curMonth) { curMonth = month; html += `<div class="archive-month">${month}</div>`; }
       const dayLabel  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       const fullLabel = d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-      html += `<button class="archive-item" data-seed="${seed}" data-num="${num}" data-label="${fullLabel}">` +
-              `<span class="archive-num">No. ${num}</span><span class="archive-date">${dayLabel}</span></button>`;
+      html += `<button class="archive-item" data-date="${p.date}" data-num="${p.puzzleNumber}" data-label="${fullLabel}">` +
+              `<span class="archive-num">No. ${p.puzzleNumber}</span><span class="archive-date">${dayLabel}</span></button>`;
     }
     list.innerHTML = html || '<div class="lb-empty">No past puzzles yet.</div>';
-    document.getElementById('result-modal')?.classList.add('hidden');
-    document.getElementById('archive-modal').classList.remove('hidden');
   }
 
   document.getElementById('archive-list').addEventListener('click', (e) => {
     const item = e.target.closest('.archive-item');
-    if (!item) return;
-    if (item.dataset.date) {
-      // Server-backed archive (past puzzle fetched from the `archive` endpoint).
-      startServerArchive(item.dataset.date, parseInt(item.dataset.num, 10), item.dataset.label);
-    } else {
-      startArchiveGame(parseInt(item.dataset.seed, 10), parseInt(item.dataset.num, 10), item.dataset.label);
-    }
+    if (!item || !item.dataset.date) return;
+    startServerArchive(item.dataset.date, parseInt(item.dataset.num, 10), item.dataset.label);
   });
   document.getElementById('archive-close').addEventListener('click', () => {
     document.getElementById('archive-modal').classList.add('hidden');
