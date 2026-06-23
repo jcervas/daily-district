@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.18';
+const VERSION_NUMBER = '1.14.19';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3129,8 +3129,18 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   tilesEl.style.pointerEvents = '';
 
   if (preBuilt) {
-    // Apply zoom animation on the cached SVG using inner points, same as fresh build.
-    if (zoomIn && _districtSvgSel && _districtProjection) {
+    if (zoomIn && _districtSvgSel && serverActive() && _districtPathGen && _districtStateFeatures) {
+      // Server mode: position the tiles at the state's GEOGRAPHIC bbox directly.
+      // The inner-point path (getActiveDistrictKeys + fitToActiveKeys) can come back
+      // empty here and leave the tiles at the national identity transform ("went back
+      // to full nation zoom"). Geometry bounds are reliable. Instant — the ref map's
+      // zoom is the visible animation and the hard-swap reveals the tiles already here.
+      const fc = { type: 'FeatureCollection', features: _districtStateFeatures };
+      const stateFit = zoomToBBox(_districtPathGen.bounds(fc), _districtW, _districtH, { margin: 0.9 });
+      districtSavedTransform = stateFit;
+      _districtSvgSel.call(districtZoomBehavior.transform, stateFit);
+    } else if (zoomIn && _districtSvgSel && _districtProjection) {
+      // Legacy: zoom animation on the cached SVG using inner points, same as fresh build.
       const activeKeys = getActiveDistrictKeys();
       const entryTransform = fitToActiveKeys(null, null, _districtProjection, _districtW, _districtH, activeKeys, { margin: 0.85 });
       if (entryTransform) {
