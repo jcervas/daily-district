@@ -788,6 +788,14 @@ circle.tile-wrong-shake {
   fill: #c41230 !important;
 }
 
+/* Optimistic press: instant feedback on tap while the /guess request is in flight,
+   so the click doesn't feel laggy. Replaced by the pop/shake once the server replies. */
+circle.tile-pressed {
+  stroke: #007BC0 !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 4px rgba(0,123,192,0.7));
+}
+
 /* ---- Result section ---- */
 /* ---- Result modal ---- */
 .result-modal-content {

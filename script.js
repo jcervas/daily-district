@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.23';
+const VERSION_NUMBER = '1.14.24';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -840,6 +840,17 @@ function serverGuessFailed(err) {
 async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
+
+  // Optimistic feedback: the /guess round-trip can take a few hundred ms, and until
+  // it returns nothing visible happens — the tap feels laggy. Paint the tapped state
+  // immediately (synchronously, before the await) so the click registers instantly;
+  // the response then resolves it to the wrong-flash or the correct-state zoom.
+  const pressedEl = usRefLayers[abbr];
+  if (pressedEl) {
+    pressedEl.attr('stroke', '#007BC0').attr('stroke-width', 3)
+             .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+  }
+
   let resp;
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds); }
   catch (err) { return serverGuessFailed(err); }
@@ -929,13 +940,19 @@ async function submitDistrictTileServer(dist) {
   if (!timerRunning) startTimer();
   const state     = serverState || todayDistrict.properties.state;
   const fullGuess = `${state}-${dist}`;
-  let resp;
-  try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds); }
-  catch (err) { return serverGuessFailed(err); }
 
+  // Optimistic feedback before the /guess round-trip: highlight the tapped tile
+  // immediately so the click feels instant (the response resolves it to the
+  // correct-pop or the wrong-shake below).
   const tilesEl     = document.getElementById('district-tiles');
   const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
   const tileCircle  = clickedTile?.querySelector('circle');
+  if (tileCircle) tileCircle.classList.add('tile-pressed');
+
+  let resp;
+  try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds); }
+  catch (err) { return serverGuessFailed(err); }
+  if (tileCircle) tileCircle.classList.remove('tile-pressed');
 
   if (resp.correct) {
     if (tileCircle) {
