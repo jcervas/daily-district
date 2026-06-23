@@ -57,12 +57,6 @@
   function signInWithEmail(email, password) {
     return client().auth.signInWithPassword({ email, password });
   }
-  // Anonymous session — a real (token-bearing) user with no email/provider. Used by
-  // the ?guest= preview hatch to exercise server features without a real login.
-  // Requires "Anonymous sign-ins" enabled in the Supabase Auth settings.
-  function signInAnonymously() {
-    return client().auth.signInAnonymously();
-  }
   function signUpWithEmail(email, password, username) {
     return client().auth.signUp({
       email, password,
@@ -169,7 +163,7 @@
     SUPABASE_URL,
     client,
     getUser, onAuthChange,
-    signInWithOAuth, signInWithEmail, signUpWithEmail, signInAnonymously, signOut,
+    signInWithOAuth, signInWithEmail, signUpWithEmail, signOut,
     today, guess, stateShapes, leaderboard,
     logTelemetry, getProfile, updateProfile,
   };
