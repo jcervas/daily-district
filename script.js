@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.0';
+const VERSION_NUMBER = '2.0.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -575,6 +575,10 @@ async function initServer() {
   initMap();
   setTimeout(() => { if (map) map.invalidateSize(); }, 50);
   requestAnimationFrame(() => { initUSRefMap(); zoomUSRefMapToValid(false); });
+
+  // Decorative overlays (roads + urban, counties) — also needed in server mode for
+  // the game-over and district maps. Lazy-loaded, non-blocking.
+  loadDecorativeOverlays();
 
   // 3. Restore an in-progress or finished game from the server result.
   const r = resp.result;
@@ -1590,6 +1594,10 @@ async function getDistrictCensusData() {
       medianHome: c.medianHome,
       bach:       c.bach,
       master:     c.master,
+      area_sqmi:      c.area_sqmi,
+      Margin2024Pres: c.Margin2024Pres,
+      DemPct2024Pres: c.DemPct2024Pres,
+      RepPct2024Pres: c.RepPct2024Pres,
     };
   }
   const p = todayDistrict.properties;
@@ -1743,11 +1751,13 @@ async function fetchAndRenderCensusPanel(districtData) {
   const eduPct   = total > 0 ? Math.round(bachPlus / total * 100) : 0;
 
   // Shapefile-derived facts (precise values for District Profile)
-  const areaMi2     = Math.round(todayDistrict?.properties.area_sqmi || 0);
+  // Shapefile facts come from todayDistrict.properties in legacy mode; in server mode
+  // the mystery feature is redacted, so they ride along in the revealed census (`d`).
+  const areaMi2     = Math.round((d.area_sqmi ?? todayDistrict?.properties.area_sqmi) || 0);
   const delegCount  = (stateDistrictMap[districtData.state] || []).length;
-  const margin      = todayDistrict?.properties.Margin2024Pres;
-  const pctDem      = Math.round((todayDistrict?.properties.DemPct2024Pres || 0) * 100);
-  const pctRep      = Math.round((todayDistrict?.properties.RepPct2024Pres || 0) * 100);
+  const margin      = d.Margin2024Pres ?? todayDistrict?.properties.Margin2024Pres;
+  const pctDem      = Math.round((d.DemPct2024Pres ?? todayDistrict?.properties.DemPct2024Pres ?? 0) * 100);
+  const pctRep      = Math.round((d.RepPct2024Pres ?? todayDistrict?.properties.RepPct2024Pres ?? 0) * 100);
   const absMar      = margin != null ? Math.abs(+margin * 100).toFixed(1) : null;
   const voteValue   = absMar == null ? 'No data'
     : +margin >  0.05 ? `D+${absMar}%`
@@ -4974,6 +4984,37 @@ function resetGame(newIdx) {
 // ============================================================
 //  INIT
 // ============================================================
+// Lazy-load decorative overlays (roads + urban, county lines) — non-blocking.
+// Used by both the legacy and server boot paths; only needed for district-phase
+// and game-over maps, so it never blocks first paint.
+function loadDecorativeOverlays() {
+  // Roads + urban.
+  fetch('./districts-overlay.topojson')
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(topo => {
+      if (topo.objects.roads) topoRoads = topojson.feature(topo, topo.objects.roads);
+      if (topo.objects.urban) topoUrban = topojson.feature(topo, topo.objects.urban);
+      // Re-render if game is already over so roads/urban appear even if fetch was slow
+      if (gameOver && map) renderMapD3(currentMapStage);
+    })
+    .catch(err => console.warn('Overlay load failed (non-fatal):', err));
+
+  // County boundary lines — used on district gameplay and game-over screens.
+  fetch('./counties-lines.topojson')
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(topo => {
+      const obj = topo.objects[Object.keys(topo.objects)[0]];
+      if (obj) {
+        topoCounties = topojson.feature(topo, obj);
+        // If already in district gameplay, rebuild so the county layer appears immediately
+        if (gamePhase === 'district' && !gameOver && todayDistrict) {
+          buildDistrictD3Map(todayDistrict.properties.state, false, false);
+        }
+      }
+    })
+    .catch(err => console.warn('Counties load failed (non-fatal):', err));
+}
+
 async function init() {
   // Stage B: server-authoritative daily. Boot from /today instead of picking the
   // answer locally. Requires a signed-in session; if not yet signed in, wait for
@@ -5045,31 +5086,7 @@ async function init() {
     return;
   }
 
-  // Lazy-load decorative overlay (roads + urban) — non-blocking.
-  fetch('./districts-overlay.topojson')
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(topo => {
-      if (topo.objects.roads) topoRoads = topojson.feature(topo, topo.objects.roads);
-      if (topo.objects.urban) topoUrban = topojson.feature(topo, topo.objects.urban);
-      // Re-render if game is already over so roads/urban appear even if fetch was slow
-      if (gameOver && map) renderMapD3(currentMapStage);
-    })
-    .catch(err => console.warn('Overlay load failed (non-fatal):', err));
-
-  // Lazy-load county boundary lines — used on district gameplay and game-over screens.
-  fetch('./counties-lines.topojson')
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(topo => {
-      const obj = topo.objects[Object.keys(topo.objects)[0]];
-      if (obj) {
-        topoCounties = topojson.feature(topo, obj);
-        // If already in district gameplay, rebuild so the county layer appears immediately
-        if (gamePhase === 'district' && !gameOver && todayDistrict) {
-          buildDistrictD3Map(todayDistrict.properties.state, false, false);
-        }
-      }
-    })
-    .catch(err => console.warn('Counties load failed (non-fatal):', err));
+  loadDecorativeOverlays();
 
   // Build state→district lookup
   stateDistrictMap = buildStateDistrictMap(districts);
