@@ -1998,16 +1998,19 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 
 /* ---- Welcome / splash modal ---- */
 .welcome-modal-content {
-  max-width: 440px;
+  max-width: 520px;
   width: 92vw;
-  height: min(92dvh, 640px);
+  height: min(94dvh, 760px);
   text-align: center;
   padding: clamp(20px, 4vh, 40px) 32px clamp(16px, 3vh, 28px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  overflow: hidden;
+  /* Content (logo, buttons, meta, donate) can exceed the height on short windows — let
+     it scroll instead of clipping. The flex spacers still center it when it fits. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .welcome-top-spacer { flex: 1.2; }
 .welcome-logo-wrap { margin-bottom: clamp(8px, 1.5vh, 16px); }
