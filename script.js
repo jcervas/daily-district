@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.17';
+const VERSION_NUMBER = '1.14.18';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -725,17 +725,26 @@ async function submitStateGuessServer(abbr) {
 
   const isCorrect = !!resp.correct;
   const pathEl = usRefLayers[abbr];
-  // Add a bold white outline (raised above the border mesh) on top of the fill so the
-  // tapped state is unmistakable — on touch the wrong-flash red sits close to the
-  // in-play state fill. Reset on the next render in processStateGuessServer.
+
+  // Correct: the reward is the zoom into the state — no flash, no pause. Go straight
+  // into the district transition so it feels immediate.
+  if (isCorrect) {
+    _guessLocked = false;
+    processStateGuessServer(abbr, resp);
+    return;
+  }
+
+  // Wrong: a bold white outline (raised above the border mesh) on top of the red fill
+  // so the tapped state is unmistakable — on touch the wrong-flash red sits close to
+  // the in-play state fill. Reset on the next render in processStateGuessServer.
   if (pathEl) {
-    pathEl.attr('fill', isCorrect ? '#FDB515' : '#C41230').attr('fill-opacity', 0.9)
+    pathEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
           .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
           .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
   }
   const panel = document.getElementById('us-ref-map');
-  panel.classList.add(isCorrect ? 'flash-correct' : 'flash-wrong');
-  setTimeout(() => panel.classList.remove('flash-correct', 'flash-wrong'), 700);
+  panel.classList.add('flash-wrong');
+  setTimeout(() => panel.classList.remove('flash-wrong'), 700);
 
   setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 650);
 }
