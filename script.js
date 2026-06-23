@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.12';
+const VERSION_NUMBER = '1.14.14';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -490,6 +490,23 @@ function reportClientError(where, err) {
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => reportClientError('window_error', e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportClientError('unhandled_rejection', e.reason));
+}
+
+// The player's current game settings (theme, hard mode, confirm-selection). Logged
+// to telemetry so we can see which options people actually use and direct effort
+// accordingly. `theme` is the stored preference: 'dark' | 'light' | 'system'.
+function currentGameSettings() {
+  return {
+    hardMode: localStorage.getItem('districtguess_hardMode') === '1',
+    theme: localStorage.getItem('districtguess_theme') || 'system',
+    confirmSelection: localStorage.getItem('districtguess_confirmMode') === '1',
+  };
+}
+// reason: 'snapshot' (passive, once per session) | 'change' (a toggle was flipped).
+function reportSettings(reason) {
+  try {
+    window.DistrictBackend?.logTelemetry?.('settings', { payload: { reason, ...currentGameSettings() } });
+  } catch (_) { /* best-effort; never disrupt */ }
 }
 
 // Build the redacted "mystery" feature from server geometry — no identity.
@@ -2048,7 +2065,7 @@ function setConfirmPending(abbr) {
   // Highlight the pending state in blue ("selected — tap again to confirm"),
   // restore others. NOT gold (#FDB515) — gold is the correct-answer/win color and
   // reading a pending wrong pick as "correct" is confusing.
-  const PENDING = '#2563EB';
+  const PENDING = '#007BC0';
   Object.entries(usRefLayers).forEach(([a, pathEl]) => {
     if (a === abbr) pathEl.attr('fill', PENDING).attr('fill-opacity', 0.85);
     else _applyStateStyle(pathEl, a);
@@ -2631,7 +2648,8 @@ function _addStateCallouts(g, geojson, pathGen, fipsToFeature) {
           tooltip.style.left = (event.clientX + 14) + 'px';
           tooltip.style.top  = (event.clientY - 34) + 'px';
         }
-        if (!correctStateGuessed && getValidStates().has(n.abbr)) {
+        if (!window.matchMedia('(pointer: coarse)').matches
+            && !correctStateGuessed && getValidStates().has(n.abbr)) {
           const hoverColor = isDarkMode() ? STATE_COLOR.dark.hover : STATE_COLOR.light.hover;
           circle.attr('fill', hoverColor).attr('fill-opacity', 1.0);
           // Also flash the actual state path
@@ -2835,8 +2853,11 @@ function initUSRefMap() {
             tooltip.style.left = (event.clientX + 14) + 'px';
             tooltip.style.top  = (event.clientY - 34) + 'px';
           }
-          // Highlight only clickable states
-          if (!correctStateGuessed && getValidStates().has(abbr)) {
+          // Highlight only clickable states — mouse only. On touch, mouseover
+          // fires on tap and sticks (no mouseout until you tap elsewhere), leaving
+          // the tapped state lit in a "selected"-looking color before the verdict.
+          if (!window.matchMedia('(pointer: coarse)').matches
+              && !correctStateGuessed && getValidStates().has(abbr)) {
             const hoverColor = isDarkMode() ? STATE_COLOR.dark.hover : STATE_COLOR.light.hover;
             pathEl.attr('fill', hoverColor).attr('fill-opacity', 1.0);
           }
@@ -5248,6 +5269,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('settings-dark-toggle').addEventListener('change', () => {
     toggleDarkMode();
+    reportSettings('change');
   });
   document.getElementById('settings-reset-theme').addEventListener('click', () => {
     localStorage.removeItem('districtguess_theme');
@@ -5262,6 +5284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (map) applyMapStage(guessHistory.filter(g => !g.correct).length, gameOver);
     if (districtLayer) districtLayer.setStyle(districtStyle());
     if (gameOver && todayDistrict) buildDistrictD3Map(todayDistrict.properties.state);
+    reportSettings('change');
   });
 
   // When system preference changes and user has no manual override, repaint everything
@@ -5340,6 +5363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hardToggle.addEventListener('change', () => {
       hardMode = hardToggle.checked;
       localStorage.setItem('districtguess_hardMode', hardMode ? '1' : '0');
+      reportSettings('change');
     });
   }
 
@@ -5351,8 +5375,12 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmInputMode = confirmToggle.checked;
       localStorage.setItem('districtguess_confirmMode', confirmInputMode ? '1' : '0');
       if (!confirmInputMode) setConfirmPending(null); // clear any pending state
+      reportSettings('change');
     });
   }
+
+  // One-time passive snapshot of the player's settings for this session.
+  reportSettings('snapshot');
 
   document.querySelectorAll('.fb-rating-group').forEach(group => {
     const hidden = group.querySelector('input[type="hidden"]');

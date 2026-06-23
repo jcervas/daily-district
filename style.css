@@ -316,6 +316,9 @@ header h1 {
   border-radius: 50%;
   width: 34px;
   height: 34px;
+  flex: 0 0 auto;          /* never shrink in the header flex row — stay uniform */
+  min-width: 34px;
+  min-height: 34px;
   font-size: 1rem;
   cursor: pointer;
   display: flex;
@@ -1736,6 +1739,7 @@ body.auth-locked #welcome-signin-btn {
 .account-wrap { position: relative; display: inline-flex; }
 .account-btn {
   width: 34px; height: 34px; border-radius: 50%;
+  flex: 0 0 auto; min-width: 34px; min-height: 34px;  /* match .btn-icon, never shrink */
   border: none; cursor: pointer; padding: 0;
   background: var(--red, #C41230); color: #fff;
   font-weight: 700; font-size: 0.8rem; letter-spacing: 0.02em;
@@ -2442,7 +2446,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   .donate-short { display: inline; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }
-  @media (max-width: 360px) { .game-logo { display: none; } }
+  .game-logo { display: none; }   /* hide the US-map logo on mobile — saves header space */
   @media (max-width: 300px) { .header-wordmark { display: none; } }
 
   /* ── Game layout: fit in one screen ── */
