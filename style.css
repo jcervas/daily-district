@@ -2548,6 +2548,14 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }
   .game-logo { display: none; }   /* hide the US-map logo on mobile — saves header space */
+  /* The added Sign in pill crowds the header. Size the side columns to their content and
+     let the TITLE column flex/truncate (it has ellipsis) so the left group can never
+     overlap the title. Also compact the pill + icon row. */
+  .header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px; }
+  .header-left { gap: 2px; }
+  .header-signin-btn { height: 30px; padding: 0 10px; font-size: 0.72rem; }
+  .btn-icon { width: 32px; height: 32px; }
+  @media (max-width: 380px) { .header-signin-btn { padding: 0 8px; font-size: 0.68rem; } }
   @media (max-width: 300px) { .header-wordmark { display: none; } }
 
   /* ── Game layout: fit in one screen ── */

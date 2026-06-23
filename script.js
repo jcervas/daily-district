@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.12';
+const VERSION_NUMBER = '2.2.13';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3967,53 +3967,60 @@ async function showGameoverModal() {
   _gameOverAnimsCallback = null;  // animations ran on district-tiles which is now gone
   buildGameoverDiv();
 
-  const won       = guessHistory.some(g => g.correct && g.phase === 'district');
-  const answerKey = todayDistrict?.properties['state-district'] || '?';
-  const districtNum = todayDistrict?.properties['district'] || todayDistrict?.properties['CD118FP'] || '';
-  const stateName   = todayDistrict?.properties['state-name'] || todayDistrict?.properties['NAME'] || '';
+  const won = guessHistory.some(g => g.correct && g.phase === 'district');
 
-  // Top ribbon: "The answer was CA-31." / "You got it! CA-31."
-  const ribbonEl = document.getElementById('gameover-ribbon-text');
-  if (ribbonEl) ribbonEl.textContent = won ? `You got it! ${answerKey}.` : `The answer was ${answerKey}.`;
+  // Populate the card text/grid. Wrapped so a failure here (e.g. a slot SVG glitch) can
+  // NEVER prevent the countdown + map below from running — that previously left the
+  // visible modal with a blank map and a frozen "—:—:—" countdown.
+  try {
+    const answerKey = todayDistrict?.properties['state-district'] || '?';
+    const districtNum = todayDistrict?.properties['district'] || todayDistrict?.properties['CD118FP'] || '';
 
-  // Card header headline: "Answer was: CA-31 — District 31"
-  const hl = document.getElementById('gameover-headline');
-  if (hl) {
-    const districtLabel = districtNum ? ` — District ${+districtNum || districtNum}` : '';
-    hl.textContent = `Answer was: ${answerKey}${districtLabel}`;
-    hl.className   = 'gameover-headline ' + (won ? 'won' : 'lost');
-  }
+    // Top ribbon: "The answer was CA-31." / "You got it! CA-31."
+    const ribbonEl = document.getElementById('gameover-ribbon-text');
+    if (ribbonEl) ribbonEl.textContent = won ? `You got it! ${answerKey}.` : `The answer was ${answerKey}.`;
 
-  // Guess grid — the correct-state slot (⊙) shows the actual state boundary SVG
-  const correctStateAbbr = todayDistrict?.properties?.state || '';
-  const usedSlots = guessHistory.map(g => {
-    if (g.correct && g.phase === 'district') return '<span class="go-slot">✓</span>';
-    if (g.correct && g.phase === 'state')    return `<span class="go-slot go-slot-state" data-state="${correctStateAbbr}">⊙</span>`;
-    return '<span class="go-slot">⊗</span>';
-  });
-  const unusedCount = won ? MAX_GUESSES - guessCount : 0;
-  const gridHtml = [...usedSlots, ...Array(unusedCount).fill('<span class="go-slot">□</span>')].join(' ');
-  const gridEl = document.getElementById('gameover-grid');
-  if (gridEl) {
-    gridEl.innerHTML = gridHtml;
-    // Swap the correct-state slot's symbol for the state's boundary outline
-    gridEl.querySelectorAll('.go-slot-state').forEach(slot => {
-      const abbr = slot.dataset.state;
-      if (abbr) {
-        getStateSvg(abbr).then(svg => {
-          if (svg) slot.innerHTML = `<span class="state-svg-container">${svg}</span>`;
-        });
-      }
+    // Card header headline: "Answer was: CA-31 — District 31"
+    const hl = document.getElementById('gameover-headline');
+    if (hl) {
+      const districtLabel = districtNum ? ` — District ${+districtNum || districtNum}` : '';
+      hl.textContent = `Answer was: ${answerKey}${districtLabel}`;
+      hl.className   = 'gameover-headline ' + (won ? 'won' : 'lost');
+    }
+
+    // Guess grid — the correct-state slot (⊙) shows the actual state boundary SVG
+    const correctStateAbbr = todayDistrict?.properties?.state || '';
+    const usedSlots = guessHistory.map(g => {
+      if (g.correct && g.phase === 'district') return '<span class="go-slot">✓</span>';
+      if (g.correct && g.phase === 'state')    return `<span class="go-slot go-slot-state" data-state="${correctStateAbbr}">⊙</span>`;
+      return '<span class="go-slot">⊗</span>';
     });
+    const unusedCount = won ? MAX_GUESSES - guessCount : 0;
+    const gridHtml = [...usedSlots, ...Array(unusedCount).fill('<span class="go-slot">□</span>')].join(' ');
+    const gridEl = document.getElementById('gameover-grid');
+    if (gridEl) {
+      gridEl.innerHTML = gridHtml;
+      // Swap the correct-state slot's symbol for the state's boundary outline
+      gridEl.querySelectorAll('.go-slot-state').forEach(slot => {
+        const abbr = slot.dataset.state;
+        if (abbr) {
+          getStateSvg(abbr).then(svg => {
+            if (svg) slot.innerHTML = `<span class="state-svg-container">${svg}</span>`;
+          }).catch(() => {});
+        }
+      });
+    }
+
+    // "Solved!" label only when won
+    const solvedEl = document.getElementById('gameover-solved-label');
+    if (solvedEl) solvedEl.textContent = won ? 'Solved!' : '';
+
+    // Time
+    const timeEl = document.getElementById('gameover-time');
+    if (timeEl) timeEl.textContent = formatTime(elapsedSeconds);
+  } catch (e) {
+    reportClientError('gameover_modal_content', e);
   }
-
-  // "Solved!" label only when won
-  const solvedEl = document.getElementById('gameover-solved-label');
-  if (solvedEl) solvedEl.textContent = won ? 'Solved!' : '';
-
-  // Time
-  const timeEl = document.getElementById('gameover-time');
-  if (timeEl) timeEl.textContent = formatTime(elapsedSeconds);
 
   // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
   // sign-in nudge (track stats / compare); signed-in players just see the countdown.
@@ -4022,12 +4029,12 @@ async function showGameoverModal() {
   document.getElementById('gameover-next-signin')?.addEventListener('click', () => {
     document.getElementById('login-modal')?.classList.remove('hidden');
   });
-  startNextDistrictCountdown();
+  try { startNextDistrictCountdown(); } catch (e) { reportClientError('gameover_countdown', e); }
 
   const mapWrap = document.getElementById('gameover-map-wrap');
 
   requestAnimationFrame(() => {
-    buildGameoverMap();
+    try { buildGameoverMap(); } catch (e) { reportClientError('gameover_map', e); }
     if (mapWrap) mapWrap.classList.add(won ? 'gameover-win-pulse' : 'gameover-loss-shake');
   });
 }
