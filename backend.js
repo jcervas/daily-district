@@ -100,6 +100,20 @@
     return data; // { state, districts: [{ districtId, state, number, geometry, adj }] }
   }
 
+  // Archive: list past puzzles, or fetch one past puzzle's full data for replay.
+  // The server only serves dates strictly before today, so today's answer is never
+  // exposed (archive replays are unofficial — not saved or counted).
+  async function archiveList() {
+    const { data, error } = await client().functions.invoke('archive', { body: {} });
+    if (error) throw error;
+    return data; // { puzzles: [{ date, puzzleNumber, districtId, state }] }
+  }
+  async function archivePuzzle(date) {
+    const { data, error } = await client().functions.invoke('archive', { body: { date } });
+    if (error) throw error;
+    return data; // { date, puzzleNumber, districtId, state, geometry, clues, census, districts:[…] }
+  }
+
   // Leaderboard: { user, today, allTime }. `user` is the signed-in player's own
   // stats (null if signed out); today/allTime are aggregates across all players.
   // Callable by anon, so aggregates show even when signed out.
@@ -175,7 +189,7 @@
     client,
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut,
-    today, guess, stateShapes, leaderboard,
+    today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
     logTelemetry, getProfile, updateProfile,
   };
 
