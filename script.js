@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.3';
+const VERSION_NUMBER = '2.2.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -634,6 +634,23 @@ async function initServer() {
     return;
   }
 
+  // 3b. Anonymous players have no server result — resume their locally-saved game so a
+  // refresh continues (or shows the finished result) instead of restarting the daily.
+  if (isAnonymousPlayer) {
+    const saved = loadAnonGame();
+    if (saved && saved.date === resp.date &&
+        ((saved.guessHistory && saved.guessHistory.length) || saved.gameOver)) {
+      serverPuzzle.clues      = saved.clues || [];
+      serverPuzzle.cluesTotal = saved.cluesTotal || MAX_GUESSES;
+      await restoreServerGame(
+        { guess_history: saved.guessHistory, guesses: saved.guessCount,
+          seconds: saved.elapsedSeconds, completed: saved.gameOver },
+        saved.answer
+      );
+      return;
+    }
+  }
+
   // 4. Fresh game.
   renderDistrict(todayDistrict);
   renderClues();
@@ -697,6 +714,7 @@ async function enterServerDistrictPhase(state, instant = false) {
   }
 
   lockStateDropdown(state, instant);
+  if (!instant) saveGameState();   // persist the solved state for anon refresh-resume
 }
 
 // Rebuild the board from the server result (in-progress or finished). Replays the
@@ -991,6 +1009,7 @@ function processStateGuessServer(abbr, resp) {
   renderGuessHistory();
   renderClues();
   zoomUSRefMapToValid();
+  saveGameState();   // persist anon progress so a refresh resumes
 
   if (resp.completed) { finishServerLoss(resp); return; }
 
@@ -1073,6 +1092,7 @@ function processDistrictGuessServer(dist, fullGuess, resp) {
   requestAnimationFrame(() => { buildDistrictD3Map(serverState || todayDistrict.properties.state); });
   renderGuessHistory();
   renderClues();
+  saveGameState();   // persist anon progress so a refresh resumes
 }
 
 // State phase exhausted (6 guesses, no district phase entered) — reveal + lose.
@@ -1240,10 +1260,34 @@ function getActiveDistrictKeys() {
 // ============================================================
 //  STORAGE
 // ============================================================
-// Progress is persisted server-side (results table) for signed-in players; anonymous
-// games live only in memory. There is no local daily save, so this is a no-op kept
-// only because it's called from many places in the game flow.
-function saveGameState() {}
+// Signed-in players' progress is persisted server-side (results table). Anonymous
+// players have no server record, so we save their game locally (keyed by puzzle date)
+// — a refresh then resumes an in-progress game and keeps a finished daily locked,
+// rather than restarting. Archive replays are unofficial and never saved.
+const ANON_GAME_KEY = STORAGE_PREFIX + 'anonGame';
+function saveGameState() {
+  if (!isAnonymousPlayer || isArchiveGame || !serverPuzzle || !serverPuzzle.date) return;
+  try {
+    localStorage.setItem(ANON_GAME_KEY, JSON.stringify({
+      date: serverPuzzle.date,
+      guessHistory,
+      guessCount,
+      elapsedSeconds,
+      gameOver,
+      serverState,
+      clues: serverPuzzle.clues || [],
+      cluesTotal: serverPuzzle.cluesTotal || MAX_GUESSES,
+      answer: serverAnswer || null,
+    }));
+  } catch (_) { /* storage full / disabled — non-fatal */ }
+}
+
+function loadAnonGame() {
+  try {
+    const raw = localStorage.getItem(ANON_GAME_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 function savePersonalStats(won, guesses, seconds) {
   try {
@@ -1359,7 +1403,6 @@ function buildGameoverDiv() {
           </div>
         </div>
         <div id="gameover-next" class="gameover-next">
-          <button id="gameover-next-close" class="gameover-next-close" aria-label="Dismiss">&times;</button>
           <div class="gameover-next-main">
             <span class="gameover-next-title">That's today's district!</span>
             <span class="gameover-next-sub">New district in <strong id="gameover-next-countdown">--:--:--</strong> &middot; midnight ET</span>
@@ -3929,10 +3972,6 @@ async function showGameoverModal() {
   if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
   document.getElementById('gameover-next-signin')?.addEventListener('click', () => {
     document.getElementById('login-modal')?.classList.remove('hidden');
-  });
-  document.getElementById('gameover-next-close')?.addEventListener('click', () => {
-    document.getElementById('gameover-next')?.remove();
-    stopNextDistrictCountdown();
   });
   startNextDistrictCountdown();
 
