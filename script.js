@@ -10,13 +10,11 @@ const HOW_TO_SEEN_KEY      = STORAGE_PREFIX + 'howToSeen';
 const WELCOME_SEEN_KEY     = STORAGE_PREFIX + 'welcomeSeen';
 const SETTINGS_SEEN_KEY    = STORAGE_PREFIX + 'settingsSeen';
 const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played count when last prompted
-const SESSION_REPLAY_KEY  = 'districtguess_replay';      // sessionStorage key
-const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current random (non-daily) game
 // D3 US reference map coordinate space (viewBox dimensions)
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.0';
+const VERSION_NUMBER = '2.2.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -588,7 +586,7 @@ async function initServer() {
     topojson.feature(statesTopo, statesTopo.objects.states).features.forEach(f => {
       if (f.properties.state) topoStates[f.properties.state] = f;
     });
-    stateDistrictMap = names;   // { state: ['01','02', …] } — same shape as buildStateDistrictMap
+    stateDistrictMap = names;   // { state: ['01','02', …] }
     districts        = [];      // no district shapes client-side until a state is unlocked
     districtPoints   = {};
     adjMap           = new Map();
@@ -1101,40 +1099,6 @@ function getTodayKey() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function seededIndex(seed, max) {
-  // Mulberry32-style hash for reproducible daily index
-  let s = (seed ^ 0xdeadbeef) >>> 0;
-  s = Math.imul(s ^ (s >>> 15), s | 1);
-  s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
-  return Math.abs((s ^ (s >>> 14)) >>> 0) % max;
-}
-
-function dateSeed() {
-  const d = new Date();
-  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-}
-
-// ============================================================
-//  STATE → DISTRICT MAP + DROPDOWNS
-// ============================================================
-function buildStateDistrictMap(features) {
-  const map = {};
-  for (const f of features) {
-    const state = f.properties.state;
-    if (!state) continue; // skip territory features with no state code
-    // Derive district number from 'state-district' (e.g. 'TX-01' → '01')
-    const sd   = f.properties['state-district'] || '';
-    const dist = sd.slice(state.length + 1) || '01';
-    if (!map[state]) map[state] = [];
-    map[state].push(dist);
-  }
-  // Sort numerically
-  for (const state of Object.keys(map)) {
-    map[state].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-  }
-  return map;
-}
-
 // State selected via D3 map or chips only.
 // District selected via tile grid (shown after state is confirmed).
 
@@ -1324,10 +1288,6 @@ function loadPersonalStats() {
 
 function getUsername() {
   return localStorage.getItem(STORAGE_PREFIX + 'username') || '';
-}
-
-function setUsername(name) {
-  localStorage.setItem(STORAGE_PREFIX + 'username', name);
 }
 
 // ============================================================
