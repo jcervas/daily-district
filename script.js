@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.13';
+const VERSION_NUMBER = '2.2.14';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3652,8 +3652,9 @@ function endGame(won, { skipAnims = false } = {}) {
   document.querySelector('.mzb-fit')?.classList.remove('at-national');
   renderClues();
   renderGuessHistory();
-  // Add 1 for the winning guess itself; wrong guesses are already counted
-  if (won) guessCount += 1;
+  // NOTE: guessCount already reflects the server's total (resp.guesses includes the
+  // winning guess). Do NOT add 1 here — that double-counts and can push the count above
+  // MAX_GUESSES, which breaks Array(MAX_GUESSES - guessCount) in the grids/share image.
   // Save stats BEFORE showResult so renderInlinePersonalStats shows current game.
   // Archive games are unofficial — never counted. Anonymous players record nothing
   // (their outcomes are not saved anywhere) — the results screen invites them to sign in.
