@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.1.1';
+const VERSION_NUMBER = '2.1.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5265,7 +5265,7 @@ document.addEventListener('DOMContentLoaded', () => {
   (function showWelcomeImmediately() {
     const wm = document.getElementById('welcome-modal');
     if (!wm) return;
-    const EPOCH = new Date('2026-06-22T00:00:00-05:00');
+    const EPOCH = new Date('2026-06-23T00:00:00-05:00');
     const now   = new Date();
     const puzzleNum = Math.floor((now - EPOCH) / 86400000) + 1;
     const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -5287,7 +5287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Play Archive — replay a past daily puzzle (unofficial, not counted) ────
   // Same epoch the welcome splash uses, so puzzle numbers match exactly.
-  const ARCHIVE_EPOCH = new Date('2026-06-22T00:00:00-05:00');
+  const ARCHIVE_EPOCH = new Date('2026-06-23T00:00:00-05:00');
 
   // Stamp the welcome splash meta for an archive puzzle (re-applied at each stage
   // because the deferred resetGame/render path otherwise restamps today's number).
