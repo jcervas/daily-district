@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.24';
+const VERSION_NUMBER = '1.14.25';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -818,9 +818,22 @@ async function startServerArchive(date, num, label) {
   document.getElementById('game-section')?.remove();
   buildGameSection();
 
+  // buildGameSection() replaced the game DOM, so the previous game's ref-map SVG node
+  // is detached. Null the ref-map/tile globals or initUSRefMap() bails on its
+  // `if (usRefMap) return` guard and the reference map never rebuilds (blank map).
+  usRefMap = null; usRefMapGroup = null; usRefLayers = {}; usRefCallouts = {};
+  usRefZoom = null; usRefSvgSel = null;
+
   initMap();
   setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-  requestAnimationFrame(() => { initUSRefMap(); zoomUSRefMapToValid(false); });
+  // Two rAFs so flex layout settles before initUSRefMap measures #us-ref-map — a
+  // single frame can measure a 0-size container right after the rebuild, which makes
+  // the projection fail to fit the screen.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    initUSRefMap();
+    zoomUSRefMapToValid(false);
+    if (map) map.invalidateSize();
+  }));
 
   renderDistrict(todayDistrict);
   renderClues();
