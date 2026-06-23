@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=52" />
+  <link rel="stylesheet" href="style.css?v=53" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -81,7 +81,15 @@
     <h2 class="login-title">Daily District</h2>
     <p class="login-subtitle">Sign in to play today's puzzle.</p>
     <div class="login-providers">
-      <button class="login-provider-btn" data-provider="google">Continue with Google</button>
+      <button class="login-provider-btn" data-provider="google">
+        <svg class="login-provider-icon" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+        </svg>
+        <span>Continue with Google</span>
+      </button>
       <!-- Apple sign-in not configured yet — re-add when its provider is set up in Supabase:
       <button class="login-provider-btn" data-provider="apple">Continue with Apple</button>
       -->
@@ -507,6 +515,6 @@
 <script src="globe.js" defer></script>
 <script src="backend.js?v=6" defer></script>
 <script src="login.js?v=6" defer></script>
-<script src="script.js?v=1.14.6" defer></script>
+<script src="script.js?v=1.14.7" defer></script>
 </body>
 </html>

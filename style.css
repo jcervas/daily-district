@@ -1745,8 +1745,8 @@ body.auth-locked #welcome-signin-btn {
 .account-menu {
   position: absolute; top: calc(100% + 8px); left: 0;
   min-width: 210px; padding: 6px;
-  background: var(--card, #fff);
-  border: 1px solid var(--border, #ddd); border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.18);
   z-index: 400;
 }
@@ -1758,7 +1758,7 @@ body.auth-locked #welcome-signin-btn {
   padding: 9px 10px; border: none; background: none; cursor: pointer;
   font: inherit; color: var(--text, #111); border-radius: 7px;
 }
-.account-menu-item:hover { background: var(--hover, #f3f3f3); }
+.account-menu-item:hover { background: var(--surface-alt); }
 
 /* ===== Archive: in-game unofficial badge + month headers ===== */
 .archive-badge {
@@ -1780,10 +1780,10 @@ body.auth-locked #welcome-signin-btn {
 .archive-item {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 11px 14px; font: inherit; cursor: pointer;
-  background: var(--card, #fff); color: var(--text, #111);
-  border: 1px solid var(--border, #e3e3e3); border-radius: 9px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 9px;
 }
-.archive-item:hover { background: var(--hover, #f3f3f3); border-color: var(--muted, #bbb); }
+.archive-item:hover { background: var(--surface-alt); border-color: var(--muted); }
 .archive-num { font-weight: 700; }
 .archive-date { color: var(--muted); font-size: 0.9rem; }
 
@@ -1814,11 +1814,18 @@ body.auth-locked #welcome-signin-btn {
   border-radius: 10px;
   padding: 11px 14px;
   cursor: pointer;
-  border: 1px solid var(--border, #ddd);
-  background: var(--card, #fff);
-  color: var(--text, #111);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
-.login-provider-btn:hover { background: var(--hover, #f3f3f3); }
+.login-provider-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.login-provider-icon { flex: 0 0 auto; }
+.login-provider-btn:hover { background: var(--surface-alt); }
 .login-submit {
   background: var(--red, #C41230);
   border-color: var(--red, #C41230);
@@ -1837,10 +1844,11 @@ body.auth-locked #welcome-signin-btn {
   font: inherit;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--border, #ddd);
-  background: var(--card, #fff);
-  color: var(--text, #111);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
+.login-email-form input::placeholder { color: var(--muted); }
 .login-error { color: var(--red, #C41230); font-size: 0.85rem; min-height: 1em; }
 .login-privacy {
   font-size: 0.72rem; line-height: 1.4; color: var(--muted);
