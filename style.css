@@ -2036,6 +2036,19 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   font-weight: 500;
   letter-spacing: 0.05em;
 }
+.welcome-loading-text span {
+  display: inline-block;
+  animation: loading-hop 1.1s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.07s);
+  will-change: transform;
+}
+@keyframes loading-hop {
+  0%, 70%, 100% { transform: translateY(0); }
+  35%           { transform: translateY(-0.45em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-loading-text span { animation: none; }
+}
 .welcome-donate-spacer { flex: 1; min-height: 8px; }
 .welcome-how-to-link {
   background: none;

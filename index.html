@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=51" />
+  <link rel="stylesheet" href="style.css?v=52" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -136,7 +136,9 @@
     <div class="welcome-buttons" id="welcome-buttons">
       <div class="welcome-loading-container">
         <span data-globe data-size="96" data-origin="bottom-right" data-direction="ccw" data-tiles="100" data-tilt="28" data-roll="22" data-empty="0.5" data-snap="0.7" data-scatter="0.18" data-gap="0.16" data-mode="tartan"></span>
-        <div class="welcome-loading-text">Loading...</div>
+        <div class="welcome-loading-text" aria-label="Loading">
+          <span style="--i:0">L</span><span style="--i:1">o</span><span style="--i:2">a</span><span style="--i:3">d</span><span style="--i:4">i</span><span style="--i:5">n</span><span style="--i:6">g</span><span style="--i:7">.</span><span style="--i:8">.</span><span style="--i:9">.</span>
+        </div>
       </div>
     </div>
     <button id="welcome-signin-btn" class="welcome-action-btn">Sign in to Play</button>
