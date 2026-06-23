@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.10';
+const VERSION_NUMBER = '1.14.11';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3100,8 +3100,22 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   if (instant) {
     mapEl.classList.add('hidden');
     tilesEl.style.opacity = '1';
+  } else if (serverActive()) {
+    // No cross-fade. The ref map and the pre-built tiles share the same projection
+    // and both sit at the guessed state's bbox, so the ref map's zoom-into-the-state
+    // (kicked off by zoomUSRefMapToValid just before this) IS the transition. Once it
+    // lands, hard-swap to the identical tiles view — invisible, and free of the
+    // double-image a cross-fade between two same-but-slightly-offset frames creates.
+    tilesEl.classList.remove('hidden');
+    tilesEl.style.transition = 'none';
+    tilesEl.style.opacity = '0';
+    setTimeout(() => {
+      tilesEl.style.opacity = '1';            // instant (transition disabled)
+      mapEl.classList.add('hidden');
+      requestAnimationFrame(() => { tilesEl.style.transition = ''; });
+    }, 720);                                   // ≥ the 700ms ref-map zoom
   } else {
-    // Cross-fade: both maps share REF_VB coordinate space so they align during the fade.
+    // Legacy cross-fade: both maps share REF_VB coordinate space so they align during the fade.
     mapEl.style.opacity = '0';
     setTimeout(() => { mapEl.classList.add('hidden'); }, 370);
     tilesEl.style.opacity = '0';
