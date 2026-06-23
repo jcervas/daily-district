@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.5';
+const VERSION_NUMBER = '2.2.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2872,7 +2872,9 @@ function zoomUSRefMapToValid(animated = true) {
     const feats = [...getValidStates()].map(a => topoStates[a]).filter(Boolean);
     if (!feats.length) return;
     const bbox = usRefPathGen.bounds({ type: 'FeatureCollection', features: feats });
-    const t = zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 });
+    // margin < 1 fits the whole valid-states bbox with padding; > 1 overshoots and
+    // clips edge states (e.g. the answer state sitting at the bottom of the cluster).
+    const t = zoomToBBox(bbox, W, H, { margin: 0.85 });
     usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
     if (animated) {
       usRefSvgSel.transition().duration(700).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);

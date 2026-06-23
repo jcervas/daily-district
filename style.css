@@ -800,7 +800,7 @@ circle.tile-wrong-shake {
    so the click doesn't feel laggy. Replaced by the pop/shake once the server replies. */
 circle.tile-pressed {
   stroke: #000000 !important;
-  stroke-width: 3px !important;
+  stroke-width: 2px !important;
   filter: drop-shadow(0 0 4px rgba(0,0,0,0.7));
 }
 
