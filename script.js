@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.1';
+const VERSION_NUMBER = '2.2.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -913,43 +913,34 @@ async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
 
-  // Optimistic feedback: the /guess round-trip can take a few hundred ms, and until
-  // it returns nothing visible happens — the tap feels laggy. Paint the tapped state
-  // immediately (synchronously, before the await) so the click registers instantly;
-  // the response then resolves it to the wrong-flash or the correct-state zoom.
+  // Optimistic wrong-feedback: paint the tapped state red and shake the map IMMEDIATELY
+  // on tap, before the /guess round-trip — otherwise the shake lags ~half a second
+  // behind the click. Most state guesses are wrong; if the server says correct we clear
+  // this and go straight into the reward zoom.
   const pressedEl = usRefLayers[abbr];
   if (pressedEl) {
-    pressedEl.attr('stroke', '#007BC0').attr('stroke-width', 3)
+    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
+             .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
              .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
   }
+  const panel = document.getElementById('us-ref-map');
+  panel.classList.remove('flash-wrong');
+  void panel.offsetWidth;            // restart the shake animation on rapid re-taps
+  panel.classList.add('flash-wrong');
 
   let resp;
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { return serverGuessFailed(err); }
+  catch (err) { panel.classList.remove('flash-wrong'); return serverGuessFailed(err); }
 
-  const isCorrect = !!resp.correct;
-  const pathEl = usRefLayers[abbr];
-
-  // Correct: the reward is the zoom into the state — no flash, no pause. Go straight
-  // into the district transition so it feels immediate.
-  if (isCorrect) {
+  // Correct: the optimistic shake was wrong — cancel it and go straight into the zoom.
+  if (resp.correct) {
+    panel.classList.remove('flash-wrong');
     _guessLocked = false;
     processStateGuessServer(abbr, resp);
     return;
   }
 
-  // Wrong: a bold white outline (raised above the border mesh) on top of the red fill
-  // so the tapped state is unmistakable — on touch the wrong-flash red sits close to
-  // the in-play state fill. Reset on the next render in processStateGuessServer.
-  if (pathEl) {
-    pathEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
-          .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
-          .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
-  }
-  const panel = document.getElementById('us-ref-map');
-  panel.classList.add('flash-wrong');
   setTimeout(() => panel.classList.remove('flash-wrong'), 450);
-
   setTimeout(() => { _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
 }
 
@@ -2853,7 +2844,8 @@ function zoomUSRefMapToValid(animated = true) {
     const t = zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 });
     usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
     if (animated) {
-      usRefSvgSel.transition().duration(700).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
+      // Snappy zoom into the guessed state so the district tiles reveal quickly.
+      usRefSvgSel.transition().duration(350).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
     } else {
       usRefSvgSel.call(usRefZoom.transform, t);
     }
@@ -2988,19 +2980,22 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
     mapEl.classList.add('hidden');
     tilesEl.style.opacity = '1';
   } else {
-    // No cross-fade. The ref map and the pre-built tiles share the same projection
-    // and both sit at the guessed state's bbox, so the ref map's zoom-into-the-state
-    // (kicked off by zoomUSRefMapToValid just before this) IS the transition. Once it
-    // lands, hard-swap to the identical tiles view — invisible, and free of the
-    // double-image a cross-fade between two same-but-slightly-offset frames creates.
+    // The ref map and the pre-built tiles share the same projection and both sit at the
+    // guessed state's bbox, so the ref map's quick zoom-into-the-state (kicked off by
+    // zoomUSRefMapToValid just before this, ~350ms) brings the two into alignment. As it
+    // lands, briefly cross-fade the tiles in over the confirmed-state red fill so the red
+    // fades away to reveal the district tiles rather than lingering.
     tilesEl.classList.remove('hidden');
     tilesEl.style.transition = 'none';
     tilesEl.style.opacity = '0';
     setTimeout(() => {
-      tilesEl.style.opacity = '1';            // instant (transition disabled)
-      mapEl.classList.add('hidden');
-      requestAnimationFrame(() => { tilesEl.style.transition = ''; });
-    }, 720);                                   // ≥ the 700ms ref-map zoom
+      tilesEl.style.transition = 'opacity 160ms ease';
+      tilesEl.style.opacity = '1';            // quick fade over the red state fill
+      setTimeout(() => {
+        mapEl.classList.add('hidden');
+        requestAnimationFrame(() => { tilesEl.style.transition = ''; });
+      }, 170);
+    }, 300);                                   // ~the 350ms ref-map zoom
   }
 }
 
@@ -3784,7 +3779,7 @@ function buildGameoverMap() {
             .attr('r', 0).style('opacity', 0).remove();
       }
 
-      const LAPS = 3, LAP_MS = 3000, t0 = performance.now();
+      const LAPS = 5, LAP_MS = 3000, t0 = performance.now();
       let emberToggle = false;
       (function frame(now) {
         const elapsed = now - t0;
