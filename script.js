@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.11';
+const VERSION_NUMBER = '1.14.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2045,13 +2045,16 @@ function setConfirmPending(abbr) {
     hint.textContent = abbr ? `Tap ${abbr} again to confirm` : 'Tap again to confirm';
     hint.classList.toggle('visible', !!abbr);
   }
-  // Highlight pending state gold, restore others
+  // Highlight the pending state in blue ("selected — tap again to confirm"),
+  // restore others. NOT gold (#FDB515) — gold is the correct-answer/win color and
+  // reading a pending wrong pick as "correct" is confusing.
+  const PENDING = '#2563EB';
   Object.entries(usRefLayers).forEach(([a, pathEl]) => {
-    if (a === abbr) pathEl.attr('fill', '#FDB515').attr('fill-opacity', 0.85);
+    if (a === abbr) pathEl.attr('fill', PENDING).attr('fill-opacity', 0.85);
     else _applyStateStyle(pathEl, a);
   });
   Object.entries(usRefCallouts).forEach(([a, co]) => {
-    if (a === abbr) co.circle.attr('fill', '#FDB515').attr('fill-opacity', 1);
+    if (a === abbr) co.circle.attr('fill', PENDING).attr('fill-opacity', 1);
     else _applyCalloutStyle(a);
   });
 }
