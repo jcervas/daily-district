@@ -16,7 +16,7 @@ const SESSION_RANDSEED_KEY = 'districtguess_randseed';  // seed for current rand
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.14.7';
+const VERSION_NUMBER = '1.14.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3943,6 +3943,11 @@ async function showGameoverModal() {
   destroyGameSection();
   _gameOverAnimsCallback = null;  // animations ran on district-tiles which is now gone
   buildGameoverDiv();
+
+  // Archive/replay needs the full district topojson, which server mode never
+  // ships — hide the freshly-built "Play Archive" button there (buildGameoverDiv
+  // recreates it each game, so the initServer hide doesn't stick).
+  if (serverActive()) document.getElementById('gameover-new-map-btn')?.classList.add('hidden');
 
   const won       = guessHistory.some(g => g.correct && g.phase === 'district');
   const answerKey = todayDistrict?.properties['state-district'] || '?';
