@@ -160,13 +160,45 @@
         err.textContent = 'Check your email to confirm, then sign in.';
       } catch (ex) { fail(ex); }
     });
+    // Forgot password: email a reset link to the address in the email field.
+    $('login-forgot-password').addEventListener('click', async () => {
+      const email = $('login-email').value.trim();
+      if (!email) { err.textContent = 'Enter your email above, then tap "Forgot password?".'; return; }
+      err.textContent = '';
+      try {
+        const { error } = await B.resetPassword(email);
+        if (error) throw error;
+        err.textContent = 'Check your email for a password-reset link.';
+      } catch (ex) { fail(ex); }
+    });
+    // Forgot username: sign-in is by email, so there's no username credential to recover.
+    $('login-forgot-username').addEventListener('click', () => {
+      err.textContent = 'You sign in with your email address — there is no separate username.';
+    });
+
+    // ---- Set-new-password modal (after following a reset link) ---------------
+    const newpwModal = $('newpw-modal');
+    const newpwErr = $('newpw-error');
+    $('newpw-close').addEventListener('click', () => newpwModal.classList.add('hidden'));
+    $('newpw-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      newpwErr.textContent = '';
+      try {
+        const { error } = await B.updatePassword($('newpw-password').value);
+        if (error) throw error;
+        newpwModal.classList.add('hidden');
+      } catch (ex) { newpwErr.textContent = (ex && ex.message) || 'Could not update password'; }
+    });
+
     // Close returns to the welcome splash (which still has the Sign-in button).
     $('login-close').addEventListener('click', () => { err.textContent = ''; hideGate(); });
     $('welcome-signin-btn').addEventListener('click', () => { err.textContent = ''; showGate(); });
     signinBtnHeader && signinBtnHeader.addEventListener('click', () => { err.textContent = ''; showGate(); });
 
     // ---- React to auth state ------------------------------------------------
-    B.onAuthChange((user) => {
+    B.onAuthChange((user, event) => {
+      // Followed a reset link → Supabase opens a recovery session; prompt for a new password.
+      if (event === 'PASSWORD_RECOVERY') { hideGate(); newpwModal.classList.remove('hidden'); return; }
       refreshAccount();
       updateSigninAffordance(user);
       if (user) {

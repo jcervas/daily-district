@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=70" />
+  <link rel="stylesheet" href="style.css?v=71" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -102,10 +102,28 @@
       <div class="login-error" id="login-error"></div>
       <button type="submit" class="login-submit" id="login-signin">Sign in</button>
       <button type="button" class="login-secondary" id="login-signup">Create an account</button>
+      <div class="login-help">
+        <button type="button" class="login-link" id="login-forgot-password">Forgot password?</button>
+        <button type="button" class="login-link" id="login-forgot-username">Forgot username?</button>
+      </div>
     </form>
     <p class="login-privacy">By continuing you agree to our
       <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
       We collect basic device info (screen size, browser) to improve the game.</p>
+  </div>
+</div>
+
+<!-- ===== SET NEW PASSWORD MODAL (shown after a password-reset link is followed) ===== -->
+<div id="newpw-modal" class="modal hidden">
+  <div class="modal-content login-modal-content">
+    <button class="login-close" id="newpw-close" aria-label="Close">&times;</button>
+    <h2 class="login-title">Set a new password</h2>
+    <p class="login-subtitle">Enter a new password for your account.</p>
+    <form id="newpw-form" class="login-email-form" autocomplete="on">
+      <input id="newpw-password" type="password" placeholder="New password" required autocomplete="new-password" minlength="6" />
+      <div class="login-error" id="newpw-error"></div>
+      <button type="submit" class="login-submit">Update password</button>
+    </form>
   </div>
 </div>
 
@@ -524,8 +542,8 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="globe.js?v=2.2.15" defer></script>
-<script src="backend.js?v=13" defer></script>
-<script src="login.js?v=10" defer></script>
-<script src="script.js?v=2.5.8" defer></script>
+<script src="backend.js?v=14" defer></script>
+<script src="login.js?v=11" defer></script>
+<script src="script.js?v=2.5.9" defer></script>
 </body>
 </html>

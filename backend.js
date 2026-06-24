@@ -62,7 +62,8 @@
     return data?.user ?? null;
   }
   function onAuthChange(cb) {
-    return client().auth.onAuthStateChange((_event, session) => cb(session?.user ?? null));
+    // Pass the event too (e.g. 'PASSWORD_RECOVERY') — existing callers ignore the 2nd arg.
+    return client().auth.onAuthStateChange((event, session) => cb(session?.user ?? null, event));
   }
   function signInWithOAuth(provider) {
     // provider: 'google' | 'apple' | 'azure' | 'github' | ...
@@ -81,6 +82,12 @@
     });
   }
   function signOut() { return client().auth.signOut(); }
+  // Email a password-reset link back to the app; on return Supabase fires PASSWORD_RECOVERY.
+  function resetPassword(email) {
+    return client().auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
+  }
+  // Set a new password for the current (recovery or signed-in) session.
+  function updatePassword(password) { return client().auth.updateUser({ password }); }
 
   // ── API (Edge Functions) ───────────────────────────────────────────────────
   // Both require a signed-in session; functions-js attaches the auth header.
@@ -200,7 +207,7 @@
     SUPABASE_URL,
     client,
     getUser, onAuthChange,
-    signInWithOAuth, signInWithEmail, signUpWithEmail, signOut,
+    signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
     logTelemetry, getProfile, updateProfile,
   };
