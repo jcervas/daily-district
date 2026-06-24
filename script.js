@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.8';
+const VERSION_NUMBER = '2.5.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -918,18 +918,22 @@ async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
 
-  // Optimistic "registered" cue: recolour the other states to the inactive/eliminated grey
-  // (the same colour out-of-play districts use) so the tapped one stands out — same visual
-  // language as the district picker. Applied IMMEDIATELY so the tap never feels laggy; the
-  // result colour (green/red) on the tapped state is added once the server answers.
+  // Optimistic "registered" cue: a TRUE dim — fade the other live states toward the grey
+  // basemap (CSS-animated fill-opacity) so the tapped one stands out, and freeze map
+  // interaction while the guess is in flight so hovering can't re-highlight a state
+  // mid-request. The result colour (green/red) on the tapped state is added once the
+  // server answers.
   const pressedEl = usRefLayers[abbr];
-  const dimFill = (isDarkMode() ? STATE_COLOR.dark : STATE_COLOR.light).elim.fill;
   for (const [a, el] of Object.entries(usRefLayers)) {
-    if (a !== abbr) el.attr('fill', dimFill).attr('fill-opacity', 1);
+    if (a !== abbr) el.attr('fill-opacity', 0.22);
   }
   pressedEl?.raise();
-  // Restore each state's proper colour (used on network failure + after a wrong guess).
-  const clearDim = () => { for (const [a, el] of Object.entries(usRefLayers)) _applyStateStyle(el, a); };
+  _setStatePickInteractive(false);
+  // Restore each state's proper style + interaction (network failure / after a wrong guess).
+  const clearDim = () => {
+    _setStatePickInteractive(true);
+    for (const [a, el] of Object.entries(usRefLayers)) _applyStateStyle(el, a);
+  };
   const panel = document.getElementById('us-ref-map');
 
   let resp;
@@ -2570,12 +2574,35 @@ function _stateColors(abbr) {
   return valid.has(abbr) ? c.valid : c.elim;
 }
 
+// Layered model: a static grey basemap (layer-basemap) sits behind these live state paths.
+// In-play states paint salmon (the answer paints red); out-of-play states fade their fill to
+// transparent so the grey basemap shows through and stop receiving pointer events — i.e. an
+// eliminated state is literally "dropped" from the live layer rather than recoloured grey.
 function _applyStateStyle(sel, abbr) {
-  const s = _stateColors(abbr);
-  sel.attr('fill', s.fill)
-     .attr('stroke', 'none')   // borders drawn as separate white mesh overlay
-     .attr('fill-opacity', s.opacity)
-     .style('cursor', (!correctStateGuessed && getValidStates().has(abbr)) ? 'pointer' : 'default');
+  const c = isDarkMode() ? STATE_COLOR.dark : STATE_COLOR.light;
+  const confirmed = correctStateGuessed && todayDistrict && todayDistrict.properties.state === abbr;
+  const inPlay    = !correctStateGuessed && getValidStates().has(abbr);
+  sel.attr('stroke', 'none');   // borders drawn as separate white mesh overlay
+  if (confirmed) {
+    sel.attr('fill', c.confirmed.fill).attr('fill-opacity', 1).style('pointer-events', null).style('cursor', 'default');
+  } else if (inPlay) {
+    sel.attr('fill', c.valid.fill).attr('fill-opacity', 1).style('pointer-events', null).style('cursor', 'pointer');
+  } else {
+    sel.attr('fill', c.valid.fill).attr('fill-opacity', 0).style('pointer-events', 'none').style('cursor', 'default');
+  }
+}
+
+// Grey backdrop colour for the static basemap (theme-aware).
+function _basemapFill() {
+  return (isDarkMode() ? STATE_COLOR.dark : STATE_COLOR.light).elim.fill;
+}
+
+// Toggle interaction on the live state layer — used to freeze hover/click while a guess is
+// in flight to the server (so a state can't re-highlight mid-request).
+function _setStatePickInteractive(on) {
+  if (!usRefMapGroup) return;
+  const layer = d3.select(usRefMapGroup).select('.layer-states');
+  if (!layer.empty()) layer.style('pointer-events', on ? null : 'none');
 }
 
 // Resize/reposition callouts based on current zoom k.
@@ -2904,6 +2931,22 @@ function initUSRefMap() {
     const g = svgSel.append('g');
     usRefMapGroup = g.node();
 
+    // Static inactive backdrop: every state painted the eliminated/inactive grey, drawn once
+    // and never interactive. The live state layer sits on top; out-of-play states fade to
+    // transparent to reveal this (a true dim) instead of being recoloured.
+    const layerBasemap = g.append('g').attr('class', 'layer-basemap').style('pointer-events', 'none');
+    const baseFill = _basemapFill();
+    stateFeatures.forEach(feature => {
+      const abbr = feature.properties && feature.properties.state;
+      if (!abbr || !stateDistrictMap[abbr]) return;
+      layerBasemap.append('path')
+        .datum(feature)
+        .attr('d', pathGen)
+        .attr('data-abbr', abbr)
+        .attr('fill', baseFill)
+        .attr('stroke', 'none');
+    });
+
     // State content (clickable state fills + the white border mesh) lives in its own
     // layer so the whole state map can be shown/hidden as one unit when toggling between
     // the state-pick and district phases (unified-map migration).
@@ -3074,6 +3117,9 @@ function zoomUSRefMapToValid(animated = true) {
 
 function updateUSRefMap() {
   if (!usRefMap) return;
+  if (usRefMapGroup) {
+    d3.select(usRefMapGroup).select('.layer-basemap').selectAll('path').attr('fill', _basemapFill());
+  }
   for (const [abbr, pathEl] of Object.entries(usRefLayers)) {
     _applyStateStyle(pathEl, abbr);
   }

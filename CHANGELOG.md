@@ -2,6 +2,16 @@
 
 ---
 
+## v2.5.0 — Layered state map (grey basemap + live overlay)
+
+The state picker is now drawn as two layers: a **static grey basemap** (`layer-basemap`, every state in the inactive `#b8bcc4`/`#48484a`) and the **live state overlay** on top.
+
+- **Elimination is now "drop from the live layer."** Out-of-play states fade their fill to transparent (revealing the grey basemap) and set `pointer-events: none` — instead of being recoloured grey. `_applyStateStyle` rewritten around this; `_stateColors` is retained for the offshore callouts.
+- **True dimming on a pending guess.** While a guess is in flight, the other live states fade to a low opacity (grey shows through) rather than an instant colour swap — animated via a CSS `fill-opacity` transition. Elimination uses the same transition for a smooth fade-out.
+- **Interaction frozen during the request.** The live layer's `pointer-events` are disabled while the server verdict is pending, so hovering can no longer re-highlight a state mid-request.
+
+---
+
 ## v2.4.8 — Fix: states flashed back to active after a correct pick
 
 - After a correct state guess the other states briefly flashed back to their "valid" salmon before going grey. Cause: `renderClues()` repaints the ref map (`updateUSRefMap`) and it ran *before* `correctStateGuessed` was set, so it used the stale valid-colour scheme. The correct branch now marks the state solved up-front so the repaint paints the solved scheme (others → inactive grey), and re-asserts the green cue on the tapped state through the zoom.
