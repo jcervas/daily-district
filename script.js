@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.17';
+const VERSION_NUMBER = '2.2.18';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3085,6 +3085,10 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
     if (zoomIn && _districtSvgSel && _districtPathGen && _districtStateFeatures) {
       // Position the tiles at the state's GEOGRAPHIC bbox directly. Instant — the ref
       // map's zoom is the visible animation and the hard-swap reveals the tiles already here.
+      // interrupt() kills any leftover zoom transition from the hidden pre-build pass —
+      // otherwise it keeps animating to a different fit, so the visible map and
+      // districtSavedTransform disagree and the FIRST guess snaps with a jarring jump.
+      _districtSvgSel.interrupt();
       const fc = { type: 'FeatureCollection', features: _districtStateFeatures };
       const stateFit = zoomToBBox(_districtPathGen.bounds(fc), _districtW, _districtH, { margin: 0.9 });
       districtSavedTransform = stateFit;
