@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.1';
+const VERSION_NUMBER = '2.5.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -924,11 +924,13 @@ async function submitStateGuessServer(abbr) {
   // mid-request. The result colour (green/red) on the tapped state is added once the
   // server answers.
   const pressedEl = usRefLayers[abbr];
-  const _validNow = getValidStates();
+  const DIM_FACTOR = 0.52;   // each other state keeps this fraction of its current opacity
   for (const [a, el] of Object.entries(usRefLayers)) {
-    // Only dim the OTHER still-active states; already-eliminated states stay dropped
-    // (fill-opacity 0) rather than ghosting back in at 0.22.
-    if (a !== abbr && _validNow.has(a)) el.attr('fill-opacity', 0.52);
+    // Scale the OTHER states' current opacity by a constant factor — active states dim,
+    // already-eliminated states (opacity 0) stay dropped (0 × factor = 0).
+    if (a === abbr) continue;
+    const cur = parseFloat(el.attr('fill-opacity'));
+    el.attr('fill-opacity', (isNaN(cur) ? 1 : cur) * DIM_FACTOR);
   }
   pressedEl?.raise();
   _setStatePickInteractive(false);

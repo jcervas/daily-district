@@ -2,6 +2,12 @@
 
 ---
 
+## v2.5.2 — Pending dim is a relative opacity reduction
+
+- The pending-guess dim now multiplies each other state's *current* opacity by a constant factor (0.52) instead of setting a flat value. Active states dim to 52% of full; already-eliminated states (opacity 0) stay dropped automatically (0 × factor = 0) — no valid-set check needed.
+
+---
+
 ## v2.5.1 — Pending dim only touches active states
 
 - Fix: the pending-guess dim set `fill-opacity: 0.22` on *every* other state, so already-eliminated states (transparent salmon) ghosted back in as faint red. The dim now applies only to still-active states (`getValidStates()`); eliminated states stay dropped at opacity 0.
