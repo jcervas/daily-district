@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.6.2';
+const VERSION_NUMBER = '2.6.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4000,7 +4000,11 @@ function buildGameoverMap(_retry = 0) {
       const glow1 = wonGame ? '#FDB515' : '#ff6060';
       const glow2 = wonGame ? '#ffb020' : '#C41230';
 
-      if (wonGame) {
+      // Only celebrate on a fresh win. When the game-over map is rebuilt on a
+      // page revisit (restored completed game), the welcome splash is up — firing
+      // the full-screen confetti over it is slow and distracting, so skip it.
+      const welcomeSplashUp = !document.getElementById('welcome-modal')?.classList.contains('hidden');
+      if (wonGame && !welcomeSplashUp) {
         const svgRect = svgNode.getBoundingClientRect();
         const { k, x: tx, y: ty } = d3.zoomTransform(svgNode);
         const [dcx, dcy] = pathGen.centroid(answerF);

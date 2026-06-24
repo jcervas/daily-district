@@ -78,7 +78,13 @@
   function signUpWithEmail(email, password, username) {
     return client().auth.signUp({
       email, password,
-      options: { data: username ? { username } : {} },
+      options: {
+        data: username ? { username } : {},
+        // With "Confirm email" enabled in Supabase Auth, the confirmation link
+        // sends the user back here; implicit flow + detectSessionInUrl then
+        // establishes their session and onAuthChange fires SIGNED_IN.
+        emailRedirectTo: window.location.href.split('#')[0],
+      },
     });
   }
   function signOut() { return client().auth.signOut(); }

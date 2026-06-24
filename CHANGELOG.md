@@ -2,6 +2,13 @@
 
 ---
 
+## v2.6.3 — No splash confetti on revisit; signup email confirmation
+
+- **No confetti on the welcome splash.** Returning to a finished, won game rebuilt the game-over map and fired the full-screen confetti over the splash (slow + distracting). Confetti now only fires on a fresh win, not on revisit.
+- **Email confirmation on signup.** Signup now sends the confirmation link back to the app and shows a "check your email" state; the user isn't signed in until they confirm. (Requires "Confirm email" enabled in Supabase Auth.)
+
+---
+
 ## v2.6.2 — Delete account
 
 - **Delete account** from Edit profile (two-step confirm). Removes the auth identity, profile, email, and telemetry/device fingerprint server-side via a new `delete-account` edge function (service role, own-account only).

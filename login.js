@@ -194,9 +194,16 @@
       const pw = $('login-password').value;
       if (!email || pw.length < 6) { err.textContent = 'Enter an email and a 6+ character password.'; return; }
       try {
-        const { error } = await B.signUpWithEmail(email, pw);
+        const { data, error } = await B.signUpWithEmail(email, pw);
         if (error) throw error;
-        err.textContent = 'Check your email to confirm, then sign in.';
+        // With email confirmation enforced, signUp returns a user but NO session
+        // until the link is clicked. (If confirmation is off, a session comes back
+        // and onAuthChange signs them straight in.)
+        if (data && data.session) {
+          err.textContent = '';
+        } else {
+          err.textContent = 'Almost there — check your email for a confirmation link to finish signing up.';
+        }
       } catch (ex) { fail(ex); }
     });
     // Forgot password: email a reset link to the address in the email field.
