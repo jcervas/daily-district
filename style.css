@@ -817,8 +817,8 @@ circle.tile-ripple {
 }
 /* While a tile's guess is in flight, dim the other (un-tapped) tiles. The tiles carry an
    inline opacity from the build/fade code, so !important is needed to override it. */
-#district-tiles g.district-tile { transition: opacity 0.18s ease; }
-#district-tiles.tiles-pinging g.district-tile:not(.tile-active) { opacity: 0.4 !important; }
+#us-ref-map g.district-tile { transition: opacity 0.18s ease; }
+#us-ref-map.tiles-pinging g.district-tile:not(.tile-active) { opacity: 0.4 !important; }
 
 /* State pick: the non-selected states dim while the /guess is in flight (opacity set
    inline via D3); smooth the transition. */
