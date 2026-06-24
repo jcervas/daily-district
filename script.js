@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.21';
+const VERSION_NUMBER = '2.3.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -709,7 +709,10 @@ async function enterServerDistrictPhase(state, instant = false) {
       tilesEl.classList.remove('hidden');
       tilesEl.style.opacity = '0';
       tilesEl.style.pointerEvents = 'none';
-      buildDistrictD3Map(state, false, false);
+      // Pre-build failure must NOT prevent lockStateDropdown() below (which sets
+      // gamePhase='district') — otherwise the player is stranded in the state phase.
+      try { buildDistrictD3Map(state, false, false); }
+      catch (e) { reportClientError('district_prebuild', e); }
     }
   }
 
@@ -2961,15 +2964,15 @@ function zoomUSRefMapToValid(animated = true) {
     return;
   }
 
-  // Server district phase: the ref map cross-fades into the district-tiles map (both
-  // share the national AlbersUSA projection), so zoom it to the guessed state's
-  // geometry to match the tiles' state-bbox view for a seamless zoom (no district
-  // inner points shipped, so getActiveDistrictKeys() can't drive this).
+  // Server district phase: the ref map and the district tiles now share the SAME
+  // projection + viewBox, so zoom both to the identical guessed-state transform (state
+  // outline bounds, margin 0.85) — the state lands pixel-for-pixel in the same place in
+  // both, making the cross-fade seamless. (showDistrictD3Map applies the same transform.)
   if (gamePhase === 'district' && serverState && usRefPathGen) {
     const feat = topoStates[serverState];
     if (!feat) return;
     const bbox = usRefPathGen.bounds(feat);
-    const t = zoomToBBox(bbox, W, H, { margin: 0.95 * 1.6 });
+    const t = zoomToBBox(bbox, W, H, { margin: 0.85 });
     usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
     if (animated) {
       // Snappy zoom into the guessed state so the district tiles reveal quickly.
@@ -3099,8 +3102,13 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
       // otherwise it keeps animating to a different fit, so the visible map and
       // districtSavedTransform disagree and the FIRST guess snaps with a jarring jump.
       _districtSvgSel.interrupt();
-      const fc = { type: 'FeatureCollection', features: _districtStateFeatures };
-      const stateFit = zoomToBBox(_districtPathGen.bounds(fc), _districtW, _districtH, { margin: 0.9 });
+      // Use the IDENTICAL transform the ref map zooms to (state outline bounds, margin
+      // 0.85). With the shared projection + viewBox this places the state pixel-for-pixel
+      // where the ref map shows it, so the cross-fade dissolves between matching shapes.
+      const stateOutline = topoStates[stateAbbr];
+      const fitBounds = stateOutline ? _districtPathGen.bounds(stateOutline)
+        : _districtPathGen.bounds({ type: 'FeatureCollection', features: _districtStateFeatures });
+      const stateFit = zoomToBBox(fitBounds, _districtW, _districtH, { margin: 0.85 });
       districtSavedTransform = stateFit;
       _districtSvgSel.call(districtZoomBehavior.transform, stateFit);
     }
@@ -3208,20 +3216,21 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const wonDistPart = wonDist ? wonDist.text.split('-').slice(1).join('-') : null;
   const isAtLarge   = stateFeatures.length === 1;
 
-  // SVG coordinate space uses the actual container dimensions so the projection
-  // fills the container without letterboxing (matches Observable zoom-to-bbox behavior).
-  // Read from the parent wrap if tilesEl is display:none (offsetWidth/Height = 0).
+  // Share the ref map's EXACT coordinate system so the two maps register pixel-for-pixel:
+  // same viewBox dimensions (W,H) and the same AlbersUSA projection instance. Without this
+  // the two maps fit independent projections at slightly different sizes, so the same state
+  // lands in different places and the state→district transition shows a mismatch. Fall back
+  // to local container dims + a fresh fit only if the ref map hasn't been built yet.
   const _wrap   = tilesEl.parentElement;
-  const cssW    = tilesEl.offsetWidth  || _wrap?.offsetWidth  || REF_VB_W;
-  const cssH    = tilesEl.offsetHeight || _wrap?.offsetHeight || REF_VB_H;
   const cssScale = 1;   // viewBox = container, 1 viewBox unit = 1 CSS pixel
-  const W = cssW, H = cssH;
+  const W = _usRefW || tilesEl.offsetWidth  || _wrap?.offsetWidth  || REF_VB_W;
+  const H = _usRefH || tilesEl.offsetHeight || _wrap?.offsetHeight || REF_VB_H;
   _districtW = W; _districtH = H;
   const dark = isDarkMode();
 
   const stateFC  = { type: 'FeatureCollection', features: stateFeatures };
   const allStatesFC = { type: 'FeatureCollection', features: Object.values(topoStates).filter(Boolean) };
-  const projection  = d3.geoAlbersUsa().fitExtent([[10, 10], [W - 10, H - 10]], allStatesFC);
+  const projection  = usRefProjection || d3.geoAlbersUsa().fitSize([W, H], allStatesFC);
   _districtProjection    = projection;  // stored for external zoom calls
   _districtCssScale      = cssScale;
   _districtStateFeatures = stateFeatures;
@@ -3230,7 +3239,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const stateBBox   = pathGen.bounds(stateFC);
   const stateFitTransform = zoomToBBox(stateBBox, W, H, { margin: 0.85, maxScale: W / 12 });
 
-  dbg(`SVG W=${W} H=${H} cssScale=${cssScale.toFixed(2)} container=${cssW}×${cssH} possibleKeys=${possibleKeys.size}/${stateFeatures.length}`);
+  dbg(`SVG W=${W} H=${H} cssScale=${cssScale.toFixed(2)} possibleKeys=${possibleKeys.size}/${stateFeatures.length}`);
 
   const svg = d3.select(tilesEl)
     .append('svg')
