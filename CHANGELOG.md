@@ -2,6 +2,13 @@
 
 ---
 
+## v2.6.1 — Menu bar reachable over modals
+
+- **Header always on top** — the menu bar (How to play, Leaderboard, Settings, account/Sign in, Donate) now sits above all modals and stays tappable, fixing mobile where the full-screen game-over / result modal covered it with no way to reach the leaderboard, settings, sign-out, or feedback.
+- Modals now reserve the header strip (`--header-h`) so their content and close button never hide behind the menu bar.
+
+---
+
 ## v2.6.0 — State-pick polish, account recovery & leaderboard test data
 
 Rollup release of the 2.5.x line:
