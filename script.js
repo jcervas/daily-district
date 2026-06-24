@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.4';
+const VERSION_NUMBER = '2.4.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -927,19 +927,17 @@ async function submitStateGuessServer(abbr) {
   pressedEl?.raise();
   const clearDim = () => { for (const el of Object.values(usRefLayers)) el.style('opacity', null); };
   const panel = document.getElementById('us-ref-map');
-  panel.classList.remove('shake');
-  void panel.offsetWidth;            // restart the shake animation on rapid re-taps
-  panel.classList.add('shake');
 
   let resp;
+  // No motion until the server answers: shaking on every tap meant a correct guess shook
+  // first, then turned green. The dim cue above is the only optimistic feedback; the shake
+  // (wrong) or green flash (correct) is applied once we know the result.
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { clearDim(); panel.classList.remove('shake'); return serverGuessFailed(err); }
+  catch (err) { clearDim(); return serverGuessFailed(err); }
 
-  // Correct: positive confirmation before the reward zoom. Flash the tapped state green
-  // (the mirror of the red miss) plus a green pulse-ring on the map, held briefly so the
-  // hit registers before the zoom into the state carries attention to the district phase.
+  // Correct: flash the tapped state green + a green pulse-ring, then go straight into the
+  // reward zoom. Only a brief beat so the hit registers without stalling the transition.
   if (resp.correct) {
-    panel.classList.remove('shake');
     if (pressedEl) {
       pressedEl.attr('fill', '#22c55e').attr('fill-opacity', 0.92)
                .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
@@ -953,13 +951,16 @@ async function submitStateGuessServer(abbr) {
       panel.classList.remove('flash-correct');
       clearDim();
       processStateGuessServer(abbr, resp);
-    }, 380);
+    }, 140);
     return;
   }
 
-  // Wrong: escalate the tapped state to the unmistakable red miss colour while the others
-  // stay dimmed; the neutral shake already supplied the motion. processStateGuessServer
-  // re-renders shortly after, clearing the inline opacity + red.
+  // Wrong: now shake + escalate the tapped state to the unmistakable red miss colour while
+  // the others stay dimmed. processStateGuessServer re-renders shortly after, clearing the
+  // inline opacity + red.
+  panel.classList.remove('shake');
+  void panel.offsetWidth;            // restart the shake on rapid re-taps
+  panel.classList.add('shake');
   if (pressedEl) {
     pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
              .attr('stroke', '#ffffff').attr('stroke-width', 2.5)

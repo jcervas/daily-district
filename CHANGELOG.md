@@ -2,6 +2,13 @@
 
 ---
 
+## v2.4.5 — Snappier, cleaner correct-state feedback
+
+- **No more shake-then-green.** The neutral shake was applied on *every* state tap before the server replied, so a correct guess shook first and only then turned green. The shake now fires only on a confirmed wrong guess; a correct guess goes straight to the green flash.
+- **Shorter pause on a correct state.** The hold before the reward zoom dropped from 380ms → 140ms, so the green registers without stalling the transition into the district phase.
+
+---
+
 ## v2.4.4 — Sign-in after an anonymous game now sticks
 
 - **Fixed: the result modal kept showing "Sign in / Sign up" after signing in.** `isAnonymousPlayer` was set at game start and never cleared when a player signed in *after* finishing (the re-init listener only fires when no guesses have been made yet). The `district-auth` handler now clears `isAnonymousPlayer` and refreshes the game-over surfaces (drops the result-modal + ribbon sign-in nudges, shows the personal-stats block).
