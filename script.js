@@ -2901,6 +2901,15 @@ function initUSRefMap() {
         .attr('pointer-events', 'none');
     }
 
+    // Single-SVG layer skeleton (unified-map migration, Stage 1). District + game-over
+    // content will be appended into these groups so the whole game lives in ONE zooming
+    // SVG. Created above the state fills/border and below the callouts so z-order is
+    // states → district context → district polys → tiles → answer → callouts.
+    g.append('g').attr('class', 'layer-context');    // counties/roads/urban (district+gameover)
+    g.append('g').attr('class', 'layer-districts');  // guessed-state district polygons + border
+    g.append('g').attr('class', 'layer-tiles');      // force-sim circles (district phase)
+    g.append('g').attr('class', 'layer-answer');     // answer highlight + leader badge (gameover)
+
     // Callouts for small states — build abbr-keyed lookup from our state features
     const fipsToFeature = {};
     stateFeatures.forEach(f => {
