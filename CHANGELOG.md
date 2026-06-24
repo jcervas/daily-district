@@ -2,6 +2,25 @@
 
 ---
 
+## v2.4.0 — Unified state + district map (one SVG)
+
+### One map for the whole game
+- **Single shared map (`#us-ref-map`)** now drives both gameplay phases instead of two separate D3 SVGs + a cross-fade. State pick zooms into the guessed state, the 50-state fills fade out, and the district tiles + county/road/state-border context render into a `district-render` group **inside the shared map group** — no second SVG, no cross-fade, so the state→district handoff is a single continuous zoom.
+- **`usRefZoom` drives the district view**: one zoom behavior for both phases, counter-scaling the district tiles to a constant screen size via `_applyTileZoomScaling`; `districtZoomBehavior` is aliased to `usRefZoom`.
+- **`setMapDistrictView(on)`** toggles the view — fades/disables the state fills + offshore callouts and reveals the district render (reversible for a fresh state phase).
+- **Game-over stays its own screen** (the game-over modal), so the in-play map only handles state→district gameplay; `buildDistrictD3Map` is a no-op at game-over.
+
+### Plumbing
+- `_buildDistrictCtx` renders into the shared map and no longer depends on the `#district-tiles` element or a `tilesEl` size probe; uses the ref map's exact `usRefProjection` + `_usRefW/_usRefH`. County clip `defs` live in the render group so they clear on each rebuild.
+- `zoomUSRefMapToValid` (district branch) records the state-fit transform (so tiles size correctly and the fit-toggle has a reference).
+- Tile interactions (optimistic ping/dim, win morph), the ping/dim CSS, and the `+/−/fit` zoom buttons all retargeted from `#district-tiles` to the shared map.
+- Removed the now-redundant district pre-build + cross-fade timing in `enterServerDistrictPhase`/`showDistrictD3Map`.
+
+### Verified
+- State→district transition, geographic tile placement, win→game-over, and wrong-guess hot/cold elimination.
+
+---
+
 ## v1.13 — State Outlines, Loading Globe & Confetti Perf
 
 ### State boundary outlines
