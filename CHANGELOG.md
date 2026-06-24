@@ -2,6 +2,12 @@
 
 ---
 
+## v2.5.7 — No red flash after the gold confirmation
+
+- The correct state stayed gold for the confirmation beat but then flashed the confirmed red (from `updateUSRefMap` in `renderClues`/`lockStateDropdown`) before the zoom. It now stays **gold** through the transition and fades out gold as the white district render zooms in — straight from gold → bbox zoom, no red.
+
+---
+
 ## v2.5.6 — Correct-state check uses the guess-history icon, fitted to the state
 
 - The correct-state confirmation now stamps the same `checkCircle` icon used in the guess history (`guess-icon-svg`) instead of a hand-drawn tick, sized to fit inside the state's bbox (~55% of its smaller dimension, leaving padding) and centred on its centroid.

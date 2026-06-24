@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.6';
+const VERSION_NUMBER = '2.5.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -995,9 +995,15 @@ function processStateGuessServer(abbr, resp) {
     correctStateGuessed = true;
     serverState = state;
     todayDistrict.properties.state = state;
+    // Keep the confirmed state GOLD through the transition — updateUSRefMap (in renderClues
+    // and lockStateDropdown) would otherwise repaint it the confirmed red. It then fades out
+    // gold as the white district render zooms in, so we go straight from gold → bbox zoom.
+    const keepGold = () => usRefLayers[state]?.attr('fill', '#FDB515').attr('fill-opacity', 1).raise();
     renderGuessHistory();
     renderClues();
+    keepGold();
     enterServerDistrictPhase(state).then(() => {
+      keepGold();
       if (isAtLarge) {
         // At-large: the lone district is the answer; the server still wants a
         // district guess to record the win, so auto-submit it once tiles exist.
@@ -2616,7 +2622,7 @@ function _showStateCheck(abbr) {
   if (!b || !isFinite(b[0][0]) || !c || !isFinite(c[0])) return;
   const w = b[1][0] - b[0][0], h = b[1][1] - b[0][1];
   // Fit to ~55% of the state's smaller dimension → padding remains inside the state.
-  const side = Math.max(4, Math.min(w, h) * 0.55);
+  const side = Math.max(4, Math.min(w, h) * 0.25);
   const g = d3.select(usRefMapGroup).append('g').attr('class', 'state-check').attr('pointer-events', 'none');
   g.html(`<svg x="${c[0] - side / 2}" y="${c[1] - side / 2}" width="${side}" height="${side}" `
     + `viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.2" `
