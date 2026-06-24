@@ -2,10 +2,15 @@
 
 ---
 
-## v2.5.9 — Forgot password / username on sign-in
+## v2.5.10 — Drop "Forgot username?"
+
+- Removed the "Forgot username?" link — sign-in is by email, so there's no username credential to recover. The "Forgot password?" link (centred) remains.
+
+---
+
+## v2.5.9 — Forgot password on sign-in
 
 - Added **"Forgot password?"** to the login form — emails a Supabase reset link; following it opens a recovery session and a new "Set a new password" modal (`resetPassword` / `updatePassword` in backend.js, `PASSWORD_RECOVERY` handled in login.js).
-- Added **"Forgot username?"** which clarifies that sign-in is by email (there's no separate username credential to recover).
 
 ---
 

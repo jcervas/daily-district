@@ -171,11 +171,6 @@
         err.textContent = 'Check your email for a password-reset link.';
       } catch (ex) { fail(ex); }
     });
-    // Forgot username: sign-in is by email, so there's no username credential to recover.
-    $('login-forgot-username').addEventListener('click', () => {
-      err.textContent = 'You sign in with your email address — there is no separate username.';
-    });
-
     // ---- Set-new-password modal (after following a reset link) ---------------
     const newpwModal = $('newpw-modal');
     const newpwErr = $('newpw-error');
