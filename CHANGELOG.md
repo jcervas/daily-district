@@ -2,6 +2,13 @@
 
 ---
 
+## v2.5.5 — Gold + checkmark confirmation on a correct state
+
+- A correct state guess now fills the state **gold** (`#FDB515`) and stamps a **checkmark** on it, held ~650ms as a clear "correct!" beat, before entering the district phase and zooming to the bbox. The other states fade to the grey basemap during the hold.
+- The deliberate hold also separates the confirmation from the zoom, so the entry reads as one clean motion instead of the previous slight zoom-out-then-in jiggle (which came from fitting the state's bbox immediately after a tighter mid-game view).
+
+---
+
 ## v2.5.4 — Don't draw district shapes during play
 
 - **The gameplay `state-fill` is now the single state outline, not the district polygons.** Previously it appended one path per district (`stateFeatures`), so the district boundary geometry sat in the DOM during play (readable/inspectable). The white state backdrop now comes from the state silhouette only; the district shapes are revealed at game over (unchanged).

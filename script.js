@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.4';
+const VERSION_NUMBER = '2.5.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -948,16 +948,20 @@ async function submitStateGuessServer(abbr) {
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearDim(); return serverGuessFailed(err); }
 
-  // Correct: fade every OTHER state out to the grey basemap, then go straight into the
-  // district phase — which fills the correct state white (counties/roads/urban) and
-  // smoothly zooms to its bbox with the district tiles. No green flash; the zoom is the
-  // confirmation. Interaction stays frozen (the district phase takes over the map).
+  // Correct: confirm the hit first — fade the other states out to the grey basemap, fill the
+  // correct state gold + stamp a checkmark, hold briefly, THEN enter the district phase
+  // (white state + counties/roads/urban + tiles, zoomed to bbox). Interaction stays frozen.
   if (resp.correct) {
     for (const [a, el] of Object.entries(usRefLayers)) {
       if (a !== abbr) el.attr('fill-opacity', 0);
     }
+    if (pressedEl) pressedEl.attr('fill', '#FDB515').attr('fill-opacity', 1).raise();
+    _showStateCheck(abbr);
     _guessLocked = false;
-    processStateGuessServer(abbr, resp);
+    setTimeout(() => {
+      _hideStateCheck();
+      processStateGuessServer(abbr, resp);
+    }, 650);
     return;
   }
 
@@ -2597,6 +2601,30 @@ function _setStatePickInteractive(on) {
   if (!usRefMapGroup) return;
   const layer = d3.select(usRefMapGroup).select('.layer-states');
   if (!layer.empty()) layer.style('pointer-events', on ? null : 'none');
+}
+
+// Stamp a checkmark on a correctly-guessed state (centred on its centroid, constant screen
+// size), shown briefly before the zoom into the district phase.
+function _showStateCheck(abbr) {
+  _hideStateCheck();
+  if (!usRefMapGroup || !usRefProjection) return;
+  const feat = topoStates[abbr];
+  if (!feat) return;
+  const c = usRefProjection(d3.geoCentroid(feat));
+  if (!c || !isFinite(c[0])) return;
+  const k = (d3.zoomTransform(usRefSvgSel.node()).k) || 1;
+  const s = 26 / k;   // ~26px on screen regardless of current zoom
+  const g = d3.select(usRefMapGroup).append('g')
+    .attr('class', 'state-check').attr('pointer-events', 'none')
+    .attr('transform', `translate(${c[0]},${c[1]})`);
+  g.append('path')
+    .attr('d', `M ${-0.5 * s} ${0.02 * s} L ${-0.13 * s} ${0.42 * s} L ${0.55 * s} ${-0.42 * s}`)
+    .attr('fill', 'none').attr('stroke', '#1a1a1a').attr('stroke-width', 4)
+    .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+    .attr('vector-effect', 'non-scaling-stroke');
+}
+function _hideStateCheck() {
+  if (usRefMapGroup) d3.select(usRefMapGroup).select('.state-check').remove();
 }
 
 // Resize/reposition callouts based on current zoom k.
