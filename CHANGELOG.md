@@ -2,6 +2,14 @@
 
 ---
 
+## v2.4.2 — Per-player solve time in stats
+
+- **`get_leaderboard` now returns the signed-in player's solve time.** The `results.seconds` column was already recorded per game and aggregated for the today/all-time leaderboards, but the per-user `user` object didn't expose it. Added `avgSeconds` + `totalWonSeconds` to the `user` section of the RPC.
+- **Result tab keeps the correct avg time after sign-in.** `hydratePersonalStatsFromServer()` now repopulates `totalWonTime` from `totalWonSeconds`, so the Result tab's "Avg. time" survives the account hydrate instead of resetting to "—".
+- **"My Stats" tab now shows Avg. time** alongside avg guesses.
+
+---
+
 ## v2.4.1 — Reconcile device stats with the account on sign-in
 
 - **Result tab now matches the Leaderboard for signed-in players.** The Result tab reads device-local stats (`districtguess_stats`), which accumulate for anonymous play and survive DB resets / fresh sign-ins — so they could disagree with the account-scoped Leaderboard (e.g. "Played 2" locally vs 1 game on the server). On sign-in (and on load when already signed in), `hydratePersonalStatsFromServer()` overwrites the local stats with the account's authoritative server aggregates (`played`, `won`, current/max streak, guess distribution). Avg-time is dropped on hydrate since the server doesn't track per-game time.

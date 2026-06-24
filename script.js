@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.1';
+const VERSION_NUMBER = '2.4.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1388,8 +1388,8 @@ function loadPersonalStats() {
 // The Result tab reads device-local stats, which accumulate for anonymous play and are
 // account-agnostic — so after a sign-in (or a DB reset + fresh account) they can disagree
 // with the account-scoped Leaderboard. When a player is signed in, overwrite the local
-// stats with the account's authoritative server aggregates so both panels match.
-// (Server doesn't track per-game time, so avg-time is dropped on hydrate.)
+// stats with the account's authoritative server aggregates so both panels match
+// (played, won, current/max streak, guess distribution, and total solve time across wins).
 async function hydratePersonalStatsFromServer() {
   try {
     const lb = await window.DistrictBackend.leaderboard();
@@ -1405,7 +1405,7 @@ async function hydratePersonalStatsFromServer() {
       streak: Number(u.curStreak) || 0,
       maxStreak: Number(u.maxStreak) || 0,
       guessDist,
-      totalWonTime: 0,                    // not tracked server-side
+      totalWonTime: Number(u.totalWonSeconds) || 0,   // sum of solve times across wins
       lastDate: null,
     };
     localStorage.setItem(STORAGE_PREFIX + 'stats', JSON.stringify(stats));
@@ -4559,6 +4559,7 @@ function renderAggregatePanel(d, emptyMsg) {
 // My Stats — the signed-in player only (distribution + avg guesses + streaks).
 function renderUserStats(u) {
   const avgGuesses = u.avgGuessesWin != null ? Number(u.avgGuessesWin).toFixed(1) : '—';
+  const avgTime    = u.avgSeconds != null ? formatTime(Number(u.avgSeconds)) : '—';
   const wonToday = gameOver && guessHistory.some(g => g.correct && g.phase === 'district');
   const hiKey = gameOver ? (wonToday ? guessCount : 'X') : null;
   return `
@@ -4572,7 +4573,7 @@ function renderUserStats(u) {
       <h4>Guess Distribution</h4>
       ${renderDistBars(u.dist, hiKey)}
     </div>
-    <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong></div>`;
+    <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong> &nbsp;&middot;&nbsp; Avg. time: <strong>${avgTime}</strong></div>`;
 }
 
 
