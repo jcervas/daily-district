@@ -2,6 +2,13 @@
 
 ---
 
+## v2.5.3 — Simpler, smoother correct-state transition
+
+- **Removed the green-flash / `keepGreen` complexity** on a correct state guess. The flow is now: fade every other state out to the grey basemap, then enter the district phase — which fills the correct state white (counties/roads/urban), smoothly zooms to its bbox, and shows the district tiles. The zoom is the confirmation.
+- **Smooth zoom (no jank).** The heavy district render (counties + tiles) is now built *before* the zoom animates instead of mid-animation, and the zoom is kicked on the next frame — so the transform tweens cleanly instead of jumping.
+
+---
+
 ## v2.5.2 — Pending dim is a relative opacity reduction
 
 - The pending-guess dim now multiplies each other state's *current* opacity by a constant factor (0.52) instead of setting a flat value. Active states dim to 52% of full; already-eliminated states (opacity 0) stay dropped automatically (0 × factor = 0) — no valid-set check needed.

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.2';
+const VERSION_NUMBER = '2.5.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -948,22 +948,16 @@ async function submitStateGuessServer(abbr) {
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearDim(); return serverGuessFailed(err); }
 
-  // Correct: tint the tapped state green + a green pulse-ring, then go straight into the
-  // reward zoom. Stroke left untouched (the normal border mesh). The grey dim is
-  // deliberately NOT cleared so it persists through the zoom into the district phase
-  // (enterServerDistrictPhase fades the whole state layer out from there).
+  // Correct: fade every OTHER state out to the grey basemap, then go straight into the
+  // district phase — which fills the correct state white (counties/roads/urban) and
+  // smoothly zooms to its bbox with the district tiles. No green flash; the zoom is the
+  // confirmation. Interaction stays frozen (the district phase takes over the map).
   if (resp.correct) {
-    if (pressedEl) {
-      pressedEl.attr('fill', '#22c55e').attr('fill-opacity', 0.92).raise();
+    for (const [a, el] of Object.entries(usRefLayers)) {
+      if (a !== abbr) el.attr('fill-opacity', 0);
     }
-    panel.classList.remove('flash-correct');
-    void panel.offsetWidth;            // restart the pulse on rapid re-taps
-    panel.classList.add('flash-correct');
     _guessLocked = false;
-    setTimeout(() => {
-      panel.classList.remove('flash-correct');
-      processStateGuessServer(abbr, resp);
-    }, 140);
+    processStateGuessServer(abbr, resp);
     return;
   }
 
@@ -992,19 +986,14 @@ function processStateGuessServer(abbr, resp) {
     if (resp.completed && !resp.won) { renderGuessHistory(); renderClues(); finishServerLoss(resp); return; }
     const isAtLarge = (stateDistrictMap[state] || []).length === 1;
     // Mark the state solved BEFORE the repaint in renderClues so the ref map uses the
-    // solved colour scheme (other states → inactive grey) instead of briefly flashing the
-    // stale "valid" salmon. enterServerDistrictPhase re-sets these idempotently.
+    // solved colour scheme (other states → inactive grey / faded) instead of briefly
+    // flashing the stale "valid" salmon. enterServerDistrictPhase re-sets these idempotently.
     correctStateGuessed = true;
     serverState = state;
     todayDistrict.properties.state = state;
-    // Keep the tapped state green as the positive cue; updateUSRefMap (in renderClues and
-    // again in lockStateDropdown) would otherwise repaint it the confirmed red.
-    const keepGreen = () => usRefLayers[state]?.attr('fill', '#22c55e').attr('fill-opacity', 0.92).raise();
     renderGuessHistory();
     renderClues();
-    keepGreen();
     enterServerDistrictPhase(state).then(() => {
-      keepGreen();
       if (isAtLarge) {
         // At-large: the lone district is the answer; the server still wants a
         // district guess to record the win, so auto-submit it once tiles exist.
@@ -3173,10 +3162,16 @@ function lockStateDropdown(stateAbbr, instant = false) {
   // Update chips and US ref map to show only the confirmed state
   renderStateChips();
   updateUSRefMap();
-  zoomUSRefMapToValid();
 
-  // Zoom into state and show D3 district map (always — read-only when game is over)
+  // Build the district render FIRST (counties + tiles are heavy — building it mid-zoom
+  // starves the animation and the zoom appears to jump), then animate the zoom into the
+  // state so it's smooth. On a real frame the built render paints, then the transform tweens.
   showDistrictD3Map(stateAbbr, instant);
+  if (instant) {
+    zoomUSRefMapToValid(false);
+  } else {
+    requestAnimationFrame(() => zoomUSRefMapToValid(true));
+  }
 }
 
 // Switch the SHARED map between the state-pick view and the district view. In the
