@@ -2,6 +2,13 @@
 
 ---
 
+## v2.5.4 — Don't draw district shapes during play
+
+- **The gameplay `state-fill` is now the single state outline, not the district polygons.** Previously it appended one path per district (`stateFeatures`), so the district boundary geometry sat in the DOM during play (readable/inspectable). The white state backdrop now comes from the state silhouette only; the district shapes are revealed at game over (unchanged).
+- **Zoom bboxes are computed from tile (dist-icon) positions, not district geometry.** New `_districtTileBBox(keys)` helper drives the active-set re-zoom and the fit-toggle button; the entry/state fit uses the state outline. Removed the now-redundant invisible `phantom-anchors` layer.
+
+---
+
 ## v2.5.3 — Simpler, smoother correct-state transition
 
 - **Removed the green-flash / `keepGreen` complexity** on a correct state guess. The flow is now: fade every other state out to the grey basemap, then enter the district phase — which fills the correct state white (counties/roads/urban), smoothly zooms to its bbox, and shows the district tiles. The zoom is the confirmation.

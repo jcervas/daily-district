@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.3';
+const VERSION_NUMBER = '2.5.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2856,16 +2856,10 @@ function initUSRefMap() {
               .call(districtZoomBehavior.transform, districtStateFitTransform);
             btn.classList.remove('at-active-fit');
           } else {
-            // First press: zoom to geographic bbox of remaining eligible districts
+            // First press: zoom to the remaining eligible TILES (dist-icon positions).
             districtUserZoomed = false;
-            const activeKeys = getActiveDistrictKeys();
-            const activeFeatures = (_districtStateFeatures || [])
-              .filter(f => activeKeys.has(f.properties['state-district']));
-            let t = districtStateFitTransform;
-            if (activeFeatures.length > 0 && _districtPathGen) {
-              const geoBBox = _districtPathGen.bounds({ type: 'FeatureCollection', features: activeFeatures });
-              t = zoomToBBox(geoBBox, W, H, { margin: 0.9 });
-            }
+            const activeBBox = _districtTileBBox(getActiveDistrictKeys());
+            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: 0.9 }) : districtStateFitTransform;
             if (t) {
               tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
                 .call(districtZoomBehavior.transform, t);
@@ -3394,8 +3388,14 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   _districtStateFeatures = stateFeatures;
   const pathGen     = d3.geoPath().projection(projection);
   _districtPathGen       = pathGen;
-  const stateBBox   = pathGen.bounds(stateFC);
+  // Fit to the STATE outline (single non-secret shape), not the district polygons.
+  const stateOutline = topoStates[stateAbbr];
+  const stateBBox   = stateOutline ? pathGen.bounds(stateOutline) : pathGen.bounds(stateFC);
   const stateFitTransform = zoomToBBox(stateBBox, W, H, { margin: 0.85, maxScale: W / 12 });
+
+  // Bbox of a district-key set's TILE (dist-icon) positions — lets us fit the remaining
+  // tiles WITHOUT touching the district polygon geometry (shapes only draw at game over).
+  const tileBBox = (keys) => _districtTileBBox(keys) || stateBBox;
 
   dbg(`SVG W=${W} H=${H} cssScale=${cssScale.toFixed(2)} possibleKeys=${possibleKeys.size}/${stateFeatures.length}`);
 
@@ -3417,7 +3417,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   districtZoomBehavior = usRefZoom;
 
   return { svg, g, pathGen, projection, cssScale, W, H, dark, tilesEl, stateAbbr,
-           stateFeatures, stateFC, stateBBox, stateFitTransform,
+           stateFeatures, stateFC, stateBBox, stateFitTransform, tileBBox,
            densityScale, targetCirclePx,
            possibleKeys, hotKeys, coldKeys,
            wonDist, wonDistPart, isAtLarge, answerKey };
@@ -3425,10 +3425,27 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
 
 // Decides and applies the initial zoom transform (zoomIn animation, game-over zoom,
 
-function _applyDistrictZoom(ctx, zoomIn) {
-  const { pathGen, stateFeatures, stateBBox, possibleKeys, W, H } = ctx;
+// Bbox (projected px) of the given district keys' tile (dist-icon) positions, using the
+// stored projection + state features. `keys` null = all districts. Returns null if unknown.
+function _districtTileBBox(keys) {
+  const proj = _districtProjection, feats = _districtStateFeatures || [];
+  if (!proj || !feats.length) return null;
+  const refPt = (f) => POINT_OVERRIDES[f.properties['state-district']]
+                    || districtPoints[f.properties['state-district']]
+                    || d3.geoCentroid(f);
+  const pts = feats
+    .filter(f => !keys || keys.has(f.properties['state-district']))
+    .map(f => proj(refPt(f)))
+    .filter(p => p && isFinite(p[0]));
+  if (!pts.length) return null;
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]];
+}
 
-  // State fit: geographic bbox of the whole state (the "zoomed out" district reference).
+function _applyDistrictZoom(ctx, zoomIn) {
+  const { stateBBox, possibleKeys, tileBBox, W, H } = ctx;
+
+  // State fit: bbox of the whole state outline (the "zoomed out" district reference).
   const stateFit = zoomToBBox(stateBBox, W, H, { margin: 0.85 });
   districtStateFitTransform = stateFit;
 
@@ -3439,13 +3456,9 @@ function _applyDistrictZoom(ctx, zoomIn) {
     return;
   }
 
-  // After a wrong district guess (rebuild): zoom the shared map to the geographic bbox of
-  // the remaining eligible districts so they fill the view.
-  const activeFeatures = stateFeatures.filter(f => possibleKeys.has(f.properties['state-district']));
-  const activeBBox = activeFeatures.length > 0
-    ? pathGen.bounds({ type: 'FeatureCollection', features: activeFeatures })
-    : stateBBox;
-  const activeFit = zoomToBBox(activeBBox, W, H, { margin: 0.85 });
+  // After a wrong district guess (rebuild): zoom the shared map to the bbox of the remaining
+  // eligible TILES (dist-icon positions) so they fill the view — no district geometry.
+  const activeFit = zoomToBBox(tileBBox(possibleKeys), W, H, { margin: 0.85 });
   districtSavedTransform = activeFit;
   const dur = 500 * (typeof ANIM_SLOW !== 'undefined' ? ANIM_SLOW : 1);
   usRefSvgSel.transition().duration(dur).ease(d3.easeCubicInOut).call(usRefZoom.transform, activeFit);
@@ -3617,18 +3630,6 @@ function _drawGameplayTiles(ctx) {
           possibleKeys, hotKeys, coldKeys, wonDist, wonDistPart, isAtLarge,
           stateFitTransform } = ctx;
 
-  // Invisible anchor circles for every district in the state — used only as position
-  // markers so the zoom-to-active-tiles bbox is always grounded in real projected coords.
-  const phantomG = g.append('g').attr('class', 'phantom-anchors').attr('pointer-events', 'none');
-  stateFeatures.forEach(f => {
-    const key    = f.properties['state-district'];
-    const refPt  = POINT_OVERRIDES[key] || districtPoints[key] || d3.geoCentroid(f);
-    const proj   = projection(refPt);
-    if (!proj || !isFinite(proj[0])) return;
-    phantomG.append('circle').attr('cx', proj[0]).attr('cy', proj[1])
-      .attr('r', 14 / cssScale).attr('opacity', 0);
-  });
-
   // Other states as a muted context
   const otherStateFills = Object.values(topoStates).filter(f => f && f.properties?.state !== stateAbbr);
   g.append('g').attr('class', 'context-other-states').attr('pointer-events', 'none')
@@ -3637,15 +3638,17 @@ function _drawGameplayTiles(ctx) {
     .attr('stroke', dark ? 'rgba(255,255,255,0.12)' : 'rgba(130,130,150,0.45)')
     .attr('stroke-width', 0.4).attr('vector-effect', 'non-scaling-stroke');
 
-  // Active state surface fill
+  // White state backdrop from the STATE OUTLINE only — the district polygons are NOT drawn
+  // during play (so a player can't read district boundaries from the DOM); the answer shape
+  // is revealed at game over.
+  const stateOutline = topoStates[stateAbbr];
   const fillG = g.append('g').attr('class', 'state-fill');
-  stateFeatures.forEach(f => {
-    fillG.append('path').datum(f).attr('d', pathGen)
+  if (stateOutline) {
+    fillG.append('path').datum(stateOutline).attr('d', pathGen)
       .attr('style', 'fill: var(--surface);').attr('stroke', 'none').attr('pointer-events', 'none');
-  });
+  }
 
   // County lines — always visible in gameplay (no zoom threshold), clipped to active state
-  const stateOutline = topoStates[stateAbbr];
   if (topoCounties && stateOutline) {
     const clipId = `gameplay-county-clip-${stateAbbr}`;
     // defs go into the district render group (g) so they're cleared on each rebuild
