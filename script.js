@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.2';
+const VERSION_NUMBER = '2.4.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -935,12 +935,25 @@ async function submitStateGuessServer(abbr) {
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearDim(); panel.classList.remove('shake'); return serverGuessFailed(err); }
 
-  // Correct: clear the cue and go straight into the reward zoom — no red.
+  // Correct: positive confirmation before the reward zoom. Flash the tapped state green
+  // (the mirror of the red miss) plus a green pulse-ring on the map, held briefly so the
+  // hit registers before the zoom into the state carries attention to the district phase.
   if (resp.correct) {
-    clearDim();
     panel.classList.remove('shake');
+    if (pressedEl) {
+      pressedEl.attr('fill', '#22c55e').attr('fill-opacity', 0.92)
+               .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
+               .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+    }
+    panel.classList.remove('flash-correct');
+    void panel.offsetWidth;            // restart the pulse on rapid re-taps
+    panel.classList.add('flash-correct');
     _guessLocked = false;
-    processStateGuessServer(abbr, resp);
+    setTimeout(() => {
+      panel.classList.remove('flash-correct');
+      clearDim();
+      processStateGuessServer(abbr, resp);
+    }, 380);
     return;
   }
 

@@ -2,6 +2,12 @@
 
 ---
 
+## v2.4.3 — Positive feedback on a correct state guess
+
+- **Correct state now reads as a hit.** Previously only a *wrong* state shook + flashed red, while a correct pick went straight into the reward zoom with no positive signal. A correct guess now flashes the tapped state green (white outline, other states dimmed) and fires the green `flashCorrect` pulse-ring on the map, held ~380ms before the zoom into the state — the clear counterpart to the red+shake miss.
+
+---
+
 ## v2.4.2 — Per-player solve time in stats
 
 - **`get_leaderboard` now returns the signed-in player's solve time.** The `results.seconds` column was already recorded per game and aggregated for the today/all-time leaderboards, but the per-user `user` object didn't expose it. Added `avgSeconds` + `totalWonSeconds` to the `user` section of the RPC.
