@@ -2,6 +2,14 @@
 
 ---
 
+## v2.6.2 — Delete account
+
+- **Delete account** from Edit profile (two-step confirm). Removes the auth identity, profile, email, and telemetry/device fingerprint server-side via a new `delete-account` edge function (service role, own-account only).
+- Game history is **retained anonymously**: the `results → auth.users` FK was dropped so a player's rows survive deletion with no link back to any identity, and still count toward the global leaderboard aggregates.
+- On delete, local `districtguess_*` / `dd_*` storage is cleared and the app reloads signed-out.
+
+---
+
 ## v2.6.1 — Menu bar reachable over modals
 
 - **Header always on top** — the menu bar (How to play, Leaderboard, Settings, account/Sign in, Donate) now sits above all modals and stays tappable, fixing mobile where the full-screen game-over / result modal covered it with no way to reach the leaderboard, settings, sign-out, or feedback.

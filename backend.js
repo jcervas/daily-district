@@ -201,6 +201,14 @@
     if (error) throw error;
     return data;
   }
+  // Permanently delete the signed-in user's account: removes the auth identity,
+  // profile, and telemetry server-side, while retaining their (now-anonymous)
+  // game history in `results`. Caller should sign out / reload afterwards.
+  async function deleteAccount() {
+    const { data, error } = await client().functions.invoke('delete-account', { body: {} });
+    if (error) throw error;
+    return data; // { deleted: true }
+  }
 
   window.DistrictBackend = {
     ENABLED,
@@ -209,7 +217,7 @@
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
-    logTelemetry, getProfile, updateProfile,
+    logTelemetry, getProfile, updateProfile, deleteAccount,
   };
 
   // Best-effort session telemetry on load (no PII). Runs for everyone.

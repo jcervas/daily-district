@@ -55,6 +55,11 @@
       try { prof = await B.getProfile(); } catch (_) {}
       fillProfileForm(prof);
       $('profile-skip').textContent = isEdit ? 'Cancel' : 'Skip for now';
+      // Delete-account "danger zone" only makes sense for an existing account.
+      $('profile-danger').classList.toggle('hidden', !isEdit);
+      $('profile-delete-confirm').classList.add('hidden');
+      $('profile-delete').classList.remove('hidden');
+      $('profile-delete-error').textContent = '';
       pModal.classList.remove('hidden');
     }
     // Shown once after first sign-in if profile not yet filled.
@@ -88,6 +93,40 @@
     $('profile-skip').addEventListener('click', () => {
       localStorage.setItem('dd_profile_done', '1');
       hideProfile();
+    });
+
+    // ---- Delete account (two-step confirm) ----------------------------------
+    $('profile-delete').addEventListener('click', () => {
+      $('profile-delete').classList.add('hidden');
+      $('profile-delete-confirm').classList.remove('hidden');
+      $('profile-delete-error').textContent = '';
+    });
+    $('profile-delete-cancel').addEventListener('click', () => {
+      $('profile-delete-confirm').classList.add('hidden');
+      $('profile-delete').classList.remove('hidden');
+    });
+    $('profile-delete-yes').addEventListener('click', async () => {
+      const btn = $('profile-delete-yes');
+      $('profile-delete-error').textContent = '';
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = 'Deleting…';
+      try {
+        await B.deleteAccount();
+        // Clear local identity + cached game state so the app reopens as a clean,
+        // signed-out device.
+        try {
+          for (const k of Object.keys(localStorage)) {
+            if (k.startsWith('districtguess_') || k.startsWith('dd_')) localStorage.removeItem(k);
+          }
+        } catch (_) {}
+        try { await B.signOut(); } catch (_) {}
+        location.reload();
+      } catch (ex) {
+        btn.disabled = false;
+        btn.textContent = prev;
+        $('profile-delete-error').textContent = (ex && ex.message) || 'Could not delete account';
+      }
     });
 
     // ---- Account menu (initials avatar → dropdown) --------------------------

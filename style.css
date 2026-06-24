@@ -1972,6 +1972,51 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 }
 .login-email-form input::placeholder { color: var(--muted); }
 .login-error { color: var(--red, #C41230); font-size: 0.85rem; min-height: 1em; }
+
+/* ---- Profile danger zone (delete account) ---- */
+.profile-danger {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.profile-danger.hidden { display: none; }
+.profile-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--red, #C41230);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.profile-delete-confirm.hidden,
+.profile-delete-btn.hidden { display: none; }
+.profile-delete-confirm p {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-secondary, var(--text));
+  margin: 0 0 12px;
+  text-align: left;
+}
+.profile-delete-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.profile-delete-confirm-btn {
+  background: var(--red, #C41230);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.profile-delete-confirm-btn:disabled { opacity: 0.6; cursor: default; }
 .login-privacy {
   font-size: 0.72rem; line-height: 1.4; color: var(--muted);
   text-align: center; margin: 12px 0 0;
