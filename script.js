@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.6.6';
+const VERSION_NUMBER = '2.6.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -366,10 +366,10 @@ const FACT_DEFS = [
 ];
 
 // Map tile progression — label-free throughout (labels give away city/state names).
-// Stage 0: outline only (nearly invisible background)
-// Stage 1: ESRI shaded relief (light) / satellite (dark) — geographic shape, no labels
-// Stage 2: ESRI satellite imagery — detailed terrain, no labels
-// Stage 3: same as stage 2 (satellite stays); labeled tiles never revealed
+// Stage 0: outline only on a plain background (0 wrong guesses)
+// Stage 1: outline only, plain background (1–3 wrong guesses) — no landscape imagery yet
+// Stage 3: ESRI satellite/terrain imagery revealed — only AFTER the 4th wrong guess
+//          (or at game over). Labeled tiles are never revealed.
 
 // ============================================================
 //  STATE
@@ -1651,8 +1651,9 @@ function initMap() {
 function applyMapStage(wrongGuesses, gameEnded = false) {
   const dark = isDarkMode();
   let idx;
+  // Landscape imagery (the satellite/terrain tile basemap, stage ≥ 2) is held back
+  // until AFTER the 4th guess — before that the map shows the district outline only.
   if (gameEnded || wrongGuesses >= 4) idx = 3;
-  else if (wrongGuesses >= 3)         idx = 2;
   else if (wrongGuesses >= 1)         idx = 1;
   else                                idx = 0;
 

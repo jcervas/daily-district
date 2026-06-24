@@ -2,6 +2,18 @@
 
 ---
 
+## v2.6.7 — Hold landscape imagery until after the 4th guess
+
+- The map's satellite/terrain landscape imagery now reveals only after the 4th wrong guess (was the 3rd). Before that the map shows the district outline only.
+
+---
+
+## v2.6.6 — How to Play: 'Back to game' instead of 'Back to map'
+
+- Renamed the How to Play modal's back button to "Back to game" (it can be opened before any map is shown).
+
+---
+
 ## v2.6.5 — Fix header hidden on mobile (proper flex shell)
 
 - The body used `min-height: 100vh`, which on mobile is *taller* than the visible viewport (`100dvh`) because it ignores the browser toolbars — so game content (especially the map) overflowed and pushed past the header.
