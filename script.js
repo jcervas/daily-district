@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.19';
+const VERSION_NUMBER = '2.2.20';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2635,6 +2635,7 @@ function _addStateCallouts(g, geojson, pathGen, fipsToFeature) {
     const tooltip = document.getElementById('us-ref-tooltip');
     circle
       .on('click', () => {
+        if (tooltip) tooltip.classList.remove('visible'); // map rebuilds on guess → mouseout won't fire
         if (gameOver || correctStateGuessed) return;
         if (!getValidStates().has(n.abbr)) return;
         handleStateSelection(n.abbr);
@@ -2839,6 +2840,7 @@ function initUSRefMap() {
 
       pathEl
         .on('click', () => {
+          if (tooltip) tooltip.classList.remove('visible'); // map rebuilds on guess → mouseout won't fire
           if (gameOver || correctStateGuessed) return;
           if (!getValidStates().has(abbr)) return;
           handleStateSelection(abbr);
@@ -2932,6 +2934,8 @@ function initUSRefMap() {
 // Zoom the US ref map to fit the inner points of currently-active districts.
 // Pass animated=false for instant placement (e.g., on restore).
 function zoomUSRefMapToValid(animated = true) {
+  // A map zoom/rebuild can strand a hover tooltip "visible" (no mouseout fires) — clear it.
+  document.getElementById('us-ref-tooltip')?.classList.remove('visible');
   if (!usRefSvgSel || !usRefZoom || !usRefProjection) return;
   const W = _usRefW, H = _usRefH;
 
