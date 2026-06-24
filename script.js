@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.3.1';
+const VERSION_NUMBER = '2.4.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -698,24 +698,8 @@ async function enterServerDistrictPhase(state, instant = false) {
   try { await loadServerStateShapes(state); }
   catch (err) { console.error('stateShapes() failed:', err); }
 
-  // Pre-build the district tiles (hidden) now that we have the state's shapes, so
-  // lockStateDropdown()'s reveal takes the smooth cached-SVG zoom path instead of
-  // building a whole new map mid-transition. (Legacy pre-builds at init; server
-  // mode only has the shapes once the state is guessed.) Skipped on instant
-  // restore, which doesn't animate anyway.
-  if (!instant && !gameOver) {
-    const tilesEl = document.getElementById('district-tiles');
-    if (tilesEl) {
-      tilesEl.classList.remove('hidden');
-      tilesEl.style.opacity = '0';
-      tilesEl.style.pointerEvents = 'none';
-      // Pre-build failure must NOT prevent lockStateDropdown() below (which sets
-      // gamePhase='district') — otherwise the player is stranded in the state phase.
-      try { buildDistrictD3Map(state, false, false); }
-      catch (e) { reportClientError('district_prebuild', e); }
-    }
-  }
-
+  // Single-map model: no pre-build/cross-fade needed. lockStateDropdown() → showDistrictD3Map()
+  // builds the district render directly into the shared SVG and zooms into the state.
   lockStateDropdown(state, instant);
   if (!instant) saveGameState();   // persist the solved state for anon refresh-resume
 }
@@ -1093,8 +1077,8 @@ async function submitDistrictTileServer(dist) {
   // and the other tiles dim, so the click feels instant without recolouring the tile (the
   // response resolves it to the correct-pop or wrong-shake). Ping style is the sonar
   // ripple by default, or a small fast-spinning globe with ?ping=globe (A/B test).
-  const tilesEl     = document.getElementById('district-tiles');
-  const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
+  const tilesEl     = document.getElementById('us-ref-map');   // tiles live in the shared map now
+  const clickedTile = tilesEl?.querySelector(`g.district-tile[data-dist="${dist}"]`);
   const tileCircle  = clickedTile?.querySelector('circle');
   let rippleLayer = null, globeHost = null;
   if (clickedTile && tileCircle) {
@@ -2304,7 +2288,7 @@ const submitDistrictGuess = submitDistrictTile;
 // so numeric interpolation is smooth). Once the fill covers the screen, endGame() runs
 // under cover, then the shape fades out to reveal the result.
 function startGameOverTransition(won, dist) {
-  const tilesEl = document.getElementById('district-tiles');
+  const tilesEl = document.getElementById('us-ref-map');   // tiles live in the shared map now
 
   // Tile center and radius in viewport (CSS pixel) coordinates.
   const tileG  = tilesEl?.querySelector(`g.district-tile[data-dist="${dist}"]`);
@@ -2702,15 +2686,20 @@ function initUSRefMap() {
 
   // D3 zoom — allow user to pan & scroll-zoom the reference map
   usRefZoom = d3.zoom()
-    .scaleExtent([0.7, Infinity])
+    .scaleExtent([0.3, Infinity])
     .on('zoom', (event) => {
-      d3.select(usRefMapGroup).attr('transform', event.transform);
+      const root = d3.select(usRefMapGroup);
+      root.attr('transform', event.transform);
       _updateCalloutsForZoom(event.transform.k);
+      // Counter-scale the in-map district render so tiles stay constant screen size on
+      // zoom (no-op when no district content is present, e.g. the state-pick phase).
+      _applyTileZoomScaling(root, event.transform.k);
       // Dismiss the pan/zoom hint on the first user gesture (not programmatic transitions)
       if (event.sourceEvent) {
         const hint = document.getElementById('us-ref-hint');
         if (hint) hint.classList.add('dismissed');
         document.querySelector('.mzb-fit')?.classList.remove('at-active-fit');
+        if (gamePhase === 'district') districtSavedTransform = event.transform;
       }
     });
   svgSel.call(usRefZoom);
@@ -2748,8 +2737,8 @@ function initUSRefMap() {
           }
           return;
         }
-        const tilesSvg = d3.select('#district-tiles svg');
-        if (tilesSvg.empty() || !districtZoomBehavior || !_districtProjection) return;
+        const tilesSvg = usRefSvgSel;   // single map: district zoom is the shared zoom
+        if (!tilesSvg || tilesSvg.empty() || !districtZoomBehavior || !_districtProjection) return;
         if (!gameOver) {
           const W = _districtW, H = _districtH;
           const atActiveFit = btn.classList.contains('at-active-fit');
@@ -2805,8 +2794,8 @@ function initUSRefMap() {
       if (tilesHidden) {
         usRefSvgSel?.transition().duration(250).call(usRefZoom.scaleBy, factor);
       } else {
-        const tilesSvg = d3.select('#district-tiles svg');
-        if (!tilesSvg.empty() && districtZoomBehavior) {
+        const tilesSvg = usRefSvgSel;   // single map: district zoom is the shared zoom
+        if (tilesSvg && !tilesSvg.empty() && districtZoomBehavior) {
           tilesSvg.transition().duration(250).call(districtZoomBehavior.scaleBy, factor);
         }
       }
@@ -2978,18 +2967,18 @@ function zoomUSRefMapToValid(animated = true) {
     return;
   }
 
-  // Server district phase: the ref map and the district tiles now share the SAME
-  // projection + viewBox, so zoom both to the identical guessed-state transform (state
-  // outline bounds, margin 0.85) — the state lands pixel-for-pixel in the same place in
-  // both, making the cross-fade seamless. (showDistrictD3Map applies the same transform.)
+  // District phase (single map): zoom the shared SVG into the guessed state's bbox and
+  // record it as the saved/fit transform so the district tiles size correctly and the
+  // fit-toggle has a reference.
   if (gamePhase === 'district' && serverState && usRefPathGen) {
     const feat = topoStates[serverState];
     if (!feat) return;
     const bbox = usRefPathGen.bounds(feat);
     const t = zoomToBBox(bbox, W, H, { margin: 0.85 });
-    usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
+    usRefZoom.scaleExtent([Math.min(t.k, 0.3), Infinity]);
+    districtStateFitTransform = t;
+    if (!districtUserZoomed) districtSavedTransform = t;
     if (animated) {
-      // Snappy zoom into the guessed state so the district tiles reveal quickly.
       usRefSvgSel.transition().duration(350 * ANIM_SLOW).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
     } else {
       usRefSvgSel.call(usRefZoom.transform, t);
@@ -3054,10 +3043,30 @@ function lockStateDropdown(stateAbbr, instant = false) {
   showDistrictD3Map(stateAbbr, instant);
 }
 
+// Switch the SHARED map between the state-pick view and the district view. In the
+// district view the 50-state fills + offshore callouts fade out (the district render
+// draws its own state context + tiles); reversing restores them for a fresh state phase.
+function setMapDistrictView(on, instant = false) {
+  if (!usRefMapGroup) return;
+  const root = d3.select(usRefMapGroup);
+  const dur  = (instant || !on) ? 0 : Math.round(260 * (typeof ANIM_SLOW !== 'undefined' ? ANIM_SLOW : 1));
+  const states   = root.select('.layer-states');
+  const callouts = root.select('.us-ref-callouts');
+  const render   = root.select('.district-render');
+  if (on) {
+    states.interrupt().transition().duration(dur).style('opacity', 0).on('end', () => states.style('pointer-events', 'none'));
+    if (instant) states.style('opacity', 0).style('pointer-events', 'none');
+    callouts.interrupt().style('opacity', 0).style('pointer-events', 'none');
+    render.interrupt().style('opacity', 1).style('pointer-events', null);
+  } else {
+    states.interrupt().style('opacity', 1).style('pointer-events', null);
+    callouts.interrupt().style('opacity', null).style('pointer-events', null);
+    if (!render.empty()) render.interrupt().style('opacity', 0).style('pointer-events', 'none').selectAll('*').remove();
+  }
+}
+
 function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   document.querySelector('.mzb-fit')?.classList.remove('at-active-fit');
-  const mapEl   = document.getElementById('us-ref-map');
-  const tilesEl = document.getElementById('district-tiles');
   const labelEl = document.getElementById('ref-label');
 
   // Hide state chips
@@ -3066,95 +3075,27 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   // Update label
   const count = (stateDistrictMap[stateAbbr] || []).length;
   if (labelEl) {
-    if (gameOver && todayDistrict) {
-      const answerKey = todayDistrict.properties['state-district'];
-      const distPart  = answerKey.split('-').slice(1).join('-');
-      const isAL      = count === 1;
-      const distLabel = isAL ? 'At-Large' : `District ${parseInt(distPart, 10)}`;
-      const won       = guessHistory.some(g => g.correct && g.phase === 'district');
-      labelEl.textContent = won
-        ? `Answer: ${answerKey} — ${distLabel}`
-        : `Answer was: ${answerKey} — ${distLabel}`;
-    } else {
-      labelEl.textContent = count === 1
-        ? 'One district — click to guess'
-        : `Pick a district (${count} total)`;
-    }
+    labelEl.textContent = count === 1
+      ? 'One district — click to guess'
+      : `Pick a district (${count} total)`;
   }
 
-  // Reset zoom state when entering district phase fresh; preserve it on game-over rebuild
-  // so a user who was already zoomed into NYC doesn't see a jarring re-zoom on correct guess.
   if (!gameOver) {
     districtUserZoomed        = false;
     districtSavedTransform    = null;
     districtStateFitTransform = null;
   }
-
-  // Dismiss the pan/zoom hint pill when entering district-pick phase
   const hintEl = document.getElementById('us-ref-hint');
   if (hintEl) hintEl.classList.add('dismissed');
 
-  const zoomIn = !instant && !gameOver;
+  // Game-over is its own screen (the game-over modal) — nothing to render in the play map.
+  if (gameOver) return;
 
-  // If tiles were pre-built at init for this state (and game is not over, which always
-  // needs a fresh build with answer highlight), reuse the existing SVG — just reveal
-  // it and apply the zoom-in animation without tearing down and rebuilding the DOM.
-  const preBuilt = !gameOver
-    && _districtBuiltState === stateAbbr
-    && tilesEl.querySelector('svg');
-
-  // Ensure tilesEl is visible before building so offsetWidth/offsetHeight are non-zero
-  tilesEl.classList.remove('hidden');
-  tilesEl.style.opacity = instant ? '1' : '0';
-  tilesEl.style.pointerEvents = '';
-
-  if (preBuilt) {
-    if (zoomIn && _districtSvgSel && _districtPathGen && _districtStateFeatures) {
-      // Position the tiles at the state's GEOGRAPHIC bbox directly. Instant — the ref
-      // map's zoom is the visible animation and the hard-swap reveals the tiles already here.
-      // interrupt() kills any leftover zoom transition from the hidden pre-build pass —
-      // otherwise it keeps animating to a different fit, so the visible map and
-      // districtSavedTransform disagree and the FIRST guess snaps with a jarring jump.
-      _districtSvgSel.interrupt();
-      // Use the IDENTICAL transform the ref map zooms to (state outline bounds, margin
-      // 0.85). With the shared projection + viewBox this places the state pixel-for-pixel
-      // where the ref map shows it, so the cross-fade dissolves between matching shapes.
-      const stateOutline = topoStates[stateAbbr];
-      const fitBounds = stateOutline ? _districtPathGen.bounds(stateOutline)
-        : _districtPathGen.bounds({ type: 'FeatureCollection', features: _districtStateFeatures });
-      const stateFit = zoomToBBox(fitBounds, _districtW, _districtH, { margin: 0.85 });
-      districtSavedTransform = stateFit;
-      _districtSvgSel.call(districtZoomBehavior.transform, stateFit);
-    }
-  } else {
-    buildDistrictD3Map(stateAbbr, animateReveal, zoomIn);
-  }
-
-  if (instant) {
-    mapEl.classList.add('hidden');
-    tilesEl.style.opacity = '1';
-  } else {
-    // The ref map (red confirmed-state) and the district tiles use different projections
-    // and zoom levels, so they don't perfectly register. Rather than fade the tiles in ON
-    // TOP of the red (which reads as a mismatched double-image), do a symmetric cross-fade:
-    // the red ref map fades OUT while the tiles fade IN, so the red dissolves into the
-    // district view. The ref map's zoom-into-the-state (~350ms) plays under the fade.
-    tilesEl.classList.remove('hidden');
-    tilesEl.style.transition = 'none';
-    tilesEl.style.opacity = '0';
-    setTimeout(() => {
-      const fadeMs = Math.round(220 * ANIM_SLOW);
-      tilesEl.style.transition = `opacity ${fadeMs}ms ease`;
-      mapEl.style.transition   = `opacity ${fadeMs}ms ease`;
-      tilesEl.style.opacity = '1';   // district view fades in
-      mapEl.style.opacity   = '0';   // red ref map fades out at the same time
-      setTimeout(() => {
-        mapEl.classList.add('hidden');
-        mapEl.style.opacity = ''; mapEl.style.transition = '';  // reset for the next game
-        requestAnimationFrame(() => { tilesEl.style.transition = ''; });
-      }, fadeMs + 20);
-    }, 300 * ANIM_SLOW);                        // ~the 350ms ref-map zoom
-  }
+  // Build the district render into the shared map, then switch to the district view.
+  // The zoom into the state is applied by zoomUSRefMapToValid (district branch), called
+  // from lockStateDropdown just before this, on the same shared SVG.
+  buildDistrictD3Map(stateAbbr, animateReveal, !instant);
+  setMapDistrictView(true, instant);
 }
 
 // ─── District D3 Map ────────────────────────────────────────────────────────
@@ -3243,22 +3184,16 @@ function _applyTileZoomScaling(g, k) {
 }
 
 function buildDistrictD3Map(stateAbbr, animateReveal = false, zoomIn = false) {
-  dbg(`buildDistrictD3Map state=${stateAbbr} gameOver=${gameOver} animateReveal=${animateReveal} zoomIn=${zoomIn} districtUserZoomed=${districtUserZoomed} savedK=${districtSavedTransform?.k?.toFixed(2)??'null'}`);
-  const tilesEl = document.getElementById('district-tiles');
-  tilesEl.classList.toggle('gameover-context', !!gameOver);
-  tilesEl.classList.remove('gameover-loss-shake', 'gameover-win-pulse');
-  tilesEl.innerHTML = '';
+  // Game-over is its own screen (the game-over modal renders the answer); the in-play
+  // unified map only handles state→district GAMEPLAY, so skip building it at game-over.
+  if (gameOver) return;
+  dbg(`buildDistrictD3Map state=${stateAbbr} zoomIn=${zoomIn} savedK=${districtSavedTransform?.k?.toFixed(2)??'null'}`);
 
-  const ctx = _buildDistrictCtx(stateAbbr, tilesEl);
+  const ctx = _buildDistrictCtx(stateAbbr, null);
   if (!ctx) return;
 
   _applyDistrictZoom(ctx, zoomIn);
-
-  if (gameOver && todayDistrict) {
-    _drawGameOverMap(ctx, animateReveal);
-  } else {
-    _drawGameplayTiles(ctx);
-  }
+  _drawGameplayTiles(ctx);
 }
 
 // Creates the SVG, projection, and zoom behavior.  Returns a context object
@@ -3311,10 +3246,12 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   // the two maps fit independent projections at slightly different sizes, so the same state
   // lands in different places and the state→district transition shows a mismatch. Fall back
   // to local container dims + a fresh fit only if the ref map hasn't been built yet.
-  const _wrap   = tilesEl.parentElement;
+  // Single map: the district render lives in the shared ref-map SVG, so use its exact
+  // viewBox dims. Fall back to the ref container only if the ref map isn't measured yet.
+  const _refEl  = document.getElementById('us-ref-map');
   const cssScale = 1;   // viewBox = container, 1 viewBox unit = 1 CSS pixel
-  const W = _usRefW || tilesEl.offsetWidth  || _wrap?.offsetWidth  || REF_VB_W;
-  const H = _usRefH || tilesEl.offsetHeight || _wrap?.offsetHeight || REF_VB_H;
+  const W = _usRefW || _refEl?.offsetWidth  || REF_VB_W;
+  const H = _usRefH || _refEl?.offsetHeight || REF_VB_H;
   _districtW = W; _districtH = H;
   const dark = isDarkMode();
 
@@ -3331,36 +3268,22 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
 
   dbg(`SVG W=${W} H=${H} cssScale=${cssScale.toFixed(2)} possibleKeys=${possibleKeys.size}/${stateFeatures.length}`);
 
-  const svg = d3.select(tilesEl)
-    .append('svg')
-    .attr('viewBox', `0 0 ${W} ${H}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet')
-    .attr('width', '100%').attr('height', '100%')
-    .style('display', 'block')
-    .style('touch-action', 'none');
+  // ONE MAP: render the district content into the SHARED ref-map SVG, in a dedicated
+  // 'district-render' group above the state fills and below the callouts. It's cleared
+  // and rebuilt whenever the district set changes. The shared usRefZoom drives this map
+  // (its handler calls _applyTileZoomScaling), so there is no separate district SVG/zoom —
+  // districtZoomBehavior is aliased to usRefZoom so the existing transform helpers still work.
+  const svg = usRefSvgSel;
+  const rootSel = d3.select(usRefMapGroup);
+  let g = rootSel.select('g.district-render');
+  if (g.empty()) g = rootSel.insert('g', '.us-ref-callouts').attr('class', 'district-render');
+  g.selectAll('*').remove();
 
-  const g = svg.append('g');
-
-  // Cache for showDistrictD3Map to reuse on reveal without a full rebuild
   _districtSvgSel     = svg;
   _districtPathSnap   = pathGen;
   _districtStateFSnap = stateFeatures;
   _districtBuiltState = stateAbbr;
-
-  // Zoom behavior — defined here so the handler captures the context constants
-  // (densityScale, targetCirclePx, cssScale, W) without threading them explicitly.
-  districtZoomBehavior = d3.zoom()
-    .scaleExtent([0.3, Infinity])
-    .on('zoom', event => {
-      g.attr('transform', event.transform);
-      _applyTileZoomScaling(g, event.transform.k);
-      if (event.sourceEvent) {
-        districtUserZoomed     = true;
-        districtSavedTransform = event.transform;
-        document.querySelector('.mzb-fit')?.classList.remove('at-active-fit');
-      }
-    });
-  svg.call(districtZoomBehavior).on('dblclick.zoom', null);
+  districtZoomBehavior = usRefZoom;
 
   return { svg, g, pathGen, projection, cssScale, W, H, dark, tilesEl, stateAbbr,
            stateFeatures, stateFC, stateBBox, stateFitTransform,
@@ -3372,48 +3295,29 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
 // Decides and applies the initial zoom transform (zoomIn animation, game-over zoom,
 
 function _applyDistrictZoom(ctx, zoomIn) {
-  const { svg, pathGen, stateFeatures, stateFC, stateBBox, possibleKeys, W, H, stateFitTransform } = ctx;
+  const { pathGen, stateFeatures, stateBBox, possibleKeys, W, H } = ctx;
 
-  // State fit: geographic bbox of all state districts (the "zoomed out" reference).
-  const stateFit = zoomToBBox(stateBBox, W, H, { margin: 0.9 });
+  // State fit: geographic bbox of the whole state (the "zoomed out" district reference).
+  const stateFit = zoomToBBox(stateBBox, W, H, { margin: 0.85 });
   districtStateFitTransform = stateFit;
 
   if (zoomIn) {
-    // Entry animation: slide from ref-map position into the state bbox fit.
-    const refStart = stateFitTransform || d3.zoomIdentity;
+    // Entry: the zoom into the state is applied on the SHARED SVG by zoomUSRefMapToValid
+    // (district branch), so don't issue a competing zoom here — just record the fit.
     districtSavedTransform = stateFit;
-    _tileZoomInAnimating = true;
-    svg.call(districtZoomBehavior.transform, refStart);
-    svg.transition().duration(700).ease(d3.easeCubicInOut)
-      .call(districtZoomBehavior.transform, stateFit)
-      .on('end', () => { _tileZoomInAnimating = false; });
-
-  } else if (gameOver && todayDistrict) {
-    svg.interrupt();
-    const answerF = stateFeatures.find(f => f.properties['state-district'] === todayDistrict.properties['state-district']);
-    if (answerF) {
-      const goTransform = zoomToBBox(pathGen.bounds(answerF), W, H, { margin: 0.6, minScale: 1.2, maxScale: 40 });
-      districtGameOverTransform = goTransform;
-      svg.call(districtZoomBehavior.transform, goTransform);
-    } else {
-      svg.call(districtZoomBehavior.transform, stateFit);
-    }
-
-  } else {
-    // After a wrong guess: snap the new SVG to the previous zoom instantly (no flash),
-    // then smoothly animate to the geographic bbox of remaining eligible districts.
-    const startTransform = districtSavedTransform || stateFit;
-    svg.call(districtZoomBehavior.transform, startTransform);
-
-    const activeFeatures = stateFeatures.filter(f => possibleKeys.has(f.properties['state-district']));
-    const activeBBox = activeFeatures.length > 0
-      ? pathGen.bounds({ type: 'FeatureCollection', features: activeFeatures })
-      : stateBBox;
-    const activeFit = zoomToBBox(activeBBox, W, H, { margin: 0.9 });
-    districtSavedTransform = activeFit;
-    svg.transition().duration(500).ease(d3.easeCubicInOut)
-      .call(districtZoomBehavior.transform, activeFit);
+    return;
   }
+
+  // After a wrong district guess (rebuild): zoom the shared map to the geographic bbox of
+  // the remaining eligible districts so they fill the view.
+  const activeFeatures = stateFeatures.filter(f => possibleKeys.has(f.properties['state-district']));
+  const activeBBox = activeFeatures.length > 0
+    ? pathGen.bounds({ type: 'FeatureCollection', features: activeFeatures })
+    : stateBBox;
+  const activeFit = zoomToBBox(activeBBox, W, H, { margin: 0.85 });
+  districtSavedTransform = activeFit;
+  const dur = 500 * (typeof ANIM_SLOW !== 'undefined' ? ANIM_SLOW : 1);
+  usRefSvgSel.transition().duration(dur).ease(d3.easeCubicInOut).call(usRefZoom.transform, activeFit);
 }
 
 // Renders the game-over view: national context, district boundary lines, answer highlight,
@@ -3613,7 +3517,9 @@ function _drawGameplayTiles(ctx) {
   const stateOutline = topoStates[stateAbbr];
   if (topoCounties && stateOutline) {
     const clipId = `gameplay-county-clip-${stateAbbr}`;
-    svg.append('defs').append('clipPath').attr('id', clipId)
+    // defs go into the district render group (g) so they're cleared on each rebuild
+    // rather than accumulating duplicate ids on the shared SVG.
+    g.append('defs').append('clipPath').attr('id', clipId)
       .append('path').attr('d', pathGen(stateOutline));
     g.append('g').attr('class', 'context-counties').attr('pointer-events', 'none')
       .attr('clip-path', `url(#${clipId})`).attr('opacity', 0.45)
