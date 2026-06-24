@@ -117,7 +117,11 @@ body {
   font-family: 'Barlow', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  /* Fixed to the *visible* viewport (dvh, not vh — vh ignores mobile browser
+     toolbars and would make the body taller than the screen, pushing game
+     content past the header). Header + main are the two flex rows below. */
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -197,6 +201,9 @@ body:has(.modal:not(.hidden)) { overflow: hidden; }
 header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  /* First of the two flex rows: fixed height, never shrinks. main fills the rest.
+     Stays at the top of the document flow so game content always sits below it. */
+  flex: 0 0 auto;
   position: sticky;
   top: 0;
   /* Above all modals (max z-index 320) so the menu bar stays visible & tappable
@@ -2490,7 +2497,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
     grid-template-columns: 28% auto 1fr;
     grid-template-rows: 1fr;
     grid-template-areas: "map controls reference";
-    height: calc(100dvh - 44px);
+    height: 100%;   /* fill main (already sized to viewport minus the header) */
     gap: 4px;
     overflow: hidden;
   }

@@ -2,6 +2,13 @@
 
 ---
 
+## v2.6.5 — Fix header hidden on mobile (proper flex shell)
+
+- The body used `min-height: 100vh`, which on mobile is *taller* than the visible viewport (`100dvh`) because it ignores the browser toolbars — so game content (especially the map) overflowed and pushed past the header.
+- Reworked into a clean two-row flex shell: `body` is a fixed `100dvh` flex column, the header is a fixed, non-shrinking top row, and `main` fills exactly the remaining height. All game content now sits below the header at every screen size. Removed the hardcoded `calc(100dvh - 44px)` header-height guess in the landscape grid.
+
+---
+
 ## v2.6.4 — Reset welcome splash on sign-out
 
 - **Sign-out now reloads** so the welcome splash rebuilds against the anonymous state. Previously the signed-out splash wrongly kept the previous account's "Back to Map" / "Review Result" buttons.
