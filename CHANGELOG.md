@@ -2,6 +2,12 @@
 
 ---
 
+## v2.6.4 — Reset welcome splash on sign-out
+
+- **Sign-out now reloads** so the welcome splash rebuilds against the anonymous state. Previously the signed-out splash wrongly kept the previous account's "Back to Map" / "Review Result" buttons.
+
+---
+
 ## v2.6.3 — No splash confetti on revisit; signup email confirmation
 
 - **No confetti on the welcome splash.** Returning to a finished, won game rebuilt the game-over map and fired the full-screen confetti over the splash (slow + distracting). Confetti now only fires on a fresh win, not on revisit.

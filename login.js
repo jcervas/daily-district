@@ -146,6 +146,11 @@
     $('account-signout').addEventListener('click', async () => {
       closeMenu();
       try { await B.signOut(); } catch (_) {}
+      // Game state is server-authoritative per account. Reload so init() re-fetches
+      // the now-anonymous state and rebuilds the welcome splash — otherwise the
+      // previous account's gameOver state lingers and the splash wrongly keeps its
+      // "Back to Map" / "Review Result" buttons.
+      location.reload();
     });
 
     const signinBtnHeader = $('header-signin-btn');
