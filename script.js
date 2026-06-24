@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.5';
+const VERSION_NUMBER = '2.5.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2603,25 +2603,25 @@ function _setStatePickInteractive(on) {
   if (!layer.empty()) layer.style('pointer-events', on ? null : 'none');
 }
 
-// Stamp a checkmark on a correctly-guessed state (centred on its centroid, constant screen
-// size), shown briefly before the zoom into the district phase.
+// Stamp the guess-history check icon (checkCircle) on a correctly-guessed state, sized to
+// fit inside the state's bbox with padding and centred on its centroid. Shown briefly
+// before the zoom into the district phase.
 function _showStateCheck(abbr) {
   _hideStateCheck();
-  if (!usRefMapGroup || !usRefProjection) return;
+  if (!usRefMapGroup || !usRefPathGen || !usRefProjection) return;
   const feat = topoStates[abbr];
   if (!feat) return;
+  const b = usRefPathGen.bounds(feat);
   const c = usRefProjection(d3.geoCentroid(feat));
-  if (!c || !isFinite(c[0])) return;
-  const k = (d3.zoomTransform(usRefSvgSel.node()).k) || 1;
-  const s = 26 / k;   // ~26px on screen regardless of current zoom
-  const g = d3.select(usRefMapGroup).append('g')
-    .attr('class', 'state-check').attr('pointer-events', 'none')
-    .attr('transform', `translate(${c[0]},${c[1]})`);
-  g.append('path')
-    .attr('d', `M ${-0.5 * s} ${0.02 * s} L ${-0.13 * s} ${0.42 * s} L ${0.55 * s} ${-0.42 * s}`)
-    .attr('fill', 'none').attr('stroke', '#1a1a1a').attr('stroke-width', 4)
-    .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
-    .attr('vector-effect', 'non-scaling-stroke');
+  if (!b || !isFinite(b[0][0]) || !c || !isFinite(c[0])) return;
+  const w = b[1][0] - b[0][0], h = b[1][1] - b[0][1];
+  // Fit to ~55% of the state's smaller dimension → padding remains inside the state.
+  const side = Math.max(4, Math.min(w, h) * 0.55);
+  const g = d3.select(usRefMapGroup).append('g').attr('class', 'state-check').attr('pointer-events', 'none');
+  g.html(`<svg x="${c[0] - side / 2}" y="${c[1] - side / 2}" width="${side}" height="${side}" `
+    + `viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2.2" `
+    + `stroke-linecap="round" stroke-linejoin="round" class="guess-icon-svg state-check-icon">`
+    + `${ICON_PATHS.checkCircle}</svg>`);
 }
 function _hideStateCheck() {
   if (usRefMapGroup) d3.select(usRefMapGroup).select('.state-check').remove();

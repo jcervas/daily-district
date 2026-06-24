@@ -2,6 +2,12 @@
 
 ---
 
+## v2.5.6 — Correct-state check uses the guess-history icon, fitted to the state
+
+- The correct-state confirmation now stamps the same `checkCircle` icon used in the guess history (`guess-icon-svg`) instead of a hand-drawn tick, sized to fit inside the state's bbox (~55% of its smaller dimension, leaving padding) and centred on its centroid.
+
+---
+
 ## v2.5.5 — Gold + checkmark confirmation on a correct state
 
 - A correct state guess now fills the state **gold** (`#FDB515`) and stamps a **checkmark** on it, held ~650ms as a clear "correct!" beat, before entering the district phase and zooming to the bbox. The other states fade to the grey basemap during the hold.
