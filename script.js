@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.20';
+const VERSION_NUMBER = '2.2.21';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1673,10 +1673,12 @@ function renderMapD3(stage) {
 }
 
 function renderDistrict(feature) {
+  if (!map) return;   // Leaflet map not initialised yet (e.g. mid-rebuild) — nothing to draw
   if (districtLayer) map.removeLayer(districtLayer);
   // Invisible Leaflet layer — used only to drive fitBounds; D3 overlay draws the visible border
   districtLayer = L.geoJSON(feature, { style: districtStyle() }).addTo(map);
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (!map) return;
     map.invalidateSize();
     if (districtLayer) {
       map.fitBounds(districtLayer.getBounds(), { padding: [40, 40], animate: false });
@@ -3110,21 +3112,25 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
     mapEl.classList.add('hidden');
     tilesEl.style.opacity = '1';
   } else {
-    // The ref map and the pre-built tiles share the same projection and both sit at the
-    // guessed state's bbox, so the ref map's quick zoom-into-the-state (kicked off by
-    // zoomUSRefMapToValid just before this, ~350ms) brings the two into alignment. As it
-    // lands, briefly cross-fade the tiles in over the confirmed-state red fill so the red
-    // fades away to reveal the district tiles rather than lingering.
+    // The ref map (red confirmed-state) and the district tiles use different projections
+    // and zoom levels, so they don't perfectly register. Rather than fade the tiles in ON
+    // TOP of the red (which reads as a mismatched double-image), do a symmetric cross-fade:
+    // the red ref map fades OUT while the tiles fade IN, so the red dissolves into the
+    // district view. The ref map's zoom-into-the-state (~350ms) plays under the fade.
     tilesEl.classList.remove('hidden');
     tilesEl.style.transition = 'none';
     tilesEl.style.opacity = '0';
     setTimeout(() => {
-      tilesEl.style.transition = `opacity ${Math.round(160 * ANIM_SLOW)}ms ease`;
-      tilesEl.style.opacity = '1';            // quick fade over the red state fill
+      const fadeMs = Math.round(220 * ANIM_SLOW);
+      tilesEl.style.transition = `opacity ${fadeMs}ms ease`;
+      mapEl.style.transition   = `opacity ${fadeMs}ms ease`;
+      tilesEl.style.opacity = '1';   // district view fades in
+      mapEl.style.opacity   = '0';   // red ref map fades out at the same time
       setTimeout(() => {
         mapEl.classList.add('hidden');
+        mapEl.style.opacity = ''; mapEl.style.transition = '';  // reset for the next game
         requestAnimationFrame(() => { tilesEl.style.transition = ''; });
-      }, 170 * ANIM_SLOW);
+      }, fadeMs + 20);
     }, 300 * ANIM_SLOW);                        // ~the 350ms ref-map zoom
   }
 }
