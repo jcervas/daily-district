@@ -3166,6 +3166,82 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
 //   _drawGameOverMap     — game-over render (answer highlight, badge, spark, context layers)
 //   _drawGameplayTiles   — gameplay render (clickable circles + force simulation)
 
+// Counter-scale the district tiles / connectors / game-over badge / context layers so
+// circles stay a constant SCREEN size as the (shared) map zooms. Extracted from the
+// per-build zoom closure so the unified usRefZoom handler can call it too once the
+// district content lives in the ref map's SVG. `g` = the district render group, `k` =
+// the current zoom scale. Reads module render constants (cssScale=1, target=14px, W).
+function _applyTileZoomScaling(g, k) {
+  const targetCirclePx = 14, densityScale = 1, cssScale = _districtCssScale || 1, W = _districtW;
+  const rk = targetCirclePx / (k * cssScale);
+
+  // Gameplay circles: radius, stroke, text
+  g.select('.dist-icons').selectAll('circle')
+    .attr('r', rk)
+    .attr('stroke-width', 1.5 / k);
+  g.select('.dist-icons').selectAll('text').each(function() {
+    if (this.parentNode && this.parentNode.querySelector('rect')) return; // skip badge text
+    const baseSize = Math.min(this.textContent.length > 2 ? 8 : 9, targetCirclePx);
+    d3.select(this).attr('font-size', `${baseSize / (k * cssScale)}px`);
+  });
+  g.select('.dist-connectors').selectAll('line').attr('stroke-width', 0.8 / k);
+  g.select('.dist-connectors').attr('display', k > 1.5 ? 'none' : null);
+
+  // Game-over pill badge: reposition + resize so it stays fixed on screen
+  const leader = g.select('.dist-leader');
+  if (!leader.empty()) {
+    const ldbx0 = +leader.attr('data-dbx0'), ldbx1 = +leader.attr('data-dbx1');
+    const ldby0 = +leader.attr('data-dby0'), ldby1 = +leader.attr('data-dby1');
+    const nby = (ldby0 + ldby1) / 2;
+    const badgeG   = g.select('.dist-icons');
+    const label    = badgeG.select('text').text();
+    const hasIcon  = !badgeG.select('.gc-icon-svg').empty();
+    const iconSize = 13 / (k * cssScale), iconGap = 4 / (k * cssScale);
+    const pH = 26 / (k * cssScale);
+    const pW = (label.length * 7.5 + 22) / (k * cssScale) + (hasIcon ? iconSize + iconGap : 0);
+    let nbx = ldbx1 + 10 / (k * cssScale) + pW / 2;
+    if (nbx + pW / 2 > W * 0.94) nbx = ldbx0 - 10 / (k * cssScale) - pW / 2;
+    leader.attr('x2', nbx).attr('y2', nby).attr('stroke-width', 1 / (k * cssScale));
+    g.selectAll('.dist-leader').attr('stroke-width', 1 / k);
+    badgeG.attr('transform', `translate(${nbx},${nby})`);
+    badgeG.select('rect')
+      .attr('width', pW).attr('height', pH).attr('rx', pH / 2)
+      .attr('x', -pW / 2).attr('y', -pH / 2)
+      .attr('stroke-width', 1 / (k * cssScale));
+    if (hasIcon) {
+      const iconX = -pW / 2 + 7 / (k * cssScale) + iconSize / 2;
+      badgeG.select('.gc-icon-svg')
+        .attr('transform', `translate(${iconX},0) scale(${iconSize / 24}) translate(-12,-12)`);
+      badgeG.select('text').attr('x', iconSize / 2 + iconGap / 2);
+    }
+    badgeG.select('text')
+      .attr('font-size', `${12 / (k * cssScale)}px`)
+      .attr('letter-spacing', 0.3 / (k * cssScale));
+  }
+
+  // Retune simulation so tiles stay collision-free at the new zoom level
+  if (districtSimulation && !gameOver && districtSimulation._applyIconPositions && !_tileZoomInAnimating) {
+    const newCollide  = 16 / (k * cssScale * densityScale);
+    const newStrength = Math.min(0.98, 0.6 + (k - 1) * 0.15);
+    districtSimulation
+      .force('collide', d3.forceCollide(d => d.isCold ? newCollide * 0.25 : d.isHot ? newCollide * 0.45 : newCollide))
+      .force('x', d3.forceX(d => d.ox).strength(newStrength))
+      .force('y', d3.forceY(d => d.oy).strength(newStrength))
+      .alpha(0.3).stop();
+    districtSimulation.tick(20);
+    districtSimulation._applyIconPositions();
+  }
+
+  // Context layers fade in with zoom (game-over only for counties; gameplay keeps fixed opacity)
+  if (gameOver) {
+    const countyOpacity = k > 3 ? Math.min(0.65, (k - 3) * 0.25) : 0;
+    g.select('.context-counties').attr('opacity', countyOpacity);
+  }
+  const fadeOpacity = k > 2 ? Math.min(1, (k - 2) * 0.35) : 0;
+  g.select('.context-urban').attr('opacity', fadeOpacity);
+  g.select('.context-roads').attr('opacity', fadeOpacity);
+}
+
 function buildDistrictD3Map(stateAbbr, animateReveal = false, zoomIn = false) {
   dbg(`buildDistrictD3Map state=${stateAbbr} gameOver=${gameOver} animateReveal=${animateReveal} zoomIn=${zoomIn} districtUserZoomed=${districtUserZoomed} savedK=${districtSavedTransform?.k?.toFixed(2)??'null'}`);
   const tilesEl = document.getElementById('district-tiles');
@@ -3277,75 +3353,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
     .scaleExtent([0.3, Infinity])
     .on('zoom', event => {
       g.attr('transform', event.transform);
-      const k  = event.transform.k;
-      const rk = targetCirclePx / (k * cssScale);
-
-      // Gameplay circles: radius, stroke, text
-      g.select('.dist-icons').selectAll('circle')
-        .attr('r', rk)
-        .attr('stroke-width', 1.5 / k);
-      g.select('.dist-icons').selectAll('text').each(function() {
-        if (this.parentNode && this.parentNode.querySelector('rect')) return; // skip badge text
-        const baseSize = Math.min(this.textContent.length > 2 ? 8 : 9, targetCirclePx);
-        d3.select(this).attr('font-size', `${baseSize / (k * cssScale)}px`);
-      });
-      g.select('.dist-connectors').selectAll('line').attr('stroke-width', 0.8 / k);
-      g.select('.dist-connectors').attr('display', k > 1.5 ? 'none' : null);
-
-      // Game-over pill badge: reposition + resize so it stays fixed on screen
-      const leader = g.select('.dist-leader');
-      if (!leader.empty()) {
-        const ldbx0 = +leader.attr('data-dbx0'), ldbx1 = +leader.attr('data-dbx1');
-        const ldby0 = +leader.attr('data-dby0'), ldby1 = +leader.attr('data-dby1');
-        const nby = (ldby0 + ldby1) / 2;
-        const badgeG   = g.select('.dist-icons');
-        const label    = badgeG.select('text').text();
-        const hasIcon  = !badgeG.select('.gc-icon-svg').empty();
-        const iconSize = 13 / (k * cssScale), iconGap = 4 / (k * cssScale);
-        const pH = 26 / (k * cssScale);
-        const pW = (label.length * 7.5 + 22) / (k * cssScale) + (hasIcon ? iconSize + iconGap : 0);
-        let nbx = ldbx1 + 10 / (k * cssScale) + pW / 2;
-        if (nbx + pW / 2 > W * 0.94) nbx = ldbx0 - 10 / (k * cssScale) - pW / 2;
-        leader.attr('x2', nbx).attr('y2', nby).attr('stroke-width', 1 / (k * cssScale));
-        g.selectAll('.dist-leader').attr('stroke-width', 1 / k);
-        badgeG.attr('transform', `translate(${nbx},${nby})`);
-        badgeG.select('rect')
-          .attr('width', pW).attr('height', pH).attr('rx', pH / 2)
-          .attr('x', -pW / 2).attr('y', -pH / 2)
-          .attr('stroke-width', 1 / (k * cssScale));
-        if (hasIcon) {
-          const iconX = -pW / 2 + 7 / (k * cssScale) + iconSize / 2;
-          badgeG.select('.gc-icon-svg')
-            .attr('transform', `translate(${iconX},0) scale(${iconSize / 24}) translate(-12,-12)`);
-          badgeG.select('text').attr('x', iconSize / 2 + iconGap / 2);
-        }
-        badgeG.select('text')
-          .attr('font-size', `${12 / (k * cssScale)}px`)
-          .attr('letter-spacing', 0.3 / (k * cssScale));
-      }
-
-      // Retune simulation so tiles stay collision-free at the new zoom level
-      if (districtSimulation && !gameOver && districtSimulation._applyIconPositions && !_tileZoomInAnimating) {
-        const newCollide  = 16 / (k * cssScale * densityScale);
-        const newStrength = Math.min(0.98, 0.6 + (k - 1) * 0.15);
-        districtSimulation
-          .force('collide', d3.forceCollide(d => d.isCold ? newCollide * 0.25 : d.isHot ? newCollide * 0.45 : newCollide))
-          .force('x', d3.forceX(d => d.ox).strength(newStrength))
-          .force('y', d3.forceY(d => d.oy).strength(newStrength))
-          .alpha(0.3).stop();
-        districtSimulation.tick(20);
-        districtSimulation._applyIconPositions();
-      }
-
-      // Context layers fade in with zoom (game-over only for counties; gameplay keeps fixed opacity)
-      if (gameOver) {
-        const countyOpacity = k > 3 ? Math.min(0.65, (k - 3) * 0.25) : 0;
-        g.select('.context-counties').attr('opacity', countyOpacity);
-      }
-      const fadeOpacity = k > 2 ? Math.min(1, (k - 2) * 0.35) : 0;
-      g.select('.context-urban').attr('opacity', fadeOpacity);
-      g.select('.context-roads').attr('opacity', fadeOpacity);
-
+      _applyTileZoomScaling(g, event.transform.k);
       if (event.sourceEvent) {
         districtUserZoomed     = true;
         districtSavedTransform = event.transform;
