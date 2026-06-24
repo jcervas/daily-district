@@ -2,6 +2,12 @@
 
 ---
 
+## v2.6.8 — Hint cards no longer reset after solving the state
+
+- Solving the correct state used to switch the clue deck and drop the hint bar back to a single card. Now the already-earned state clues stay and district clues are appended — the hint bar only grows. (Server `today`/`guess` reveal logic + client archive mirror.)
+
+---
+
 ## v2.6.7 — Hold landscape imagery until after the 4th guess
 
 - The map's satellite/terrain landscape imagery now reveals only after the 4th wrong guess (was the 3rd). Before that the map shows the district outline only.

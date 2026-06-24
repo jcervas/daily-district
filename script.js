@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.6.7';
+const VERSION_NUMBER = '2.6.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -781,17 +781,34 @@ async function restoreServerGame(result, answer) {
 // Reveal clues the same way the server does (phase-local), but client-side for the
 // archive replay (no /guess round-trip — we have the answer). Mirrors revealClues()
 // in the `guess`/`today` edge functions; keep them in sync.
+// Mirror of revealClues() in the today/guess edge functions: keep the state clues
+// already earned and APPEND district clues once the state is solved, so the hint bar
+// only grows and never resets. Returns { unlocked, total }.
 function clientRevealClues(clues, history, completed) {
   const cl = clues || {};
   const stateDeck    = Array.isArray(cl) ? cl : (Array.isArray(cl.state) ? cl.state : []);
   const districtDeck = Array.isArray(cl) ? [] : (Array.isArray(cl.district) ? cl.district : []);
   const stateSolved  = history.some(g => g.phase === 'state' && g.correct);
-  const deck = stateSolved ? districtDeck : stateDeck;
-  if (completed) return deck.slice(0, Math.min(deck.length, MAX_GUESSES));
-  const count = stateSolved
-    ? 1 + history.filter(g => g.phase === 'district' && !g.correct).length
-    : history.filter(g => g.phase === 'state' && !g.correct).length;
-  return deck.slice(0, Math.min(count, deck.length, MAX_GUESSES));
+
+  const wrongState = history.filter(g => g.phase === 'state' && !g.correct).length;
+  const stateShownCount = completed
+    ? stateDeck.length
+    : Math.min(wrongState, stateDeck.length, MAX_GUESSES);
+  const stateShown = stateDeck.slice(0, stateShownCount);
+
+  if (!stateSolved) {
+    return { unlocked: stateShown, total: Math.min(stateDeck.length, MAX_GUESSES) };
+  }
+
+  const wrongDistrict = history.filter(g => g.phase === 'district' && !g.correct).length;
+  const districtShownCount = completed
+    ? districtDeck.length
+    : Math.min(1 + wrongDistrict, districtDeck.length);
+  const districtShown = districtDeck.slice(0, districtShownCount);
+  return {
+    unlocked: [...stateShown, ...districtShown],
+    total: stateShown.length + districtDeck.length,
+  };
 }
 
 // Build a /guess-shaped response locally for an archive guess (we know the answer).
@@ -811,11 +828,12 @@ function archiveLocalGuess(phase, value) {
   const guesses   = hist.length;
   const won       = phase === 'district' && correct;
   const completed = won || guesses >= MAX_GUESSES;
+  const { unlocked, total: cluesTotal } = clientRevealClues(serverArchive.clues, hist, completed);
   return {
     correct, adjacent, phase, guesses, guessesLeft: MAX_GUESSES - guesses,
     completed, won,
-    clues: clientRevealClues(serverArchive.clues, hist, completed),
-    cluesTotal: MAX_GUESSES,
+    clues: unlocked,
+    cluesTotal,
     state: (phase === 'state' && correct) || completed ? ans.state : null,
     answer: completed ? ans : null,
   };
