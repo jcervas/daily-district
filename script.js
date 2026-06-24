@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.6';
+const VERSION_NUMBER = '2.4.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -918,14 +918,18 @@ async function submitStateGuessServer(abbr) {
   _guessLocked = true;
   if (!timerRunning) startTimer();
 
-  // Optimistic "registered" cue: dim the other states so the tapped one stands out
-  // (no stroke/recolour), plus a NEUTRAL shake, applied IMMEDIATELY so the tap never
-  // feels laggy. The wrong-colour (red) escalation is added only once the server
-  // confirms a miss, so a correct guess never flashes red.
+  // Optimistic "registered" cue: recolour the other states to the inactive/eliminated grey
+  // (the same colour out-of-play districts use) so the tapped one stands out — same visual
+  // language as the district picker. Applied IMMEDIATELY so the tap never feels laggy; the
+  // result colour (green/red) on the tapped state is added once the server answers.
   const pressedEl = usRefLayers[abbr];
-  for (const [a, el] of Object.entries(usRefLayers)) el.style('opacity', a === abbr ? null : 0.3);
+  const dimFill = (isDarkMode() ? STATE_COLOR.dark : STATE_COLOR.light).elim.fill;
+  for (const [a, el] of Object.entries(usRefLayers)) {
+    if (a !== abbr) el.attr('fill', dimFill).attr('fill-opacity', 1);
+  }
   pressedEl?.raise();
-  const clearDim = () => { for (const el of Object.values(usRefLayers)) el.style('opacity', null); };
+  // Restore each state's proper colour (used on network failure + after a wrong guess).
+  const clearDim = () => { for (const [a, el] of Object.entries(usRefLayers)) _applyStateStyle(el, a); };
   const panel = document.getElementById('us-ref-map');
 
   let resp;
@@ -936,8 +940,8 @@ async function submitStateGuessServer(abbr) {
   catch (err) { clearDim(); return serverGuessFailed(err); }
 
   // Correct: tint the tapped state green + a green pulse-ring, then go straight into the
-  // reward zoom. No outline — the dimmed neighbours already isolate the pick — and the dim
-  // is deliberately NOT cleared so it persists through the zoom into the district phase
+  // reward zoom. Stroke left untouched (the normal border mesh). The grey dim is
+  // deliberately NOT cleared so it persists through the zoom into the district phase
   // (enterServerDistrictPhase fades the whole state layer out from there).
   if (resp.correct) {
     if (pressedEl) {
@@ -955,15 +959,13 @@ async function submitStateGuessServer(abbr) {
   }
 
   // Wrong: now shake + escalate the tapped state to the unmistakable red miss colour while
-  // the others stay dimmed. processStateGuessServer re-renders shortly after, clearing the
-  // inline opacity + red.
+  // the others stay grey. Stroke left untouched (normal border mesh). processStateGuessServer
+  // re-renders shortly after, restoring proper colours.
   panel.classList.remove('shake');
   void panel.offsetWidth;            // restart the shake on rapid re-taps
   panel.classList.add('shake');
   if (pressedEl) {
-    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9)
-             .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
-             .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9).raise();
   }
   setTimeout(() => panel.classList.remove('shake'), 450);
   setTimeout(() => { clearDim(); _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);

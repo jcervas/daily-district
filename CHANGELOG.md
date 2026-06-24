@@ -2,6 +2,13 @@
 
 ---
 
+## v2.4.7 — State-pick dim reuses the inactive-district grey
+
+- **The "other states" dim is now the inactive/eliminated grey** (`#b8bcc4` light / `#48484a` dark) instead of a 0.3-opacity fade — the same colour out-of-play districts use, so the state picker and district picker share one visual language. Restores via `_applyStateStyle` on a wrong guess / network failure; persists into the zoom on a correct one.
+- **No thicker stroke on the tapped state.** Both the correct (green) and wrong (red) states now only change fill; the stroke is left at its normal value (border mesh), instead of getting a heavy white outline.
+
+---
+
 ## v2.4.6 — Cleaner correct-state visual
 
 - **Dropped the heavy white outline** on a correct state pick — the dimmed neighbours already isolate it, so the tapped state just tints green.
