@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.15';
+const VERSION_NUMBER = '2.2.16';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1044,6 +1044,35 @@ function startTileRipple(group, baseCircle) {
   return layer;
 }
 
+// Optimistic district-guess feedback style: 'ripple' (default sonar rings) or 'globe'
+// (a small fast-spinning tartan globe over the tapped tile) — switch with ?ping=globe to
+// A/B them. Read once at load.
+const TILE_PING_MODE = new URLSearchParams(location.search).get('ping') || 'ripple';
+
+// Mount a small fast-spinning globe centered over the tapped district tile (an HTML
+// overlay, since TiledGlobe renders to a <canvas> and the tiles are SVG). Returns the
+// host element so it can be removed when the guess resolves.
+function startTileGlobe(baseCircle) {
+  if (!window.TiledGlobe) return null;
+  const r = baseCircle.getBoundingClientRect();
+  if (!r.width) return null;
+  const size = Math.max(30, Math.round(r.width * 2));
+  const host = document.createElement('div');
+  host.className = 'tile-globe-host';
+  host.style.cssText = `position:fixed;left:${Math.round(r.left + r.width / 2 - size / 2)}px;` +
+    `top:${Math.round(r.top + r.height / 2 - size / 2)}px;width:${size}px;height:${size}px;` +
+    `z-index:1200;pointer-events:none;`;
+  document.body.appendChild(host);
+  try {
+    const span = host.appendChild(document.createElement('span'));
+    new window.TiledGlobe(span, {
+      size, tiles: 64, speed: 9, direction: 'ccw', origin: 'bottom-right',
+      tilt: 26, roll: 18, empty: 0.5, snap: 0.7, scatter: 0.18, gap: 0.16, mode: 'tartan',
+    });
+  } catch (_) { host.remove(); return null; }
+  return host;
+}
+
 // ── District guess via /guess ───────────────────────────────────
 async function submitDistrictTileServer(dist) {
   if (gameOver || !correctStateGuessed || _distLocked) return;
@@ -1052,22 +1081,25 @@ async function submitDistrictTileServer(dist) {
   const state     = serverState || todayDistrict.properties.state;
   const fullGuess = `${state}-${dist}`;
 
-  // Optimistic feedback before the /guess round-trip: a ripple/sonar ping radiates from
-  // the tapped tile and the other tiles dim, so the click feels instant without
-  // recolouring the tile (the response resolves it to the correct-pop or wrong-shake).
+  // Optimistic feedback before the /guess round-trip: a ping radiates from the tapped tile
+  // and the other tiles dim, so the click feels instant without recolouring the tile (the
+  // response resolves it to the correct-pop or wrong-shake). Ping style is the sonar
+  // ripple by default, or a small fast-spinning globe with ?ping=globe (A/B test).
   const tilesEl     = document.getElementById('district-tiles');
   const clickedTile = tilesEl.querySelector(`g.district-tile[data-dist="${dist}"]`);
   const tileCircle  = clickedTile?.querySelector('circle');
-  let rippleLayer = null;
+  let rippleLayer = null, globeHost = null;
   if (clickedTile && tileCircle) {
     clickedTile.classList.add('tile-active');
     tilesEl.classList.add('tiles-pinging');
-    rippleLayer = startTileRipple(clickedTile, tileCircle);
+    if (TILE_PING_MODE === 'globe') globeHost = startTileGlobe(tileCircle);
+    else rippleLayer = startTileRipple(clickedTile, tileCircle);
   }
   const clearPing = () => {
     clickedTile?.classList.remove('tile-active');
     tilesEl.classList.remove('tiles-pinging');
     rippleLayer?.remove();
+    globeHost?.remove();
   };
 
   let resp;
