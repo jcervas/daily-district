@@ -2,6 +2,12 @@
 
 ---
 
+## v2.4.8 — Fix: states flashed back to active after a correct pick
+
+- After a correct state guess the other states briefly flashed back to their "valid" salmon before going grey. Cause: `renderClues()` repaints the ref map (`updateUSRefMap`) and it ran *before* `correctStateGuessed` was set, so it used the stale valid-colour scheme. The correct branch now marks the state solved up-front so the repaint paints the solved scheme (others → inactive grey), and re-asserts the green cue on the tapped state through the zoom.
+
+---
+
 ## v2.4.7 — State-pick dim reuses the inactive-district grey
 
 - **The "other states" dim is now the inactive/eliminated grey** (`#b8bcc4` light / `#48484a` dark) instead of a 0.3-opacity fade — the same colour out-of-play districts use, so the state picker and district picker share one visual language. Restores via `_applyStateStyle` on a wrong guess / network failure; persists into the zoom on a correct one.

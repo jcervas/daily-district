@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.7';
+const VERSION_NUMBER = '2.4.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -982,9 +982,20 @@ function processStateGuessServer(abbr, resp) {
     // Correct state on the final guess: no district turn remains — reveal + lose.
     if (resp.completed && !resp.won) { renderGuessHistory(); renderClues(); finishServerLoss(resp); return; }
     const isAtLarge = (stateDistrictMap[state] || []).length === 1;
+    // Mark the state solved BEFORE the repaint in renderClues so the ref map uses the
+    // solved colour scheme (other states → inactive grey) instead of briefly flashing the
+    // stale "valid" salmon. enterServerDistrictPhase re-sets these idempotently.
+    correctStateGuessed = true;
+    serverState = state;
+    todayDistrict.properties.state = state;
+    // Keep the tapped state green as the positive cue; updateUSRefMap (in renderClues and
+    // again in lockStateDropdown) would otherwise repaint it the confirmed red.
+    const keepGreen = () => usRefLayers[state]?.attr('fill', '#22c55e').attr('fill-opacity', 0.92).raise();
     renderGuessHistory();
     renderClues();
+    keepGreen();
     enterServerDistrictPhase(state).then(() => {
+      keepGreen();
       if (isAtLarge) {
         // At-large: the lone district is the answer; the server still wants a
         // district guess to record the win, so auto-submit it once tiles exist.
