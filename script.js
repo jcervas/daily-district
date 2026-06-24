@@ -2830,11 +2830,16 @@ function initUSRefMap() {
     const g = svgSel.append('g');
     usRefMapGroup = g.node();
 
+    // State content (clickable state fills + the white border mesh) lives in its own
+    // layer so the whole state map can be shown/hidden as one unit when toggling between
+    // the state-pick and district phases (unified-map migration).
+    const layerStates = g.append('g').attr('class', 'layer-states');
+
     stateFeatures.forEach(feature => {
       const abbr = feature.properties && feature.properties.state;
       if (!abbr || !stateDistrictMap[abbr]) return;
 
-      const pathEl = g.append('path')
+      const pathEl = layerStates.append('path')
         .datum(feature)
         .attr('d', pathGen)
         .attr('stroke', 'none')
@@ -2881,7 +2886,7 @@ function initUSRefMap() {
 
     // White internal borders
     if (rawTopo && rawTopo.objects.states) {
-      g.append('path')
+      layerStates.append('path')
         .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a !== b))
         .attr('d', pathGen)
         .attr('fill', 'none')
@@ -2891,7 +2896,7 @@ function initUSRefMap() {
         .attr('pointer-events', 'none');
 
       // Outer US boundary
-      g.append('path')
+      layerStates.append('path')
         .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a === b))
         .attr('d', pathGen)
         .attr('fill', 'none')
