@@ -2,6 +2,12 @@
 
 ---
 
+## v2.4.1 — Reconcile device stats with the account on sign-in
+
+- **Result tab now matches the Leaderboard for signed-in players.** The Result tab reads device-local stats (`districtguess_stats`), which accumulate for anonymous play and survive DB resets / fresh sign-ins — so they could disagree with the account-scoped Leaderboard (e.g. "Played 2" locally vs 1 game on the server). On sign-in (and on load when already signed in), `hydratePersonalStatsFromServer()` overwrites the local stats with the account's authoritative server aggregates (`played`, `won`, current/max streak, guess distribution). Avg-time is dropped on hydrate since the server doesn't track per-game time.
+
+---
+
 ## v2.4.0 — Unified state + district map (one SVG)
 
 ### One map for the whole game

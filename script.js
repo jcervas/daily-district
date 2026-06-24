@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.0';
+const VERSION_NUMBER = '2.4.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1383,6 +1383,34 @@ function loadPersonalStats() {
     const raw = localStorage.getItem(STORAGE_PREFIX + 'stats');
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
+}
+
+// The Result tab reads device-local stats, which accumulate for anonymous play and are
+// account-agnostic — so after a sign-in (or a DB reset + fresh account) they can disagree
+// with the account-scoped Leaderboard. When a player is signed in, overwrite the local
+// stats with the account's authoritative server aggregates so both panels match.
+// (Server doesn't track per-game time, so avg-time is dropped on hydrate.)
+async function hydratePersonalStatsFromServer() {
+  try {
+    const lb = await window.DistrictBackend.leaderboard();
+    const u = lb && lb.user;
+    if (!u) return;                       // signed out, or account has no recorded games yet
+    const srcDist = u.dist || {};
+    const guessDist = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, X:0 };
+    for (const k of Object.keys(guessDist)) guessDist[k] = Number(srcDist[k]) || 0;
+    const won = [1,2,3,4,5,6].reduce((s, k) => s + guessDist[k], 0);
+    const stats = {
+      played: Number(u.played) || 0,
+      won,
+      streak: Number(u.curStreak) || 0,
+      maxStreak: Number(u.maxStreak) || 0,
+      guessDist,
+      totalWonTime: 0,                    // not tracked server-side
+      lastDate: null,
+    };
+    localStorage.setItem(STORAGE_PREFIX + 'stats', JSON.stringify(stats));
+    renderInlinePersonalStats();          // refresh the Result tab if it's showing
+  } catch (_) { /* non-fatal */ }
 }
 
 function getUsername() {
@@ -4592,6 +4620,10 @@ async function init() {
     window.addEventListener('district-auth', () => {
       if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) init();
     }, { once: true });
+  } else {
+    // Already signed in on load: align the device-local stats with the account's server
+    // stats so the Result tab matches the Leaderboard (fire-and-forget).
+    hydratePersonalStatsFromServer();
   }
   return initServer();
 }
@@ -4599,6 +4631,11 @@ async function init() {
 // ============================================================
 //  EVENT LISTENERS
 // ============================================================
+// A sign-in mid-session (incl. switching accounts) should re-align device-local stats
+// with the now-signed-in account's server stats. Anonymous→sign-in also re-inits via the
+// once-listener in init(); this overwrite is idempotent, so the overlap is harmless.
+window.addEventListener('district-auth', () => { hydratePersonalStatsFromServer(); });
+
 document.addEventListener('DOMContentLoaded', () => {
   applyDarkModeClass(); // must run before init() so D3 map gets correct colors
   updateThemeToggle();
