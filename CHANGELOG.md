@@ -2,6 +2,13 @@
 
 ---
 
+## v2.4.4 — Sign-in after an anonymous game now sticks
+
+- **Fixed: the result modal kept showing "Sign in / Sign up" after signing in.** `isAnonymousPlayer` was set at game start and never cleared when a player signed in *after* finishing (the re-init listener only fires when no guesses have been made yet). The `district-auth` handler now clears `isAnonymousPlayer` and refreshes the game-over surfaces (drops the result-modal + ribbon sign-in nudges, shows the personal-stats block).
+- **The finished anonymous game is now recorded to the account on sign-in.** `bindAnonymousGameToAccount()` replays the completed game's guess history through `/guess` (the signed-in path persists it guess-by-guess), so the game actually counts instead of leaving the new account with empty stats. Runs once; a partial replay isn't retried to avoid double-appending.
+
+---
+
 ## v2.4.3 — Positive feedback on a correct state guess
 
 - **Correct state now reads as a hit.** Previously only a *wrong* state shook + flashed red, while a correct pick went straight into the reward zoom with no positive signal. A correct guess now flashes the tapped state green (white outline, other states dimmed) and fires the green `flashCorrect` pulse-ring on the map, held ~380ms before the zoom into the state — the clear counterpart to the red+shake miss.

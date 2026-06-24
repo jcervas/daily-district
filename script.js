@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.3';
+const VERSION_NUMBER = '2.4.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1424,6 +1424,37 @@ async function hydratePersonalStatsFromServer() {
     localStorage.setItem(STORAGE_PREFIX + 'stats', JSON.stringify(stats));
     renderInlinePersonalStats();          // refresh the Result tab if it's showing
   } catch (_) { /* non-fatal */ }
+}
+
+// A player can finish a game anonymously (nothing recorded server-side) and sign in
+// afterward. Record that completed game to the now-signed-in account by replaying its
+// guess history through /guess, which the signed-in path persists guess-by-guess. Runs
+// at most once: a partial replay must NOT be retried or it would double-append, so the
+// guard stays set even on error.
+let _anonGameBound = false;
+async function bindAnonymousGameToAccount() {
+  if (_anonGameBound) return;
+  if (isArchiveGame || !Array.isArray(guessHistory) || guessHistory.length === 0) return;
+  _anonGameBound = true;
+  try {
+    for (const g of guessHistory) {
+      await window.DistrictBackend.guess(g.phase, g.text, elapsedSeconds);
+    }
+  } catch (e) {
+    reportClientError('anon_bind', e);   // leave guard set — don't risk a double-append
+  }
+}
+
+// Reflect signed-in status in any visible game-over surfaces: drop the "sign in to save"
+// nudges (result modal + game-over ribbon) and show the personal-stats block.
+function refreshSignedInUI() {
+  const anonCta = document.getElementById('result-anon-cta');
+  const personalStats = document.getElementById('result-personal-stats');
+  if (anonCta) anonCta.classList.toggle('hidden', !isAnonymousPlayer);   // hide once signed in
+  if (personalStats) personalStats.classList.toggle('hidden', isAnonymousPlayer);
+  const nextCta = document.getElementById('gameover-next-cta');
+  if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
+  renderInlinePersonalStats();
 }
 
 function getUsername() {
@@ -4645,10 +4676,20 @@ async function init() {
 // ============================================================
 //  EVENT LISTENERS
 // ============================================================
-// A sign-in mid-session (incl. switching accounts) should re-align device-local stats
-// with the now-signed-in account's server stats. Anonymous→sign-in also re-inits via the
-// once-listener in init(); this overwrite is idempotent, so the overlap is harmless.
-window.addEventListener('district-auth', () => { hydratePersonalStatsFromServer(); });
+// A sign-in mid/post-session (incl. switching accounts) means the player is no longer
+// anonymous. If they'd already FINISHED a game anonymously, record it to the account so it
+// actually counts (otherwise they'd be signed in with empty stats and still see the "sign
+// in to save" nudge). Then re-align device stats with the account and drop the nudges.
+// (Anonymous→sign-in *before* guessing re-inits via the once-listener in init().)
+window.addEventListener('district-auth', async () => {
+  const wasAnon = isAnonymousPlayer;
+  isAnonymousPlayer = false;
+  if (wasAnon && gameOver && !isArchiveGame) {
+    await bindAnonymousGameToAccount();   // replay the finished game to the new account
+  }
+  await hydratePersonalStatsFromServer(); // now includes the just-bound game
+  refreshSignedInUI();                     // hide the sign-in nudges, show personal stats
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   applyDarkModeClass(); // must run before init() so D3 map gets correct colors
