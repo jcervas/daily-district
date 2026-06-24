@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.7';
+const VERSION_NUMBER = '2.5.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -932,12 +932,20 @@ async function submitStateGuessServer(abbr) {
     const cur = parseFloat(el.attr('fill-opacity'));
     el.attr('fill-opacity', (isNaN(cur) ? 1 : cur) * DIM_FACTOR);
   }
+  // Dim the OTHER offshore callouts the same way (relative reduction of their group opacity).
+  for (const a of Object.keys(usRefCallouts)) {
+    if (a === abbr) continue;
+    const co = usRefCallouts[a];
+    const cur = parseFloat(co.group.style('opacity'));
+    co.group.style('opacity', (isNaN(cur) ? 1 : cur) * DIM_FACTOR);
+  }
   pressedEl?.raise();
   _setStatePickInteractive(false);
-  // Restore each state's proper style + interaction (network failure / after a wrong guess).
+  // Restore each state + callout's proper style + interaction (network failure / wrong guess).
   const clearDim = () => {
     _setStatePickInteractive(true);
     for (const [a, el] of Object.entries(usRefLayers)) _applyStateStyle(el, a);
+    for (const a of Object.keys(usRefCallouts)) _applyCalloutStyle(a);
   };
   const panel = document.getElementById('us-ref-map');
 
@@ -2657,10 +2665,10 @@ function _updateCalloutsForZoom(k) {
       .attr('x2', x).attr('y2', y)
       .attr('stroke-width', 0.8 * inv);
 
-    const clickable = !correctStateGuessed && getValidStates().has(abbr);
-    const confirmed = correctStateGuessed && todayDistrict && todayDistrict.properties.state === abbr;
-    const baseOpacity = (clickable || confirmed) ? 1 : 0.55;
-    const opacity = baseOpacity * (1 - t);
+    // Solid at any in/out-of-play state — the fill colour (salmon vs grey) signals
+    // eliminated, matching the state layer, so no extra opacity de-emphasis. Only the
+    // zoom-fade (t) reduces it as the map zooms in.
+    const opacity = 1 - t;
     co.group.style('opacity', opacity);
     co.group.style('pointer-events', opacity < 0.15 ? 'none' : null);
   }

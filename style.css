@@ -741,6 +741,8 @@ main:has(#already-played-banner:not(.hidden)) {
 /* Live state fills fade over the static grey basemap — true dimming on a pending guess and
    a smooth fade-out when a state is eliminated. Only the live layer's state paths animate. */
 #us-ref-map .layer-states path[data-abbr] { transition: fill-opacity 0.22s ease; }
+/* Offshore callouts dim the same way (group opacity) during a pending guess / elimination. */
+#us-ref-map .us-ref-callouts g[data-abbr] { transition: opacity 0.22s ease; }
 
 /* Game-over loss: shake the whole map-ref area to signal "you didn't get it" */
 @keyframes gameoverLossShake {

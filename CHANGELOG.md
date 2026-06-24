@@ -2,6 +2,13 @@
 
 ---
 
+## v2.5.8 — Callouts dim + grey with the states
+
+- The offshore callouts now **dim during a pending guess** (relative group-opacity reduction, same factor as the states, CSS-animated) instead of staying bright.
+- **Eliminated callouts now go solid grey** (`#b8bcc4`, opacity 1) to match the eliminated states' basemap grey — dropped the old 0.55 opacity de-emphasis since the grey fill already signals "out of play."
+
+---
+
 ## v2.5.7 — No red flash after the gold confirmation
 
 - The correct state stayed gold for the confirmation beat but then flashed the confirmed red (from `updateUSRefMap` in `renderClues`/`lockStateDropdown`) before the zoom. It now stays **gold** through the transition and fades out gold as the white district render zooms in — straight from gold → bbox zoom, no red.
