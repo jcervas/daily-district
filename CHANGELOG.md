@@ -2,6 +2,19 @@
 
 ---
 
+## v2.6.0 — State-pick polish, account recovery & leaderboard test data
+
+Rollup release of the 2.5.x line:
+
+- **Layered state map** — a static grey basemap with a live overlay; eliminated states fade to transparent (revealing grey) and stop receiving clicks; a pending guess does a true relative dim; map interaction freezes while a guess is in flight.
+- **Correct-state flow** — the state fills gold with the guess-history check icon (fitted inside the state) and holds briefly, then stays gold straight into a smooth build-then-zoom to the state bbox (no red flash, no jiggle).
+- **Gameplay map slimmed** — district polygons are no longer drawn during play (only at game over); the white backdrop is the state outline and all zoom bboxes come from the tile (dist-icon) positions.
+- **Callouts** dim on a pending guess and go solid grey when eliminated, matching the states.
+- **Account recovery** — "Forgot password?" on sign-in emails a reset link and opens a "Set a new password" modal on return.
+- **Leaderboard** now exposes per-player solve time; seeded ~40 fake users / ~1,150 results into Supabase so the Today / All-Time aggregates and distribution can be tested.
+
+---
+
 ## v2.5.10 — Drop "Forgot username?"
 
 - Removed the "Forgot username?" link — sign-in is by email, so there's no username credential to recover. The "Forgot password?" link (centred) remains.
