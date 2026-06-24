@@ -2,6 +2,12 @@
 
 ---
 
+## v2.5.1 — Pending dim only touches active states
+
+- Fix: the pending-guess dim set `fill-opacity: 0.22` on *every* other state, so already-eliminated states (transparent salmon) ghosted back in as faint red. The dim now applies only to still-active states (`getValidStates()`); eliminated states stay dropped at opacity 0.
+
+---
+
 ## v2.5.0 — Layered state map (grey basemap + live overlay)
 
 The state picker is now drawn as two layers: a **static grey basemap** (`layer-basemap`, every state in the inactive `#b8bcc4`/`#48484a`) and the **live state overlay** on top.

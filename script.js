@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.5.0';
+const VERSION_NUMBER = '2.5.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -924,8 +924,11 @@ async function submitStateGuessServer(abbr) {
   // mid-request. The result colour (green/red) on the tapped state is added once the
   // server answers.
   const pressedEl = usRefLayers[abbr];
+  const _validNow = getValidStates();
   for (const [a, el] of Object.entries(usRefLayers)) {
-    if (a !== abbr) el.attr('fill-opacity', 0.22);
+    // Only dim the OTHER still-active states; already-eliminated states stay dropped
+    // (fill-opacity 0) rather than ghosting back in at 0.22.
+    if (a !== abbr && _validNow.has(a)) el.attr('fill-opacity', 0.52);
   }
   pressedEl?.raise();
   _setStatePickInteractive(false);
