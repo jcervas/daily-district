@@ -2,6 +2,13 @@
 
 ---
 
+## v2.4.6 — Cleaner correct-state visual
+
+- **Dropped the heavy white outline** on a correct state pick — the dimmed neighbours already isolate it, so the tapped state just tints green.
+- **Dim now persists into the district transition.** The dim was being cleared right before the reward zoom (states briefly snapped back to full opacity); it's no longer cleared, so it carries through as `enterServerDistrictPhase` fades the whole state layer out.
+
+---
+
 ## v2.4.5 — Snappier, cleaner correct-state feedback
 
 - **No more shake-then-green.** The neutral shake was applied on *every* state tap before the server replied, so a correct guess shook first and only then turned green. The shake now fires only on a confirmed wrong guess; a correct guess goes straight to the green flash.

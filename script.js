@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.4.5';
+const VERSION_NUMBER = '2.4.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -935,13 +935,13 @@ async function submitStateGuessServer(abbr) {
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearDim(); return serverGuessFailed(err); }
 
-  // Correct: flash the tapped state green + a green pulse-ring, then go straight into the
-  // reward zoom. Only a brief beat so the hit registers without stalling the transition.
+  // Correct: tint the tapped state green + a green pulse-ring, then go straight into the
+  // reward zoom. No outline — the dimmed neighbours already isolate the pick — and the dim
+  // is deliberately NOT cleared so it persists through the zoom into the district phase
+  // (enterServerDistrictPhase fades the whole state layer out from there).
   if (resp.correct) {
     if (pressedEl) {
-      pressedEl.attr('fill', '#22c55e').attr('fill-opacity', 0.92)
-               .attr('stroke', '#ffffff').attr('stroke-width', 2.5)
-               .attr('stroke-opacity', 1).attr('vector-effect', 'non-scaling-stroke').raise();
+      pressedEl.attr('fill', '#22c55e').attr('fill-opacity', 0.92).raise();
     }
     panel.classList.remove('flash-correct');
     void panel.offsetWidth;            // restart the pulse on rapid re-taps
@@ -949,7 +949,6 @@ async function submitStateGuessServer(abbr) {
     _guessLocked = false;
     setTimeout(() => {
       panel.classList.remove('flash-correct');
-      clearDim();
       processStateGuessServer(abbr, resp);
     }, 140);
     return;
