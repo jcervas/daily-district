@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.16';
+const VERSION_NUMBER = '2.2.17';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1044,10 +1044,11 @@ function startTileRipple(group, baseCircle) {
   return layer;
 }
 
-// Optimistic district-guess feedback style: 'ripple' (default sonar rings) or 'globe'
-// (a small fast-spinning tartan globe over the tapped tile) — switch with ?ping=globe to
-// A/B them. Read once at load.
-const TILE_PING_MODE = new URLSearchParams(location.search).get('ping') || 'ripple';
+// Optimistic district-guess feedback style. Default 'none': the guess resolves fast
+// enough that no ping animation is wanted — just the brief dim of the other tiles. Opt
+// into 'ripple' (sonar rings) or 'globe' (a small fast-spinning tartan globe) via
+// ?ping=ripple / ?ping=globe to compare. Read once at load.
+const TILE_PING_MODE = new URLSearchParams(location.search).get('ping') || 'none';
 
 // Mount a small fast-spinning globe centered over the tapped district tile (an HTML
 // overlay, since TiledGlobe renders to a <canvas> and the tiles are SVG). Returns the
@@ -1093,7 +1094,8 @@ async function submitDistrictTileServer(dist) {
     clickedTile.classList.add('tile-active');
     tilesEl.classList.add('tiles-pinging');
     if (TILE_PING_MODE === 'globe') globeHost = startTileGlobe(tileCircle);
-    else rippleLayer = startTileRipple(clickedTile, tileCircle);
+    else if (TILE_PING_MODE === 'ripple') rippleLayer = startTileRipple(clickedTile, tileCircle);
+    // default 'none' → just the dim of the other tiles, no ping animation
   }
   const clearPing = () => {
     clickedTile?.classList.remove('tile-active');
