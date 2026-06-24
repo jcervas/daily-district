@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.2.18';
+const VERSION_NUMBER = '2.2.19';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1049,6 +1049,10 @@ function startTileRipple(group, baseCircle) {
 // into 'ripple' (sonar rings) or 'globe' (a small fast-spinning tartan globe) via
 // ?ping=ripple / ?ping=globe to compare. Read once at load.
 const TILE_PING_MODE = new URLSearchParams(location.search).get('ping') || 'none';
+
+// Debug slow-motion factor for the state→district reveal. ?slow=4 plays that transition
+// 4× slower so the cross-fade can be observed frame-by-frame. Default 1 (normal speed).
+const ANIM_SLOW = Math.max(1, parseFloat(new URLSearchParams(location.search).get('slow')) || 1);
 
 // Mount a small fast-spinning globe centered over the tapped district tile (an HTML
 // overlay, since TiledGlobe renders to a <canvas> and the tiles are SVG). Returns the
@@ -2963,7 +2967,7 @@ function zoomUSRefMapToValid(animated = true) {
     usRefZoom.scaleExtent([Math.min(t.k, 0.7), Infinity]);
     if (animated) {
       // Snappy zoom into the guessed state so the district tiles reveal quickly.
-      usRefSvgSel.transition().duration(350).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
+      usRefSvgSel.transition().duration(350 * ANIM_SLOW).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
     } else {
       usRefSvgSel.call(usRefZoom.transform, t);
     }
@@ -3111,13 +3115,13 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
     tilesEl.style.transition = 'none';
     tilesEl.style.opacity = '0';
     setTimeout(() => {
-      tilesEl.style.transition = 'opacity 160ms ease';
+      tilesEl.style.transition = `opacity ${Math.round(160 * ANIM_SLOW)}ms ease`;
       tilesEl.style.opacity = '1';            // quick fade over the red state fill
       setTimeout(() => {
         mapEl.classList.add('hidden');
         requestAnimationFrame(() => { tilesEl.style.transition = ''; });
-      }, 170);
-    }, 300);                                   // ~the 350ms ref-map zoom
+      }, 170 * ANIM_SLOW);
+    }, 300 * ANIM_SLOW);                        // ~the 350ms ref-map zoom
   }
 }
 
