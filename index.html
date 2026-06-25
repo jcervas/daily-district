@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=75" />
+  <link rel="stylesheet" href="style.css?v=76" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -34,6 +34,20 @@
       <button id="settings-btn" class="btn-icon" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.75 1.75 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.75 1.75 0 0 0-1.82-.33 1.75 1.75 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.75 1.75 0 0 0 9 19.4a1.75 1.75 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.75 1.75 0 0 0 4.68 15a1.75 1.75 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.75 1.75 0 0 0 4.6 9a1.75 1.75 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.75 1.75 0 0 0 9 4.68a1.75 1.75 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.75 1.75 0 0 0 1 1.51 1.75 1.75 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.75 1.75 0 0 0 19.4 9a1.75 1.75 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.75 1.75 0 0 0-1.51 1z"/></svg>
       </button>
+    </div>
+    <!-- Title centered in middle column -->
+    <h1>
+      <button id="title-home-btn" class="title-home-btn" title="Back to welcome screen">
+        <img src="logo.svg" class="game-logo" alt="" aria-hidden="true" />
+        <span class="header-wordmark">Daily District</span> <span class="beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
+      </button>
+    </h1>
+    <!-- Timer + account + donate link on the right -->
+    <div class="header-right">
+      <div id="timer-display" class="timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timer-value">0:00</span>
+      </div>
       <div class="account-wrap">
         <button id="header-signin-btn" class="header-signin-btn hidden" title="Sign in or sign up">Sign in</button>
         <button id="account-btn" class="account-btn hidden" title="Account" aria-haspopup="true" aria-expanded="false">
@@ -47,20 +61,6 @@
           <button id="account-edit" class="account-menu-item" role="menuitem">Edit profile</button>
           <button id="account-signout" class="account-menu-item" role="menuitem">Sign out</button>
         </div>
-      </div>
-    </div>
-    <!-- Title centered in middle column -->
-    <h1>
-      <button id="title-home-btn" class="title-home-btn" title="Back to welcome screen">
-        <img src="logo.svg" class="game-logo" alt="" aria-hidden="true" />
-        <span class="header-wordmark">Daily District</span> <span class="beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
-      </button>
-    </h1>
-    <!-- Timer + donate link on the right -->
-    <div class="header-right">
-      <div id="timer-display" class="timer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span id="timer-value">0:00</span>
       </div>
       <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
          class="donate-btn" target="_blank" rel="noopener">
@@ -555,6 +555,6 @@
 <script src="globe.js?v=2.2.15" defer></script>
 <script src="backend.js?v=16" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.6.9" defer></script>
+<script src="script.js?v=2.7.0" defer></script>
 </body>
 </html>

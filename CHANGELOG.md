@@ -2,6 +2,14 @@
 
 ---
 
+## v2.7.0 — Header layout + jonathancervas.com link/button effects
+
+- Moved the sign-in / account avatar to the right side of the menu, next to Donate.
+- The "Daily District" wordmark is now absolutely centered on the menu bar at all times (was drifting on mobile when the side groups had unequal widths). Reworked the header into a flex shell with an absolutely-centered title.
+- Adopted the hyperlink + button hover effects from jonathancervas.com: text links are bold carnegie-red with a soft grey highlight that swipes in behind the text on hover; primary buttons get a light sheen that sweeps left→right on hover. Respects `prefers-reduced-motion`.
+
+---
+
 ## v2.6.9 — Fixed 6-card hint bar
 
 - The hint bar is now always exactly 6 cards, all hidden at the start. Each guess reveals the next card — a state clue while the state is unsolved, a district clue once it's solved. Fixes the bar swelling to 9+ cards mid-game and no longer resets to a single card after solving the state. (Server `today`/`guess` reveal logic + client archive mirror.)

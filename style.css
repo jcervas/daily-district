@@ -215,9 +215,10 @@ header {
   margin: 0 auto;
   padding: 0 14px;
   height: 52px;
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  position: relative;            /* anchor for the absolutely-centered title */
+  display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 .header-left {
   display: flex;
@@ -225,6 +226,12 @@ header {
   gap: 6px;
 }
 header h1 {
+  /* Absolutely centered on the menu bar at all times, regardless of how wide the
+     left (icons) or right (timer/account/donate) groups are. */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;          /* let clicks fall through; the button re-enables itself */
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -234,6 +241,7 @@ header h1 {
   justify-content: center;
   white-space: nowrap;
 }
+.title-home-btn { pointer-events: auto; }
 .title-home-btn {
   background: none;
   border: none;
@@ -1864,7 +1872,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 .header-signin-btn:hover { background: var(--red, #C41230); color: #fff; }
 .header-signin-btn.hidden { display: none; }
 .account-menu {
-  position: absolute; top: calc(100% + 8px); left: 0;
+  position: absolute; top: calc(100% + 8px); right: 0; left: auto;
   min-width: 210px; padding: 6px;
   background: var(--surface);
   border: 1px solid var(--border); border-radius: 10px;
@@ -2371,6 +2379,78 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 }
 .settings-sub-link:hover { color: var(--text); }
 
+/* ============================================================
+   LINK & BUTTON HOVER EFFECTS — adapted from jonathancervas.com
+   Links: bold carnegie-red, no underline; on hover a soft grey
+   highlight swipes in from the left behind the text.
+   Buttons: a light sheen sweeps left→right on hover.
+   ============================================================ */
+.login-link,
+.welcome-how-to-link,
+.settings-link-btn,
+.settings-sub-link {
+  position: relative;
+  z-index: 0;
+  overflow: clip;
+  color: var(--cmu-red);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color .4s ease;
+}
+.login-link::before,
+.welcome-how-to-link::before,
+.settings-link-btn::before,
+.settings-sub-link::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  z-index: -1;
+  background: rgba(98, 98, 98, 0.12);
+  transition: width .4s ease;
+  pointer-events: none;
+}
+.login-link:hover,
+.welcome-how-to-link:hover,
+.settings-link-btn:hover,
+.settings-sub-link:hover { color: var(--cmu-red); }
+.login-link:hover::before,
+.welcome-how-to-link:hover::before,
+.settings-link-btn:hover::before,
+.settings-sub-link:hover::before { width: 100%; }
+
+/* Sheen sweep across primary buttons on hover. */
+.donate-btn,
+.header-signin-btn,
+.login-submit,
+.welcome-action-btn {
+  position: relative;
+  overflow: hidden;
+}
+.donate-btn::after,
+.header-signin-btn::after,
+.login-submit::after,
+.welcome-action-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+  transform: translateX(-130%);
+  transition: transform .6s ease;
+  pointer-events: none;
+}
+.donate-btn:hover::after,
+.header-signin-btn:hover::after,
+.login-submit:hover::after,
+.welcome-action-btn:hover::after { transform: translateX(130%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-link::before, .welcome-how-to-link::before,
+  .settings-link-btn::before, .settings-sub-link::before,
+  .donate-btn::after, .header-signin-btn::after,
+  .login-submit::after, .welcome-action-btn::after { transition: none; }
+}
+
 /* ---- Confirm-selection pending indicator ---- */
 #confirm-hint {
   display: none;
@@ -2619,7 +2699,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   :root { --header-h: 46px; }
   /* ── Header: move timer inline, keep donate compact ── */
   #timer-display { display: none; }        /* timer moves inline with guess dots */
-  .header-inner h1 { font-size: 1rem; gap: 5px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .header-inner h1 { font-size: 1rem; gap: 5px; max-width: 60vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .header-inner { height: 46px; padding: 0 8px; }
   .donate-btn { font-size: 0.72rem; padding: 5px 10px; }
   .donate-long { display: none; }
@@ -2627,10 +2707,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }
   .game-logo { display: none; }   /* hide the US-map logo on mobile — saves header space */
-  /* The added Sign in pill crowds the header. Size the side columns to their content and
-     let the TITLE column flex/truncate (it has ellipsis) so the left group can never
-     overlap the title. Also compact the pill + icon row. */
-  .header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px; }
+  /* Compact the icon row so the centered wordmark keeps room beside the groups. */
   .header-left { gap: 2px; }
   .header-signin-btn { height: 30px; padding: 0 10px; font-size: 0.72rem; }
   .btn-icon { width: 32px; height: 32px; }
