@@ -55,6 +55,8 @@ html, body {
   --shadow:         0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
   --shadow-lg:      0 10px 25px rgba(0,0,0,0.15);
   --header-h:       52px;   /* header height; modals reserve this so the menu bar stays reachable */
+  /* Arrow glyph used as a mask inside CMU-style red buttons (.Button--alt). */
+  --cmu-arrow:      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h12M12 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* ============================================================
@@ -2380,87 +2382,99 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .settings-sub-link:hover { color: var(--text); }
 
 /* ============================================================
-   LINK & BUTTON HOVER EFFECTS — adapted from jonathancervas.com
-   Links: bold carnegie-red, no underline; on hover a soft grey
-   highlight swipes in from the left behind the text.
-   Buttons: a light sheen sweeps left→right on hover.
+   CMU BUTTON + LINK STYLES  (cmu.edu cmu_base design system)
+   - Red CTAs (.Button--alt): a red arrow box on the left expands to a
+     full red fill on hover; the label flips to white.
+   - Clear button (.Button): outlined; the theme colour fills up from the
+     bottom on hover and the label flips to white.
+   - Links (a:not(.Button)): carnegie-red with an underline that thickens
+     1px → 2px on hover.
    ============================================================ */
-.login-link,
-.welcome-how-to-link,
-.settings-link-btn,
-.settings-sub-link {
-  position: relative;
-  z-index: 0;
-  overflow: clip;
-  color: var(--cmu-red);
-  font-weight: 700;
-  text-decoration: none;
-  transition: color .4s ease;
-}
-.login-link::before,
-.welcome-how-to-link::before,
-.settings-link-btn::before,
-.settings-sub-link::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 0;
-  z-index: -1;
-  background: rgba(98, 98, 98, 0.12);
-  transition: width .4s ease;
-  pointer-events: none;
-}
-.login-link:hover,
-.welcome-how-to-link:hover,
-.settings-link-btn:hover,
-.settings-sub-link:hover { color: var(--cmu-red); }
-.login-link:hover::before,
-.welcome-how-to-link:hover::before,
-.settings-link-btn:hover::before,
-.settings-sub-link:hover::before { width: 100%; }
 
-/* Button fill that slides up from the bottom on hover (jonathancervas.com
-   ".menu-item Button"). The ::before sits above the button's own background but
-   below its text (negative z-index inside the button's own stacking context),
-   starts translated down out of view, and slides up to fill on hover. */
+/* ---- Red "alt" CTAs: Play / Donate / login Sign in ---- */
 .donate-btn,
-.header-signin-btn,
 .login-submit,
-.welcome-action-btn {
+.welcome-action-btn:not(.secondary) {
+  --arrow-w: 40px;
   position: relative;
-  z-index: 0;                 /* own stacking context so ::before tucks behind the text */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   overflow: clip;
+  color: var(--text);                   /* theme-aware label at rest; white on hover */
+  border: 1px solid var(--cmu-red);
+  background-color: transparent;
+  background-image: linear-gradient(var(--cmu-red), var(--cmu-red));
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: var(--arrow-w) 100%; /* red strip only over the arrow box… */
+  padding-left: calc(var(--arrow-w) + 1rem);
+  padding-right: calc(var(--arrow-w) + 1rem);  /* keep the label visually centred */
+  transition: background-size .4s ease, color .4s ease;
 }
 .donate-btn::before,
-.header-signin-btn::before,
 .login-submit::before,
-.welcome-action-btn::before {
+.welcome-action-btn:not(.secondary)::before {
+  content: "";
+  position: absolute; top: 0; left: 0;
+  width: var(--arrow-w); height: 100%;
+  background-color: #fff;
+  -webkit-mask: var(--cmu-arrow) center / 42% no-repeat;
+  mask: var(--cmu-arrow) center / 42% no-repeat;
+  pointer-events: none;
+}
+.donate-btn:hover,
+.login-submit:hover,
+.welcome-action-btn:not(.secondary):hover {
+  color: #fff;
+  background-size: 100% 100%;           /* …red sweeps across to fill on hover */
+}
+/* Compact header Donate pill: smaller arrow box. */
+.donate-btn { --arrow-w: 30px; padding-left: calc(30px + .6rem); padding-right: .9rem; }
+
+/* ---- Clear button: header "Sign in" pill (fill slides up from the bottom) ---- */
+.header-signin-btn {
+  position: relative;
+  z-index: 0;                           /* own stacking context so ::before tucks behind the label */
+  overflow: clip;
+}
+.header-signin-btn::before {
   content: "";
   position: absolute;
-  inset: -2px;                /* slight bleed so the fill covers rounded corners cleanly */
+  inset: -1px;
   z-index: -1;
   border-radius: inherit;
-  background: var(--cmu-red-dark);
+  background: var(--cmu-red);
   transform: translateY(100%);
   transition: transform .4s ease;
   pointer-events: none;
 }
-/* The outlined "Sign in" pill starts transparent — fill it solid red and flip the
-   text to white on hover. */
-.header-signin-btn::before { background: var(--cmu-red); }
 .header-signin-btn:hover { color: #fff; }
-/* Secondary (outlined, dark-text) welcome button keeps its border-hover, not the red fill. */
-.welcome-action-btn.secondary::before { content: none; }
-.donate-btn:hover::before,
-.header-signin-btn:hover::before,
-.login-submit:hover::before,
-.welcome-action-btn:hover::before { transform: translateY(0); }
+.header-signin-btn:hover::before { transform: translateY(0); }
+
+/* ---- Text links: carnegie-red, underline thickens on hover ---- */
+.login-link,
+.welcome-how-to-link,
+.settings-link-btn,
+.settings-sub-link {
+  color: var(--cmu-red);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-thickness .15s ease;
+}
+.login-link:hover,
+.welcome-how-to-link:hover,
+.settings-link-btn:hover,
+.settings-sub-link:hover {
+  color: var(--cmu-red);
+  text-decoration-thickness: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .login-link::before, .welcome-how-to-link::before,
-  .settings-link-btn::before, .settings-sub-link::before,
-  .donate-btn::before, .header-signin-btn::before,
-  .login-submit::before, .welcome-action-btn::before { transition: none; }
+  .donate-btn, .login-submit, .welcome-action-btn:not(.secondary),
+  .header-signin-btn::before { transition: none; }
 }
 
 /* ---- Confirm-selection pending indicator ---- */

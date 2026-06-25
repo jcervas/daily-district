@@ -2,6 +2,15 @@
 
 ---
 
+## v2.7.2 — Faithful CMU button + link styles
+
+- Primary CTAs (Play, Donate, login/profile submit) now use the CMU `.Button--alt` red button: a red arrow box on the left that expands to a full red fill on hover, with the label flipping to white.
+- The header "Sign in" pill is the CMU clear `.Button`: outlined, with the fill sliding up from the bottom on hover.
+- Text links (Forgot password?, How to Play, settings links) are carnegie-red with an underline that thickens 1px→2px on hover (CMU `a:not(.Button)`).
+- Label color uses the theme token so it stays readable in both light and dark mode.
+
+---
+
 ## v2.7.1 — Button fill-slide-up hover (jonathancervas.com)
 
 - Replaced the button sheen with the `.menu-item Button` effect from jonathancervas.com: on hover the fill slides up from the bottom (`.4s ease`). The outlined "Sign in" pill fills solid red with white text; the solid red CTAs (Play, Donate, Sign in submit) deepen as the fill rises. The outlined "Review Result" secondary button keeps its border hover.
