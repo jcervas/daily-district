@@ -300,7 +300,7 @@ header h1 {
   transition: background 0.15s;
   flex-shrink: 0;
 }
-.donate-btn:hover { background: var(--cmu-red-dark); }
+/* Hover handled by the slide-up fill (::before) below. */
 .donate-short { display: none; }
 .timer {
   font-size: 0.95rem;
@@ -1869,7 +1869,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   background: transparent; color: var(--red, #C41230);
   font-weight: 700; font-size: 0.82rem; letter-spacing: 0.01em;
 }
-.header-signin-btn:hover { background: var(--red, #C41230); color: #fff; }
+/* Fill + text-color handled by the slide-up ::before below (keeps the bg transparent so the fill shows). */
 .header-signin-btn.hidden { display: none; }
 .account-menu {
   position: absolute; top: calc(100% + 8px); right: 0; left: auto;
@@ -2210,7 +2210,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   border: none;
   cursor: pointer;
 }
-.welcome-action-btn:hover { opacity: 0.88; }
+/* Hover handled by the slide-up fill (::before). */
 .welcome-action-btn.secondary {
   background: transparent;
   color: var(--text);
@@ -2419,36 +2419,48 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .settings-link-btn:hover::before,
 .settings-sub-link:hover::before { width: 100%; }
 
-/* Sheen sweep across primary buttons on hover. */
+/* Button fill that slides up from the bottom on hover (jonathancervas.com
+   ".menu-item Button"). The ::before sits above the button's own background but
+   below its text (negative z-index inside the button's own stacking context),
+   starts translated down out of view, and slides up to fill on hover. */
 .donate-btn,
 .header-signin-btn,
 .login-submit,
 .welcome-action-btn {
   position: relative;
-  overflow: hidden;
+  z-index: 0;                 /* own stacking context so ::before tucks behind the text */
+  overflow: clip;
 }
-.donate-btn::after,
-.header-signin-btn::after,
-.login-submit::after,
-.welcome-action-btn::after {
+.donate-btn::before,
+.header-signin-btn::before,
+.login-submit::before,
+.welcome-action-btn::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
-  transform: translateX(-130%);
-  transition: transform .6s ease;
+  inset: -2px;                /* slight bleed so the fill covers rounded corners cleanly */
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--cmu-red-dark);
+  transform: translateY(100%);
+  transition: transform .4s ease;
   pointer-events: none;
 }
-.donate-btn:hover::after,
-.header-signin-btn:hover::after,
-.login-submit:hover::after,
-.welcome-action-btn:hover::after { transform: translateX(130%); }
+/* The outlined "Sign in" pill starts transparent — fill it solid red and flip the
+   text to white on hover. */
+.header-signin-btn::before { background: var(--cmu-red); }
+.header-signin-btn:hover { color: #fff; }
+/* Secondary (outlined, dark-text) welcome button keeps its border-hover, not the red fill. */
+.welcome-action-btn.secondary::before { content: none; }
+.donate-btn:hover::before,
+.header-signin-btn:hover::before,
+.login-submit:hover::before,
+.welcome-action-btn:hover::before { transform: translateY(0); }
 
 @media (prefers-reduced-motion: reduce) {
   .login-link::before, .welcome-how-to-link::before,
   .settings-link-btn::before, .settings-sub-link::before,
-  .donate-btn::after, .header-signin-btn::after,
-  .login-submit::after, .welcome-action-btn::after { transition: none; }
+  .donate-btn::before, .header-signin-btn::before,
+  .login-submit::before, .welcome-action-btn::before { transition: none; }
 }
 
 /* ---- Confirm-selection pending indicator ---- */

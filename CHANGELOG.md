@@ -2,6 +2,12 @@
 
 ---
 
+## v2.7.1 — Button fill-slide-up hover (jonathancervas.com)
+
+- Replaced the button sheen with the `.menu-item Button` effect from jonathancervas.com: on hover the fill slides up from the bottom (`.4s ease`). The outlined "Sign in" pill fills solid red with white text; the solid red CTAs (Play, Donate, Sign in submit) deepen as the fill rises. The outlined "Review Result" secondary button keeps its border hover.
+
+---
+
 ## v2.7.0 — Header layout + jonathancervas.com link/button effects
 
 - Moved the sign-in / account avatar to the right side of the menu, next to Donate.
