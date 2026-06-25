@@ -2452,29 +2452,53 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .header-signin-btn:hover { color: #fff; }
 .header-signin-btn:hover::before { transform: translateY(0); }
 
-/* ---- Text links: carnegie-red, underline thickens on hover ---- */
+/* ---- Text links: carnegie-red with an underline that swipes in left→right
+   on hover (jonathancervas.com / cmu_base ".link-underline-swipe"). The
+   underline is a currentColor gradient grown from 0 to full width. ---- */
 .login-link,
 .welcome-how-to-link,
 .settings-link-btn,
 .settings-sub-link {
   color: var(--cmu-red);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  transition: text-decoration-thickness .15s ease;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
+  padding-bottom: 0.0625em;
+  transition: background-size .4s ease, color .4s ease;
 }
 .login-link:hover,
 .welcome-how-to-link:hover,
 .settings-link-btn:hover,
 .settings-sub-link:hover {
   color: var(--cmu-red);
-  text-decoration-thickness: 2px;
+  background-size: 100% 0.0625em;
 }
+
+/* ---- Secondary welcome button (e.g. "Review Result"): outlined, with the fill
+   sliding up from the bottom on hover (the clear ".Button" behaviour). ---- */
+.welcome-action-btn.secondary {
+  position: relative;
+  z-index: 0;
+  overflow: clip;
+}
+.welcome-action-btn.secondary::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--text);
+  transform: translateY(100%);
+  transition: transform .4s ease;
+  pointer-events: none;
+}
+.welcome-action-btn.secondary:hover { color: var(--bg); }
+.welcome-action-btn.secondary:hover::before { transform: translateY(0); }
 
 @media (prefers-reduced-motion: reduce) {
   .donate-btn, .login-submit, .welcome-action-btn:not(.secondary),
-  .header-signin-btn::before { transition: none; }
+  .login-link, .welcome-how-to-link, .settings-link-btn, .settings-sub-link,
+  .header-signin-btn::before, .welcome-action-btn.secondary::before { transition: none; }
 }
 
 /* ---- Confirm-selection pending indicator ---- */

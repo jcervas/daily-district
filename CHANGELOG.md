@@ -2,6 +2,13 @@
 
 ---
 
+## v2.7.3 — Link swipe-underline + secondary button fill
+
+- Text links now use the `.link-underline-swipe` effect from jonathancervas.com: a currentColor underline that swipes in left→right on hover (instead of the underline-thicken).
+- The secondary welcome button ("Review Result" / "Sign in") fills bottom-to-top on hover (clear `.Button` behaviour), complementing the primary button's left-to-right red fill.
+
+---
+
 ## v2.7.2 — Faithful CMU button + link styles
 
 - Primary CTAs (Play, Donate, login/profile submit) now use the CMU `.Button--alt` red button: a red arrow box on the left that expands to a full red fill on hover, with the label flipping to white.
