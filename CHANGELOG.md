@@ -2,9 +2,15 @@
 
 ---
 
+## v2.6.9 — Fixed 6-card hint bar
+
+- The hint bar is now always exactly 6 cards, all hidden at the start. Each guess reveals the next card — a state clue while the state is unsolved, a district clue once it's solved. Fixes the bar swelling to 9+ cards mid-game and no longer resets to a single card after solving the state. (Server `today`/`guess` reveal logic + client archive mirror.)
+
+---
+
 ## v2.6.8 — Hint cards no longer reset after solving the state
 
-- Solving the correct state used to switch the clue deck and drop the hint bar back to a single card. Now the already-earned state clues stay and district clues are appended — the hint bar only grows. (Server `today`/`guess` reveal logic + client archive mirror.)
+- Solving the correct state used to switch the clue deck and drop the hint bar back to a single card. Now the already-earned state clues stay and district clues are appended. (Superseded by v2.6.9's fixed 6-card bar.)
 
 ---
 
