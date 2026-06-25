@@ -5007,7 +5007,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (gameOver) {
       const btnMap = document.createElement('button');
-      btnMap.className = 'welcome-action-btn';
+      btnMap.className = 'welcome-action-btn secondary';
       btnMap.textContent = 'Back to Map';
       btnMap.addEventListener('click', () => {
         welcomeModal.classList.add('hidden');
@@ -5033,7 +5033,7 @@ document.addEventListener('DOMContentLoaded', () => {
           `You've made ${guessCount} of ${MAX_GUESSES} guess${guessCount !== 1 ? 'es' : ''}. Keep it up!`;
       }
       const btnPlay = document.createElement('button');
-      btnPlay.className = 'welcome-action-btn';
+      btnPlay.className = 'welcome-action-btn secondary';
       btnPlay.textContent = inProgress ? 'Continue' : 'Play';
       btnPlay.addEventListener('click', dismissAndStart);
       container.appendChild(btnPlay);
