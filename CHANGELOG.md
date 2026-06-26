@@ -2,9 +2,14 @@
 
 ---
 
+## v2.9.4 — Keep the globe loop continuous
+
+- Reverted the globe loader's idle-stop from v2.9.3: the animation loop runs continuously again (it's a loader and should keep playing whenever it's on the page; it only "stops" by being dropped from the DOM, which the loop still handles).
+
+---
+
 ## v2.9.3 — Mobile performance
 
-- The decorative globe loader's animation loop ran forever (an empty `requestAnimationFrame` loop every frame for the life of the page, even after the globe was gone). It now stops when no globes are present and restarts when one is added, so the page can go idle.
 - Removed `backdrop-filter: blur()` from the perpetually-pulsing "View Results" arrow on the game-over screen — an animated element with a backdrop-filter forces continuous recompositing (expensive on iOS) for no visible benefit. This overlaps the win confetti, so it should make that smoother.
 
 ---
