@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.10';
+const VERSION_NUMBER = '2.9.11';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1215,6 +1215,11 @@ function processDistrictGuessServer(dist, fullGuess, resp) {
 
 // State phase exhausted (6 guesses, no district phase entered) — reveal + lose.
 async function finishServerLoss(resp) {
+  // Lock the game immediately. endGame() (which sets gameOver) only runs AFTER the
+  // awaited state-shape load below — without this, a guess could slip in during that
+  // await (e.g. a 7th state pick after the 6th wrong guess) before the game locks.
+  gameOver = true;
+  _guessLocked = true;
   if (resp.answer) {
     serverAnswer = resp.answer;
     try { await loadServerStateShapes(resp.answer.state); } catch (_) {}
@@ -1310,7 +1315,7 @@ function innerPointBBox(projection, activeKeys, tileR = 0) {
 // Fit using geographic bounds for zoom level, inner-point centroid for center.
 // For portrait states (CA, WA) in a landscape viewBox this prevents tiles from
 // appearing bunched to one side while still respecting the full state extent.
-function zoomToGeoBBoxCenteredOnPoints(geoBBox, innerBBox, W, H, { margin = 0.9 } = {}) {
+function zoomToGeoBBoxCenteredOnPoints(geoBBox, innerBBox, W, H, { margin = DISTRICT_FIT_MARGIN } = {}) {
   if (!geoBBox || !innerBBox) return null;
   const [[gx0, gy0], [gx1, gy1]] = geoBBox;
   const [[ix0, iy0], [ix1, iy1]] = innerBBox;
@@ -2987,7 +2992,7 @@ function initUSRefMap() {
             // First press: zoom to the remaining eligible TILES (dist-icon positions).
             districtUserZoomed = false;
             const activeBBox = _districtTileBBox(getActiveDistrictKeys());
-            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: 0.9 }) : districtStateFitTransform;
+            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: DISTRICT_FIT_MARGIN }) : districtStateFitTransform;
             if (t) {
               tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
                 .call(districtZoomBehavior.transform, t);

@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.11 — Fix 7th guess after 6 wrong
+
+- After the 6th wrong state guess, a 7th guess could slip in before the game locked: `finishServerLoss` awaits the answer's state-shape load before `endGame()` sets `gameOver`, and input had already been unlocked. Now `gameOver`/the guess lock are set synchronously at the start of `finishServerLoss`, closing that window (covers the district phase too).
+
+---
+
 ## v2.9.10 — Tunable district-fit margin
 
 - Extracted the repeated district zoom-fit margin (0.85, used in 6 places) into a single `DISTRICT_FIT_MARGIN` variable, exposed on `window` for live tweaking in the console (lower = more padding, higher = tighter). The two state-phase/fit-button `0.9` margins are left separate.
