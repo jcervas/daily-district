@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.12';
+const VERSION_NUMBER = '2.9.13';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();

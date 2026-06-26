@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.13 — Archive badge no longer covers the map
+
+- The "Archive · unofficial — not counted" badge was `position: fixed` at `top: 60px`, floating over the district map and wrapping oddly. It's now an in-flow centered single-line pill between the header and the game, so it never overlaps the district.
+
+---
+
 ## v2.9.12 — Correct state pick is free (fixes premature game-over + missing tween)
 
 - The server counted every pick toward MAX_GUESSES, but the client UI always treated a *correct state* pick as a free transition (not a guess). That mismatch meant a correct state on the "6th" pick ended the game early — and routed through the loss path that skips the reveal tween.
