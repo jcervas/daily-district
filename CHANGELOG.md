@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.16 — Drop "Solved in X guesses" from District Profile
+
+- The District Profile (game-over census sheet) no longer shows the "Solved in X guesses" line; it keeps the district code header.
+
+---
+
 ## v2.9.15 — Divider between result-modal tab groups
 
 - Added a vertical divider (with symmetric padding) between the "Today's District" tabs (Result/Guesses) and the "Lifetime Statistics" tabs (Me/Everyone) so the two halves read as distinct.

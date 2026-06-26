@@ -1246,10 +1246,9 @@ circle.tile-ripple {
   background: rgba(255, 255, 255, 0.55);   /* more opaque than the 0.2 sheet so cards stand out */
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
-.gameover-census-sheet .result-answer,
-.gameover-census-sheet .result-time-line {
-  background: transparent;
-}
+.gameover-census-sheet .result-answer { background: transparent; }
+/* The District Profile doesn't need the "Solved in X guesses" line. */
+.gameover-census-sheet .result-time-line { display: none; }
 /* Dark theme: tint the glass dark so light text stays readable over the map. */
 body.dark-mode .gameover-census-sheet { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
 body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
