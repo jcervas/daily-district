@@ -2,6 +2,13 @@
 
 ---
 
+## v2.8.7 — District Profile glass + z-order
+
+- Adopted the css.glass recipe for the District Profile sheet (`rgba(255,255,255,0.2)` + `blur(5px)` + subtle border/shadow); cards are glassy to match, with a dark-theme tint variant.
+- The District Profile sheet now sits **below** the welcome splash (z-150 vs z-200), so on reload the splash appears in front of an open profile instead of over it.
+
+---
+
 ## v2.8.6 — District Profile sheet: actually see-through
 
 - The frosted sheet was 80% opaque with solid stat cards, so the map behind was hidden. Dropped the sheet to ~55% translucency and made the stat cards glassy (~45%), so the blurred game-over map shows through while text stays readable.
