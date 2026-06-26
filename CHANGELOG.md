@@ -2,6 +2,12 @@
 
 ---
 
+## v2.8.8 — District Profile cards more solid than sheet
+
+- The census stat cards are now less translucent (0.55) than the glass sheet (0.2) so they read as solid panels against the see-through background. Dark-theme cards bumped to match.
+
+---
+
 ## v2.8.7 — District Profile glass + z-order
 
 - Adopted the css.glass recipe for the District Profile sheet (`rgba(255,255,255,0.2)` + `blur(5px)` + subtle border/shadow); cards are glassy to match, with a dark-theme tint variant.

@@ -1200,8 +1200,8 @@ circle.tile-ripple {
 /* Inside the frosted District Profile sheet, the cards are glassy too so the
    blurred map behind shows through them. */
 .gameover-census-sheet .census-card {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.55);   /* more opaque than the 0.2 sheet so cards stand out */
+  border: 1px solid rgba(255, 255, 255, 0.45);
 }
 .gameover-census-sheet .result-answer,
 .gameover-census-sheet .result-time-line {
@@ -1209,10 +1209,10 @@ circle.tile-ripple {
 }
 /* Dark theme: tint the glass dark so light text stays readable over the map. */
 body.dark-mode .gameover-census-sheet { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
-body.dark-mode .gameover-census-sheet .census-card { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.14); }
+body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 @media (prefers-color-scheme: dark) {
   body:not(.light-mode) .gameover-census-sheet { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
-  body:not(.light-mode) .gameover-census-sheet .census-card { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.14); }
+  body:not(.light-mode) .gameover-census-sheet .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 }
 .census-card .label {
   font-size: 0.72rem;
