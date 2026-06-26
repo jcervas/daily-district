@@ -2,6 +2,13 @@
 
 ---
 
+## v2.8.4 — District Profile sheet: frosted glass + working close
+
+- The blur is now on the District Profile sheet itself (frosted glass) rather than blurring the game-over content behind it — the backdrop is a plain dim.
+- Fixed the close chevron doing nothing: the swipe-drag was attached to the whole titlebar, so `setPointerCapture` swallowed the close button's click. Drag now initiates only from the grip handle.
+
+---
+
 ## v2.8.3 — District Profile sheet, urban/roads fix, click-capture fix
 
 - **District Profile** is now an open-by-default bottom sheet over a blurred, dimmed backdrop. Dismiss by swiping the sheet down or tapping the down-chevron; reopen via the "District Profile" pill. (Was a collapsed `<details>` that wouldn't open.)

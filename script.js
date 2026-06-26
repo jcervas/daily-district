@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.8.3';
+const VERSION_NUMBER = '2.8.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1632,7 +1632,7 @@ function wireGameoverCensus() {
   wrap.querySelector('.gameover-census-backdrop')?.addEventListener('click', close);
   wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
 
-  // Swipe the sheet down (from its top handle/titlebar) to dismiss.
+  // Swipe the sheet down (from its top grip handle) to dismiss.
   let startY = null, dy = 0;
   const onDown = (e) => {
     startY = e.clientY; dy = 0;
@@ -1650,12 +1650,15 @@ function wireGameoverCensus() {
     if (dy > 90) close();
     startY = null; dy = 0;
   };
-  wrap.querySelectorAll('.gameover-census-handle, .gameover-census-titlebar').forEach(z => {
+  // Drag only from the grip handle — attaching to the titlebar would let
+  // setPointerCapture swallow the close button's click.
+  const z = wrap.querySelector('.gameover-census-handle');
+  if (z) {
     z.addEventListener('pointerdown', onDown);
     z.addEventListener('pointermove', onMove);
     z.addEventListener('pointerup', onUp);
     z.addEventListener('pointercancel', onUp);
-  });
+  }
 }
 
 function destroyGameoverDiv() {
