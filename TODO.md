@@ -21,4 +21,4 @@ District Information
 - [ ] add Polsby-Popper (show district inside circle, white with black stroke)
 - [ ] add → Reock (draw circle with district comparison)
 - [ ] add other redistricting data like county splits
-- [ ] add information about current member (https://www.house.gov/representatives)
+- [x] add information about current member (https://www.house.gov/representatives) — v2.9.20, `tools/census/build_reps.py`
