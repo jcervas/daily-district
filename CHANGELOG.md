@@ -2,6 +2,13 @@
 
 ---
 
+## v2.9.8 — District zoom: fit tiles on entry, Fit button → whole state
+
+- Entering the "Pick a district" view now zooms to the bbox of the eligible district tiles (dist-icons) for a tighter initial frame, instead of the whole state outline.
+- The Fit button now zooms out to the full guessed-state bbox (then back to the tiles on a second press). Falls back to the state fit if tiles aren't built yet.
+
+---
+
 ## v2.9.7 — Grouped result-modal tabs + equal stat widths
 
 - The result-modal tabs are now two centered, labeled groups: "Today's District" (Result · Guesses) and "Lifetime Statistics" (Me · Everyone), with a gap that grows on wide screens instead of pinning them to the edges.

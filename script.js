@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.7';
+const VERSION_NUMBER = '2.9.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3193,17 +3193,22 @@ function zoomUSRefMapToValid(animated = true) {
     return;
   }
 
-  // District phase (single map): zoom the shared SVG into the guessed state's bbox and
-  // record it as the saved/fit transform so the district tiles size correctly and the
-  // fit-toggle has a reference.
+  // District phase (single map): the INITIAL view fits the eligible TILES (dist-icon
+  // positions) for a tight frame. The full guessed-state bbox is recorded as the
+  // fit-toggle reference (pressing Fit zooms out to the whole state).
   if (gamePhase === 'district' && serverState && usRefPathGen) {
     const feat = topoStates[serverState];
     if (!feat) return;
-    const bbox = usRefPathGen.bounds(feat);
-    const t = zoomToBBox(bbox, W, H, { margin: 0.85 });
-    usRefZoom.scaleExtent([Math.min(t.k, 0.3), Infinity]);
-    districtStateFitTransform = t;
+    const stateFit = zoomToBBox(usRefPathGen.bounds(feat), W, H, { margin: 0.85 });
+    districtStateFitTransform = stateFit;   // Fit button zooms out to this
+
+    const tileBox = _districtTileBBox(getActiveDistrictKeys());
+    const t = tileBox ? zoomToBBox(tileBox, W, H, { margin: 0.85 }) : stateFit;
+    // Allow zooming out at least to the full-state fit.
+    usRefZoom.scaleExtent([Math.min(stateFit.k, 0.3), Infinity]);
     if (!districtUserZoomed) districtSavedTransform = t;
+    // We're now at the tile fit, so the Fit button's next press zooms out to the state.
+    document.querySelector('.mzb-fit')?.classList.add('at-active-fit');
     if (animated) {
       usRefSvgSel.transition().duration(350 * ANIM_SLOW).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
     } else {
