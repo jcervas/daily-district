@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.13';
+const VERSION_NUMBER = '2.9.14';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1193,10 +1193,15 @@ async function finishServerLoss(resp) {
   _guessLocked = true;
   if (resp.answer) {
     serverAnswer = resp.answer;
-    try { await loadServerStateShapes(resp.answer.state); } catch (_) {}
     serverState = resp.answer.state;
     todayDistrict.properties.state = resp.answer.state;
     todayDistrict.properties['state-district'] = resp.answer.districtId;
+    // Play the same reveal tween as the district phase. The answer state's district
+    // shapes load in parallel; the expanding fill covers the wait (no dead pause).
+    const ready = loadServerStateShapes(resp.answer.state).catch(() => {});
+    const distPart = resp.answer.districtId.slice(resp.answer.state.length + 1);
+    startGameOverTransition(false, distPart, { ready });
+    return;
   }
   endGame(false);
   showGameoverModal();
@@ -2448,7 +2453,11 @@ const submitDistrictGuess = submitDistrictTile;
 // rectangle via D3 shape tweening (4 cubic bezier segments, same structure on both ends
 // so numeric interpolation is smooth). Once the fill covers the screen, endGame() runs
 // under cover, then the shape fades out to reveal the result.
-function startGameOverTransition(won, dist) {
+function startGameOverTransition(won, dist, opts = {}) {
+  // opts.ready: a promise to await before swapping to the game-over screen (e.g. the
+  // answer state's district shapes loading on a state-phase loss). The expanding fill
+  // covers the wait so there's no dead pause.
+  const ready = opts.ready || null;
   const tilesEl = document.getElementById('us-ref-map');   // tiles live in the shared map now
 
   // Tile center and radius in viewport (CSS pixel) coordinates.
@@ -2462,6 +2471,10 @@ function startGameOverTransition(won, dist) {
     ox    = cr.left + cr.width  / 2;
     oy    = cr.top  + cr.height / 2;
     tileR = cr.width / 2;
+  } else if (serverState && usRefLayers[serverState]) {
+    // State-phase loss (no district tile yet): emanate from the answer state on the map.
+    const sr = usRefLayers[serverState].node().getBoundingClientRect();
+    if (sr.width) { ox = sr.left + sr.width / 2; oy = sr.top + sr.height / 2; }
   }
 
   const W = window.innerWidth, H = window.innerHeight;
@@ -2516,11 +2529,12 @@ function startGameOverTransition(won, dist) {
     .duration(400)
     .ease(d3.easeCubicInOut)
     .attrTween('d', () => t => toPath(interp(t)))
-    .on('end', () => {
+    .on('end', async () => {
       // Remove the full-viewport flash overlay in a finally so an error in
       // endGame()/showGameoverModal() can never leave the screen locked on the
-      // gold/red reveal.
+      // gold/red reveal. The fill holds full-screen while `ready` resolves.
       try {
+        if (ready) { try { await ready; } catch (_) {} }
         endGame(won, { skipAnims: true });
         showGameoverModal();
         if (_gameOverAnimsCallback) {

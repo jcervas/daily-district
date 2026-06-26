@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.14 — Reveal tween on a state-phase loss
+
+- Losing in the state phase (6 wrong state guesses) skipped the reveal tween and showed a dead pause while the answer's shapes loaded, then jumped to the game-over screen. Now it plays the same expanding-fill reveal as the district phase — emanating from the answer state on the map — and loads the shapes in parallel under cover of the fill (no dead pause). Added a `ready` gate to `startGameOverTransition`.
+
+---
+
 ## v2.9.13 — Archive badge no longer covers the map
 
 - The "Archive · unofficial — not counted" badge was `position: fixed` at `top: 60px`, floating over the district map and wrapping oddly. It's now an in-flow centered single-line pill between the header and the game, so it never overlaps the district.
