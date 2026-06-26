@@ -21,7 +21,7 @@ import json, os
 HERE=os.path.dirname(__file__)
 SRC=os.environ.get("DD_CENSUS_OUT", os.path.join(HERE,"census_out.json"))
 DST=os.path.join(HERE,"census_update.sql")
-PRESERVE=["area_sqmi","Margin2024Pres","DemPct2024Pres","RepPct2024Pres"]
+PRESERVE=["area_sqmi","Margin2024Pres","DemPct2024Pres","RepPct2024Pres","rep"]
 
 def sqllit(obj):
     return "'" + json.dumps(obj,separators=(',',':')).replace("'","''") + "'"

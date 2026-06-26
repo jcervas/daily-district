@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.19';
+const VERSION_NUMBER = '2.9.20';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2003,8 +2003,22 @@ async function fetchAndRenderCensusPanel(districtData) {
 
   censusLoading.classList.add('hidden');
   censusDataEl.classList.remove('hidden');
+  // Current U.S. House member (census->'rep', sourced from house.gov).
+  const rep = d.rep && d.rep.name ? d.rep : null;
+  const repName = rep
+    ? (rep.url ? `<a href="${rep.url}" target="_blank" rel="noopener">${rep.name}</a>` : rep.name)
+    : '—';
+  const repParty = rep && rep.party
+    ? `${rep.party}${rep.partyCode ? ` (${rep.partyCode})` : ''}`
+    : 'Vacant';
+
   censusDataEl.innerHTML = `
     <div class="census-grid">
+      <div class="census-card census-rep">
+        <div class="label">Current Representative</div>
+        <div class="value">${repName}</div>
+        <div class="sub">${repParty}</div>
+      </div>
       <div class="census-card">
         <div class="label">Total Population</div>
         <div class="value">${formatNumber(d.pop)}</div>
@@ -2076,7 +2090,7 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="sub">${voteSub}</div>
       </div>
     </div>
-    <div class="census-source">Source: U.S. Census Bureau, ACS 5-Year Estimates (2019–2023), aggregated to 2026 district boundaries. ${d.name}</div>
+    <div class="census-source">Sources: U.S. Census Bureau, ACS 5-Year Estimates (2019–2023), aggregated to 2026 district boundaries; representative via house.gov. ${d.name}</div>
   `;
 }
 

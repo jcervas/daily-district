@@ -1,5 +1,13 @@
 # District Guess — Changelog
 
+## v2.9.20 — District Profile: current representative
+
+- Added the **current U.S. House member** to each District Profile (name, party, and a link to their official site), sourced from https://www.house.gov/representatives via a new `tools/census/build_reps.py` scraper. Stored as `census.rep` for all 435 districts.
+- `apply_census.py` now preserves `rep` so a demographic rebuild won't drop it.
+- Validation note: the ACS aggregation was re-checked against an **unchanged** district (NV-01, since TX-07 was redrawn after the ACS vintage). NV-01 matches the Census Bureau's published CD-level values within ~1% (pop 765,392 vs 763,217; income $68,378 vs $67,470; home value, rent, age all <0.5%).
+
+---
+
 ## v2.9.19 — District Profile: full ACS demographic rebuild
 
 - Rebuilt every district's census from ACS 5-year (2019–2023) data aggregated to the **2026 boundaries** via a new reproducible pipeline (`tools/census/`), rolling Census **tract** estimates up to each district through the DRA block-assignment files (latest map year per state).

@@ -58,9 +58,25 @@ $92 k, nor mean $133 k for that district).
 
 ## What's preserved vs recomputed
 
-`apply_census.py` replaces every ACS field but preserves four non-ACS keys from
-the existing census: `area_sqmi` (computed from the 2026 polygon) and the 2024
-presidential fields `Margin2024Pres`, `DemPct2024Pres`, `RepPct2024Pres`.
+`apply_census.py` replaces every ACS field but preserves these non-ACS keys from
+the existing census: `area_sqmi` (computed from the 2026 polygon), the 2024
+presidential fields `Margin2024Pres`, `DemPct2024Pres`, `RepPct2024Pres`, and
+`rep` (the current House member, below).
+
+## Current representative
+
+`build_reps.py` scrapes the official directory at
+https://www.house.gov/representatives and writes a `rep` object onto each
+district's census (`{name, party, partyCode, url}`). Representatives change over
+time — re-run it whenever House membership shifts:
+
+```bash
+python3 build_reps.py        # -> reps_out.json + reps_update.sql
+# then apply reps_update.sql
+```
+
+It only touches `census->'rep'`, and a census rebuild won't drop it (the key is
+in `apply_census.py`'s preserve list).
 
 ## Field glossary (`census_out.json`)
 
@@ -88,4 +104,5 @@ presidential fields `Margin2024Pres`, `DemPct2024Pres`, `RepPct2024Pres`.
 
 - `build_census.py` — aggregator (ACS tract → district) → `census_out.json`
 - `apply_census.py` — `census_out.json` → `census_update.sql`
-- `census_out.json` / `census_update.sql` — generated artifacts (regenerable)
+- `build_reps.py` — scrape house.gov → `reps_out.json` + `reps_update.sql`
+- `*_out.json` / `*_update.sql` — generated artifacts (regenerable)
