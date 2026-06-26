@@ -2,6 +2,13 @@
 
 ---
 
+## v2.8.5 — Urban areas + roads on the district-pick map
+
+- The district-pick reference map (`_drawGameplayTiles`) only drew county lines — it never rendered urban areas or roads. Added both, clipped to the active state at a fixed opacity (urban behind, roads, then county borders on top).
+- Gated the zoom-fade of the urban/roads layers to game-over only, so the gameplay layers keep their fixed opacity instead of being zeroed out at low zoom.
+
+---
+
 ## v2.8.4 — District Profile sheet: frosted glass + working close
 
 - The blur is now on the District Profile sheet itself (frosted glass) rather than blurring the game-over content behind it — the backdrop is a plain dim.

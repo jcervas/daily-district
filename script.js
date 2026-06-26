@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.8.4';
+const VERSION_NUMBER = '2.8.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3420,14 +3420,15 @@ function _applyTileZoomScaling(g, k) {
     districtSimulation._applyIconPositions();
   }
 
-  // Context layers fade in with zoom (game-over only for counties; gameplay keeps fixed opacity)
+  // Context layers fade in with zoom at game over. During gameplay the context
+  // layers keep the fixed opacity set in _drawGameplayTiles (no zoom gating).
   if (gameOver) {
     const countyOpacity = k > 3 ? Math.min(0.65, (k - 3) * 0.25) : 0;
     g.select('.context-counties').attr('opacity', countyOpacity);
+    const fadeOpacity = k > 2 ? Math.min(1, (k - 2) * 0.35) : 0;
+    g.select('.context-urban').attr('opacity', fadeOpacity);
+    g.select('.context-roads').attr('opacity', fadeOpacity);
   }
-  const fadeOpacity = k > 2 ? Math.min(1, (k - 2) * 0.35) : 0;
-  g.select('.context-urban').attr('opacity', fadeOpacity);
-  g.select('.context-roads').attr('opacity', fadeOpacity);
 }
 
 function buildDistrictD3Map(stateAbbr, animateReveal = false, zoomIn = false) {
@@ -3774,6 +3775,29 @@ function _drawGameplayTiles(ctx) {
   if (stateOutline) {
     fillG.append('path').datum(stateOutline).attr('d', pathGen)
       .attr('style', 'fill: var(--surface);').attr('stroke', 'none').attr('pointer-events', 'none');
+  }
+
+  // Urban areas + roads — decorative geographic context, clipped to the active
+  // state, always visible during gameplay (no zoom threshold). Drawn before the
+  // county lines so the dashed county borders sit on top.
+  if (stateOutline && (topoUrban || topoRoads)) {
+    const ctxClipId = `gameplay-context-clip-${stateAbbr}`;
+    g.append('defs').append('clipPath').attr('id', ctxClipId)
+      .append('path').attr('d', pathGen(stateOutline));
+    if (topoUrban) {
+      g.append('g').attr('class', 'context-urban').attr('pointer-events', 'none')
+        .attr('clip-path', `url(#${ctxClipId})`).attr('opacity', 1)
+        .selectAll('path').data(topoUrban.features).join('path').attr('d', pathGen)
+        .attr('fill', dark ? 'rgba(255,255,255,0.07)' : 'rgba(80,80,140,0.12)').attr('stroke', 'none');
+    }
+    if (topoRoads) {
+      g.append('g').attr('class', 'context-roads').attr('pointer-events', 'none')
+        .attr('clip-path', `url(#${ctxClipId})`).attr('opacity', 1)
+        .selectAll('path').data(topoRoads.features).join('path').attr('d', pathGen)
+        .attr('fill', 'none')
+        .attr('stroke', dark ? 'rgba(255,255,255,0.18)' : 'rgba(60,60,100,0.22)')
+        .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke');
+    }
   }
 
   // County lines — always visible in gameplay (no zoom threshold), clipped to active state
