@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.9 — Hard Mode actually hides hints
+
+- Hard Mode was stored but never wired to anything (hints still showed). It now lives up to "No hints revealed — shape only": the clue/hint bar is replaced with a "Hard mode · no hints" note and the map stays shape-only (no terrain/urban/roads reveal) during play. Everything is revealed at game over. Toggling the setting applies immediately.
+
+---
+
 ## v2.9.8 — District zoom: fit tiles on entry, Fit button → whole state
 
 - Entering the "Pick a district" view now zooms to the bbox of the eligible district tiles (dist-icons) for a tighter initial frame, instead of the whole state outline.

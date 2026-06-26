@@ -436,6 +436,18 @@ main:has(#already-played-banner:not(.hidden)) {
   scrollbar-width: none;
 }
 #hint-bar::-webkit-scrollbar { display: none; }
+/* Hard mode: replaces the clue cards with a muted note. */
+.hint-hard-note {
+  flex: 1;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 9px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
 
 /* Collapsed by default: previous/locked clues shrink to a tappable icon strip; only
    the latest clue expands to fill the remaining horizontal space (see .latest below).

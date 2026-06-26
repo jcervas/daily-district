@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.8';
+const VERSION_NUMBER = '2.9.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1732,8 +1732,12 @@ function applyMapStage(wrongGuesses, gameEnded = false) {
   else if (wrongGuesses >= 1)         idx = 1;
   else                                idx = 0;
 
+  // Hard mode: shape only — no terrain/imagery reveal during play (full reveal at game over).
+  const hardPlay = hardMode && !gameEnded;
+  if (hardPlay) idx = 0;
+
   // D3 overlay: stages 0 (outline only), 1 (+ urban/roads), 2+ (transparent bg over terrain)
-  currentMapStage = Math.max(currentMapStage, idx);
+  currentMapStage = hardPlay ? 0 : Math.max(currentMapStage, idx);
   renderMapD3(currentMapStage);
 
   // One basemap per theme starting at stage 2: terrain in light mode, satellite in dark mode
@@ -2166,6 +2170,12 @@ function renderHintBar() {
   const bar = document.getElementById('hint-bar');
   if (!bar) return;
   if (!_gameStarted) { bar.innerHTML = ''; return; }
+
+  // Hard mode: no textual hints during play (revealed once the game is over).
+  if (hardMode && !gameOver) {
+    bar.innerHTML = '<div class="hint-hard-note">Hard mode · no hints</div>';
+    return;
+  }
 
   bar.innerHTML = '';
 
@@ -5264,6 +5274,9 @@ document.addEventListener('DOMContentLoaded', () => {
       hardMode = hardToggle.checked;
       localStorage.setItem('districtguess_hardMode', hardMode ? '1' : '0');
       reportSettings('change');
+      // Apply immediately: refresh the hint bar + map imagery for the new mode.
+      renderClues();
+      if (map) applyMapStage(guessHistory.filter(g => !g.correct).length, gameOver);
     });
   }
 
