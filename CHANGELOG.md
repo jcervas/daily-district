@@ -2,6 +2,12 @@
 
 ---
 
+## v2.8.9 — Glass reopen pill
+
+- The "District Profile" reopen pill now uses the same frosted-glass treatment (red-tinted `rgba(196,18,48,0.2)` + `blur(5px)` + light border), filling solid red on hover.
+
+---
+
 ## v2.8.8 — District Profile cards more solid than sheet
 
 - The census stat cards are now less translucent (0.55) than the glass sheet (0.2) so they read as solid panels against the see-through background. Dark-theme cards bumped to match.
