@@ -2,6 +2,12 @@
 
 ---
 
+## v2.8.6 — District Profile sheet: actually see-through
+
+- The frosted sheet was 80% opaque with solid stat cards, so the map behind was hidden. Dropped the sheet to ~55% translucency and made the stat cards glassy (~45%), so the blurred game-over map shows through while text stays readable.
+
+---
+
 ## v2.8.5 — Urban areas + roads on the district-pick map
 
 - The district-pick reference map (`_drawGameplayTiles`) only drew county lines — it never rendered urban areas or roads. Added both, clipped to the active state at a fixed opacity (urban behind, roads, then county borders on top).

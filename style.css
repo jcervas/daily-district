@@ -1197,6 +1197,15 @@ circle.tile-ripple {
   border-radius: var(--radius);
   padding: 12px 14px;
 }
+/* Inside the frosted District Profile sheet, the cards go translucent too so the
+   blurred map behind shows through them. */
+.gameover-census-sheet .census-card {
+  background: color-mix(in srgb, var(--surface-alt) 45%, transparent);
+}
+.gameover-census-sheet .result-answer,
+.gameover-census-sheet .result-time-line {
+  background: transparent;
+}
 .census-card .label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -1787,12 +1796,12 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   max-height: 88%;
   display: flex;
   flex-direction: column;
-  /* Frosted glass: the sheet itself is translucent + blurred, so content shows
-     through it softly. (The blur lives here, not on the backdrop.) */
+  /* Frosted glass: the sheet is quite translucent + blurred so the map behind
+     stays visible through it. (The blur lives here, not on the backdrop.) */
   background: var(--surface);   /* fallback where color-mix is unsupported */
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -10px 34px rgba(0,0,0,0.30);
   transform: translateY(101%);
