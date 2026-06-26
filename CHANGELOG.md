@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.9.18 — Spacing fixes (game-over ribbon + District Profile header)
+
+- `#gameover-next` had asymmetric vertical margin (10px top, 4px bottom) — now symmetric.
+- Added breathing room below the District Profile district code (the "Solved in" line beneath it is hidden, so it sat flush against the stats).
+
 ---
 
 ## v2.9.17 — How to Play: sign-in note
