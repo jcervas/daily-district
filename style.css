@@ -909,6 +909,9 @@ circle.tile-ripple {
   color: var(--cmu-red);
   border-bottom-color: var(--cmu-red);
 }
+/* Push this button (and any after it) to the right edge — Result/Guesses stay left,
+   Me/Everyone group right. */
+.result-tab-btn--right { margin-left: auto; }
 .result-tab-pane {
   display: none;
   padding: 20px;
@@ -2656,10 +2659,13 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 /* ---- Result modal close button ---- */
 .result-modal-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 10px;
+  justify-content: flex-start;
+  padding: 10px 12px 0;
   flex-shrink: 0;
 }
+/* Keep the result-modal back button in its own row (the base .modal-close is
+   position:absolute, which floated it over the district preview map). */
+#result-modal .result-modal-close { position: static; }
 .result-modal-close {
   font-size: 0.82rem;
   font-weight: 600;

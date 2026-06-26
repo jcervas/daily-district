@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.5';
+const VERSION_NUMBER = '2.9.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1941,22 +1941,8 @@ function renderInlinePersonalStats() {
 
   const winRate = Math.round(stats.won / stats.played * 100);
   const dist    = stats.guessDist || {};
-  const maxBar  = Math.max(...Object.values(dist).map(Number), 1);
   const wonToday = guessHistory.some(g => g.correct && g.phase === 'district');
-
-  const bars = [1, 2, 3, 4, 5, 6, 'X'].map(k => {
-    const count = dist[k] || 0;
-    const pct   = count > 0 ? Math.max(Math.round(count / maxBar * 100), 12) : 0;
-    const hi    = gameOver && ((wonToday && k === guessCount) || (!wonToday && k === 'X'));
-    return `<div class="rdist-row">
-      <span class="rdist-n">${k}</span>
-      <div class="rdist-bar-wrap">
-        <div class="rdist-bar${hi ? ' today' : ''}" style="width:${pct}%">
-          ${count ? `<span class="rdist-count">${count}</span>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  const hiKey = gameOver ? (wonToday ? guessCount : 'X') : null;
 
   const avgSecs  = stats.won > 0 ? Math.round((stats.totalWonTime || 0) / stats.won) : null;
   const avgLabel = avgSecs !== null ? formatTime(avgSecs) : '—';
@@ -1964,16 +1950,18 @@ function renderInlinePersonalStats() {
   const totalWonCount   = [1,2,3,4,5,6].reduce((s, k) => s + (dist[k] || 0), 0);
   const avgGuesses = totalWonCount > 0 ? (totalWonGuesses / totalWonCount).toFixed(1) : '—';
 
+  // Same markup/classes as the Me / Everyone tabs so the stat cards + histogram
+  // are identical in style and width.
   el.innerHTML = `
-    <div class="result-stats-grid">
-      <div class="rstat-cell"><span class="rstat-big">${stats.played}</span><span class="rstat-label">Played</span></div>
-      <div class="rstat-cell"><span class="rstat-big">${winRate}</span><span class="rstat-label">Win %</span></div>
-      <div class="rstat-cell"><span class="rstat-big">${stats.streak}</span><span class="rstat-label">Current Streak</span></div>
-      <div class="rstat-cell"><span class="rstat-big">${stats.maxStreak}</span><span class="rstat-label">Max Streak</span></div>
+    <div class="personal-grid">
+      <div class="stat-card"><div class="stat-val">${stats.played}</div><div class="stat-label">Played</div></div>
+      <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-label">Win Rate</div></div>
+      <div class="stat-card"><div class="stat-val">${stats.streak}</div><div class="stat-label">Current Streak</div></div>
+      <div class="stat-card"><div class="stat-val">${stats.maxStreak}</div><div class="stat-label">Max Streak</div></div>
     </div>
     <div class="result-dist">
       <h4>Guess Distribution</h4>
-      ${bars}
+      ${renderDistBars(dist, hiKey)}
     </div>
     <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong> &nbsp;&middot;&nbsp; Avg. time: <strong>${avgLabel}</strong></div>`;
 }

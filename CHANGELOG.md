@@ -2,6 +2,14 @@
 
 ---
 
+## v2.9.6 — Result-modal tab polish
+
+- Renamed the stats tabs to "Me" (your stats) and "Everyone" (all players); reordered to Result · Guesses (left) and Me · Everyone (right-aligned).
+- The Result tab's stat cards + guess histogram now use the exact same markup/style/width as the Me and Everyone tabs (were a different, smaller style).
+- Fixed the "Back to map" button overlapping the district preview — the base `.modal-close` is `position: absolute`; the result-modal back button now sits in its own row above the preview.
+
+---
+
 ## v2.9.5 — Flatten leaderboard into result-modal tabs
 
 - Dropped the nested "Leaderboard" tab and its sub-tabs. "All Time" and "My Stats" are now top-level tabs in line with "Result" and "Guesses".
