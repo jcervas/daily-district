@@ -2,6 +2,13 @@
 
 ---
 
+## v2.9.12 — Correct state pick is free (fixes premature game-over + missing tween)
+
+- The server counted every pick toward MAX_GUESSES, but the client UI always treated a *correct state* pick as a free transition (not a guess). That mismatch meant a correct state on the "6th" pick ended the game early — and routed through the loss path that skips the reveal tween.
+- Now the server (and archive replay) exclude correct-state picks from the count: guesses = wrong picks + district picks. A correct state always advances to the district phase with guesses remaining, so the normal win/loss flow (and its tween) runs. Verified: 5 wrong + correct state → 5 used, 1 left, not completed.
+
+---
+
 ## v2.9.11 — Fix 7th guess after 6 wrong
 
 - After the 6th wrong state guess, a 7th guess could slip in before the game locked: `finishServerLoss` awaits the answer's state-shape load before `endGame()` sets `gameOver`, and input had already been unlocked. Now `gameOver`/the guess lock are set synchronously at the start of `finishServerLoss`, closing that window (covers the district phase too).

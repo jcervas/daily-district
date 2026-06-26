@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.11';
+const VERSION_NUMBER = '2.9.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -26,36 +26,10 @@ const GAME_VERSION = (() => {
 })();
 document.querySelectorAll('.beta-version').forEach(el => { el.textContent = VERSION_NUMBER; });
 
-
-// ---- FIREBASE CONFIGURATION (optional) ----------------------
-// To enable the global leaderboard:
-//   1. Create a project at https://console.firebase.google.com
-//   2. Enable Firestore (start in test mode for development)
-//   3. Replace the null below with your config object
-//
-// Example:
-// const FIREBASE_CONFIG = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   projectId: "your-project",
-//   storageBucket: "your-project.appspot.com",
-//   messagingSenderId: "123456789",
-//   appId: "1:123:web:abc"
-// };
-//
-// Firestore security rules (paste into Firebase console):
-// rules_version = '2';
-// service cloud.firestore {
-//   match /databases/{database}/documents {
-//     match /scores/{doc} {
-//       allow read: if true;
-//       allow create: if request.resource.data.keys().hasAll(
-//         ['date','username','guesses','time','won','timestamp']
-//       );
-//     }
-//   }
-// }
-const FIREBASE_CONFIG = null;
+let DISTRICT_FIT_MARGIN = 0.95;
+try { Object.defineProperty(window, 'DISTRICT_FIT_MARGIN', {
+  get: () => DISTRICT_FIT_MARGIN, set: v => { DISTRICT_FIT_MARGIN = v; },
+}); } catch (_) {}
 
 // ---- CENSUS API KEY (optional, free) -------------------------
 // Get one at https://api.census.gov/data/key_signup.html
@@ -401,10 +375,6 @@ let currentMapStage     = 0;     // highest stage reached; preserved across re-r
 // padding around it, higher = tighter). Used by every district-fit zoomToBBox call.
 // Exposed on window so you can tweak it live in the console (e.g. DISTRICT_FIT_MARGIN = 0.7)
 // then trigger a re-zoom (press the Fit button / make a guess).
-let DISTRICT_FIT_MARGIN = 0.85;
-try { Object.defineProperty(window, 'DISTRICT_FIT_MARGIN', {
-  get: () => DISTRICT_FIT_MARGIN, set: v => { DISTRICT_FIT_MARGIN = v; },
-}); } catch (_) {}
 let todayDistrict       = null;   // feature object
 let todayKey            = '';     // 'YYYY-MM-DD'
 let map, terrainLayer, satelliteLayer, streetLayer, districtLayer;
@@ -825,7 +795,8 @@ function archiveLocalGuess(phase, value) {
     adjacent = new Set(adjMap.get(ans.districtId) || []).has(value);
   }
   const hist = [...guessHistory.map(g => ({ phase: g.phase, correct: g.correct })), { phase, correct }];
-  const guesses   = hist.length;
+  // A correct state pick is a free transition — not counted toward MAX_GUESSES.
+  const guesses   = hist.filter(g => !(g.phase === 'state' && g.correct)).length;
   const won       = phase === 'district' && correct;
   const completed = won || guesses >= MAX_GUESSES;
   const { unlocked, total: cluesTotal } = clientRevealClues(serverArchive.clues, hist, completed);
@@ -1606,7 +1577,6 @@ function buildGameoverDiv() {
       <!-- District Profile — open-by-default bottom sheet with a blurred backdrop.
            Dismiss by swiping the sheet down or tapping the chevron; reopen via the pill. -->
       <div id="gameover-census" class="gameover-census open" role="dialog" aria-label="District Profile">
-        <div class="gameover-census-backdrop"></div>
         <section class="gameover-census-sheet">
           <div class="gameover-census-handle"><span class="gameover-census-grip"></span></div>
           <div class="gameover-census-titlebar">
@@ -1642,7 +1612,6 @@ function wireGameoverCensus() {
   const close = () => wrap.classList.remove('open');
 
   wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
-  wrap.querySelector('.gameover-census-backdrop')?.addEventListener('click', close);
   wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
 
   // Swipe the sheet down (from its top grip handle) to dismiss.
