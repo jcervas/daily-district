@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=79" />
+  <link rel="stylesheet" href="style.css?v=80" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -27,9 +27,6 @@
     <div class="header-left">
       <button id="how-to-btn" class="btn-icon" title="How to play">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
-      </button>
-      <button id="leaderboard-btn" class="btn-icon" title="Leaderboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
       <button id="settings-btn" class="btn-icon" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.75 1.75 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.75 1.75 0 0 0-1.82-.33 1.75 1.75 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.75 1.75 0 0 0 9 19.4a1.75 1.75 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.75 1.75 0 0 0 4.68 15a1.75 1.75 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.75 1.75 0 0 0 4.6 9a1.75 1.75 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.75 1.75 0 0 0 9 4.68a1.75 1.75 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.75 1.75 0 0 0 1 1.51 1.75 1.75 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.75 1.75 0 0 0 19.4 9a1.75 1.75 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.75 1.75 0 0 0-1.51 1z"/></svg>
@@ -407,29 +404,6 @@
   </div>
 </div>
 
-<!-- ===== LEADERBOARD MODAL ===== -->
-<div id="leaderboard-modal" class="modal hidden">
-  <div class="modal-content leaderboard-content">
-    <div class="result-modal-header"><button class="modal-close result-modal-close">← Back to map</button></div>
-    <h2>Leaderboard</h2>
-    <div id="lb-district-label" class="lb-district-label"></div>
-    <div class="leaderboard-tabs">
-      <button class="tab-btn active" data-tab="today">Today</button>
-      <button class="tab-btn" data-tab="alltime">All Time</button>
-      <button class="tab-btn" data-tab="personal">My Stats</button>
-    </div>
-    <div id="leaderboard-today" class="tab-panel active">
-      <div id="today-scores" class="scores-list">Loading…</div>
-    </div>
-    <div id="leaderboard-alltime" class="tab-panel">
-      <div id="alltime-scores" class="scores-list">Loading…</div>
-    </div>
-    <div id="leaderboard-personal" class="tab-panel">
-      <div id="personal-stats"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== USERNAME PROMPT MODAL ===== -->
 <div id="username-modal" class="modal hidden">
   <div class="modal-content">
@@ -489,7 +463,7 @@
       <div class="result-modal-tabs">
         <button class="result-tab-btn active" data-rtab="result">Result</button>
         <button class="result-tab-btn" data-rtab="guesses">Guesses</button>
-        <button class="result-tab-btn" data-rtab="census">District Profile</button>
+        <button class="result-tab-btn" data-rtab="leaderboard">Leaderboard</button>
       </div>
 
       <div id="result-section" class="result-tab-pane active">
@@ -531,14 +505,22 @@
         <div id="guess-remaining"></div>
       </div>
 
-      <div id="census-section" class="result-tab-pane">
-        <div id="census-header"></div>
-        <div id="census-loading">Fetching district data from the U.S. Census…</div>
-        <div id="census-data" class="hidden"></div>
-        <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
-           class="donate-btn result-donate-btn" target="_blank" rel="noopener">
-          Donate to CMU
-        </a>
+      <div id="leaderboard-section" class="result-tab-pane">
+        <div id="lb-district-label" class="lb-district-label"></div>
+        <div class="leaderboard-tabs">
+          <button class="tab-btn active" data-tab="today">Today</button>
+          <button class="tab-btn" data-tab="alltime">All Time</button>
+          <button class="tab-btn" data-tab="personal">My Stats</button>
+        </div>
+        <div id="leaderboard-today" class="tab-panel active">
+          <div id="today-scores" class="scores-list">Loading…</div>
+        </div>
+        <div id="leaderboard-alltime" class="tab-panel">
+          <div id="alltime-scores" class="scores-list">Loading…</div>
+        </div>
+        <div id="leaderboard-personal" class="tab-panel">
+          <div id="personal-stats"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -555,6 +537,6 @@
 <script src="globe.js?v=2.2.15" defer></script>
 <script src="backend.js?v=16" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.7.3" defer></script>
+<script src="script.js?v=2.8.0" defer></script>
 </body>
 </html>

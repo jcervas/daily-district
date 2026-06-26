@@ -2,6 +2,14 @@
 
 ---
 
+## v2.8.0 — Consolidated results, leaderboard & district profile
+
+- **Leaderboard folded into the result modal** as a third tab (Today / All Time / My Stats sub-tabs). The standalone leaderboard modal and the header Leaderboard icon are removed; the leaderboard is now reachable from the result screen after playing.
+- When the result modal is opened without a finished game, it lands on the Leaderboard tab and the Result/Guesses tabs show a "finish today's puzzle…" placeholder.
+- **District Profile moved to the game-over screen** as a collapsible "District Profile ▸" section beneath the revealed district map (removed from the result modal's tabs). Census data renders into the game-over card once it's built.
+
+---
+
 ## v2.7.3 — Link swipe-underline + secondary button fill
 
 - Text links now use the `.link-underline-swipe` effect from jonathancervas.com: a currentColor underline that swipes in left→right on hover (instead of the underline-thicken).

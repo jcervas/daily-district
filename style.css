@@ -1750,6 +1750,34 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   min-height: 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
+/* Collapsible District Profile on the game-over card (census facts). */
+.gameover-census {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.gameover-census-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+  user-select: none;
+}
+.gameover-census-summary::-webkit-details-marker { display: none; }
+.gameover-census-chevron { flex-shrink: 0; color: var(--muted); transition: transform .2s ease; }
+.gameover-census[open] .gameover-census-chevron { transform: rotate(180deg); }
+.gameover-census-body {
+  padding: 0 14px 14px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
 .gameover-card-header {
   flex-shrink: 0;
   display: flex;

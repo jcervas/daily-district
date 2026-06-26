@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.7.3';
+const VERSION_NUMBER = '2.8.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -770,8 +770,7 @@ async function restoreServerGame(result, answer) {
     lastGameWon = guessHistory.some(g => g.phase === 'district' && g.correct);
     renderClues();
     showResult(lastGameWon, false);
-    showGameoverModal();
-    fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
+    showGameoverModal();   // also renders the District Profile into the game-over card
   }
 }
 
@@ -1590,6 +1589,17 @@ function buildGameoverDiv() {
             <button class="mzb mzb-go mzb-go-fit" data-dir="fit" aria-label="Fit to district" title="Fit to district"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
           </div>
         </div>
+        <details id="gameover-census" class="gameover-census">
+          <summary class="gameover-census-summary">
+            <span>District Profile</span>
+            <svg class="gameover-census-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="gameover-census-body">
+            <div id="census-header"></div>
+            <div id="census-loading">Fetching district data from the U.S. Census…</div>
+            <div id="census-data" class="hidden"></div>
+          </div>
+        </details>
       </div>
     </div>
   `;
@@ -1918,21 +1928,25 @@ function renderInlinePersonalStats() {
 function switchResultTab(tab) {
   document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.result-tab-btn').forEach(b => b.classList.remove('active'));
-  const paneId = { result: 'result-section', guesses: 'guesses-section', census: 'census-section' }[tab] || 'result-section';
+  const paneId = { result: 'result-section', guesses: 'guesses-section', leaderboard: 'leaderboard-section' }[tab] || 'result-section';
   const pane = document.getElementById(paneId);
   const btn  = document.querySelector(`.result-tab-btn[data-rtab="${tab}"]`);
   if (pane) pane.classList.add('active');
   if (btn)  btn.classList.add('active');
-  if (tab === 'census') renderTabHeader('census-header');
-  if (tab === 'guesses') {
+  if (tab === 'guesses' && gameOver) {
     renderTabHeader('guesses-header');
     renderGuessHistory();
   }
+  if (tab === 'leaderboard') loadLeaderboardPanels();
 }
 
 async function fetchAndRenderCensusPanel(districtData) {
+  // District Profile now lives in the game-over card, so render its header here
+  // (it used to be drawn when switching to the result-modal census tab).
+  renderTabHeader('census-header');
   const censusLoading = document.getElementById('census-loading');
   const censusDataEl  = document.getElementById('census-data');
+  if (!censusLoading || !censusDataEl) return;
 
   const d = await getDistrictCensusData();
   if (!d) {
@@ -3856,10 +3870,10 @@ function endGame(won, { skipAnims = false } = {}) {
   }
   saveGameState();
 
-  // Submit to Firebase and render census data. Anonymous outcomes are never submitted
-  // (no leaderboard entry); telemetry still fires elsewhere.
+  // Submit to Firebase. Anonymous outcomes are never submitted (no leaderboard entry);
+  // telemetry still fires elsewhere. The District Profile is rendered by
+  // showGameoverModal() (the game-over card owns it now).
   if (!isAnonymousPlayer) submitScore(won, guessCount, elapsedSeconds);
-  fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
 }
 
 // ============================================================
@@ -4152,6 +4166,9 @@ async function showGameoverModal() {
   destroyGameoverDiv();
   _gameOverAnimsCallback = null;  // animations ran on district-tiles which is now gone
   buildGameoverDiv();
+
+  // District Profile lives in the game-over card now — populate it once the card exists.
+  if (todayDistrict) fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
 
   const won = guessHistory.some(g => g.correct && g.phase === 'district');
 
@@ -4541,7 +4558,16 @@ function openResultModal() {
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
-  switchResultTab('result');
+  if (gameOver) {
+    switchResultTab('result');
+  } else {
+    // No finished game yet — land on the leaderboard and placeholder the rest.
+    const rs = document.getElementById('result-stats');
+    const gh = document.getElementById('guess-history');
+    if (rs) rs.innerHTML = '<div class="lb-empty">Finish today’s puzzle to see your result.</div>';
+    if (gh) gh.innerHTML = '<div class="lb-empty">Finish today’s puzzle to see your guesses.</div>';
+    switchResultTab('leaderboard');
+  }
   if (lastGameWon && !_resultConfettiFired) {
     _resultConfettiFired = true;
     _launchConfettiAfterAnim();
@@ -4648,9 +4674,10 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-async function openLeaderboard() {
-  document.getElementById('leaderboard-modal').classList.remove('hidden');
-  document.getElementById('lb-district-label').textContent =
+// Loads the leaderboard panels inside the result modal's Leaderboard tab.
+async function loadLeaderboardPanels() {
+  const labelEl = document.getElementById('lb-district-label');
+  if (labelEl) labelEl.textContent =
     (gameOver && todayDistrict) ? `${todayDistrict.properties['state-district']} · ${todayKey}` : todayKey;
 
   const todayEl    = document.getElementById('today-scores');
@@ -4957,8 +4984,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // Leaderboard
-  document.getElementById('leaderboard-btn').addEventListener('click', openLeaderboard);
-  document.getElementById('show-results-btn').addEventListener('click', openResultModal);
+  document.getElementById('show-results-btn')?.addEventListener('click', openResultModal);
 
   // Anonymous results CTA → open the login modal (login.js wires the form/providers).
   document.getElementById('result-anon-signin-btn')?.addEventListener('click', () => {
