@@ -2,6 +2,14 @@
 
 ---
 
+## v2.8.3 — District Profile sheet, urban/roads fix, click-capture fix
+
+- **District Profile** is now an open-by-default bottom sheet over a blurred, dimmed backdrop. Dismiss by swiping the sheet down or tapping the down-chevron; reopen via the "District Profile" pill. (Was a collapsed `<details>` that wouldn't open.)
+- **Fixed:** clicking the District Profile no longer triggers the "click anywhere on the game-over screen → open results" handler.
+- **Fixed:** urban areas + roads weren't drawing on the reference/game-over map in server mode — the clip path was built only from district geometry (absent in server mode), so the layers referenced a missing clip and were clipped to nothing. Now the clip falls back to the merged states geometry.
+
+---
+
 ## v2.8.2 — Matching Sign in / Donate header pills
 
 - The header Sign in and Donate buttons are now identical size (92×34) outlined red pills with the same fill-on-hover style.

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.8.2';
+const VERSION_NUMBER = '2.8.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1589,22 +1589,73 @@ function buildGameoverDiv() {
             <button class="mzb mzb-go mzb-go-fit" data-dir="fit" aria-label="Fit to district" title="Fit to district"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
           </div>
         </div>
-        <details id="gameover-census" class="gameover-census">
-          <summary class="gameover-census-summary">
-            <span>District Profile</span>
-            <svg class="gameover-census-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
+      </div>
+      <!-- District Profile — open-by-default bottom sheet with a blurred backdrop.
+           Dismiss by swiping the sheet down or tapping the chevron; reopen via the pill. -->
+      <div id="gameover-census" class="gameover-census open" role="dialog" aria-label="District Profile">
+        <div class="gameover-census-backdrop"></div>
+        <section class="gameover-census-sheet">
+          <div class="gameover-census-handle"><span class="gameover-census-grip"></span></div>
+          <div class="gameover-census-titlebar">
+            <span class="gameover-census-title">District Profile</span>
+            <button type="button" class="gameover-census-close" aria-label="Minimize District Profile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="20" height="20"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
           <div class="gameover-census-body">
             <div id="census-header"></div>
             <div id="census-loading">Fetching district data from the U.S. Census…</div>
             <div id="census-data" class="hidden"></div>
           </div>
-        </details>
+        </section>
+        <button type="button" class="gameover-census-reopen" aria-label="Show District Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><polyline points="18 15 12 9 6 15"/></svg>
+          District Profile
+        </button>
       </div>
     </div>
   `;
   document.getElementById('result-modal').before(el);
   return el;
+}
+
+// Wire the District Profile bottom sheet: open by default, dismiss via the
+// chevron / backdrop / swiping the handle down, reopen via the pill.
+function wireGameoverCensus() {
+  const wrap = document.getElementById('gameover-census');
+  if (!wrap) return;
+  const sheet = wrap.querySelector('.gameover-census-sheet');
+  const open  = () => wrap.classList.add('open');
+  const close = () => wrap.classList.remove('open');
+
+  wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
+  wrap.querySelector('.gameover-census-backdrop')?.addEventListener('click', close);
+  wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
+
+  // Swipe the sheet down (from its top handle/titlebar) to dismiss.
+  let startY = null, dy = 0;
+  const onDown = (e) => {
+    startY = e.clientY; dy = 0;
+    if (sheet) sheet.style.transition = 'none';
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onMove = (e) => {
+    if (startY == null || !sheet) return;
+    dy = Math.max(0, e.clientY - startY);
+    sheet.style.transform = `translateY(${dy}px)`;
+  };
+  const onUp = () => {
+    if (startY == null) return;
+    if (sheet) { sheet.style.transition = ''; sheet.style.transform = ''; }
+    if (dy > 90) close();
+    startY = null; dy = 0;
+  };
+  wrap.querySelectorAll('.gameover-census-handle, .gameover-census-titlebar').forEach(z => {
+    z.addEventListener('pointerdown', onDown);
+    z.addEventListener('pointermove', onMove);
+    z.addEventListener('pointerup', onUp);
+    z.addEventListener('pointercancel', onUp);
+  });
 }
 
 function destroyGameoverDiv() {
@@ -3549,27 +3600,33 @@ function _drawGameOverMap(ctx, animateReveal) {
       .attr('fill', dark ? 'rgba(255,255,255,0.06)' : 'rgba(100,100,120,0.12)')
       .attr('stroke', 'none');
 
-    // Clip roads/urban to the US land boundary. The district topo (and the
-    // roads/urban/counties overlays) only exist in legacy mode; server mode
-    // ships a states-only topo, so skip the district-geometry merge there.
+    // Clip roads/urban to the US land boundary. Legacy mode merges the district
+    // geometries; server mode ships a states-only topo, so fall back to merging
+    // the states. (Previously this skipped the clipPath entirely in server mode,
+    // but the layers still referenced url(#clip) → they were clipped to nothing
+    // and roads/urban never appeared.)
     const clipId = 'gameover-us-land-clip';
-    if (rawTopo.objects.districts) {
+    let landGeom = null;
+    if (rawTopo.objects.districts)   landGeom = topojson.merge(rawTopo, rawTopo.objects.districts.geometries);
+    else if (rawTopo.objects.states) landGeom = topojson.merge(rawTopo, rawTopo.objects.states.geometries);
+    if (landGeom) {
       let defs = svg.select('defs');
       if (defs.empty()) defs = svg.insert('defs', ':first-child');
       defs.selectAll(`#${clipId}`).remove();
       defs.append('clipPath').attr('id', clipId)
-        .append('path').datum(topojson.merge(rawTopo, rawTopo.objects.districts.geometries)).attr('d', pathGen);
+        .append('path').datum(landGeom).attr('d', pathGen);
     }
+    const clipRef = landGeom ? `url(#${clipId})` : null;
 
     if (topoUrban) {
       g.append('g').attr('class', 'context-urban')
-        .attr('clip-path', `url(#${clipId})`).attr('opacity', 0).attr('pointer-events', 'none')
+        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
         .selectAll('path').data(topoUrban.features).join('path').attr('d', pathGen)
         .attr('fill', dark ? 'rgba(255,255,255,0.06)' : 'rgba(80,80,140,0.08)').attr('stroke', 'none');
     }
     if (topoRoads) {
       g.append('g').attr('class', 'context-roads')
-        .attr('clip-path', `url(#${clipId})`).attr('opacity', 0).attr('pointer-events', 'none')
+        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
         .selectAll('path').data(topoRoads.features).join('path').attr('d', pathGen)
         .attr('fill', 'none')
         .attr('stroke', dark ? 'rgba(255,255,255,0.14)' : 'rgba(60,60,100,0.18)')
@@ -3577,7 +3634,7 @@ function _drawGameOverMap(ctx, animateReveal) {
     }
     if (topoCounties) {
       g.append('g').attr('class', 'context-counties')
-        .attr('clip-path', `url(#${clipId})`).attr('opacity', 0).attr('pointer-events', 'none')
+        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
         .selectAll('path').data(topoCounties.features).join('path').attr('d', pathGen)
         .attr('fill', 'none')
         .attr('stroke', dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)')
@@ -4169,6 +4226,7 @@ async function showGameoverModal() {
 
   // District Profile lives in the game-over card now — populate it once the card exists.
   if (todayDistrict) fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
+  wireGameoverCensus();
 
   const won = guessHistory.some(g => g.correct && g.phase === 'district');
 
@@ -4554,6 +4612,7 @@ function launchConfetti() {
 // the actual content is rendered ahead of time by showResult(won, false) in endGame().
 function openResultModal() {
   document.querySelector('.gameover-results-arrow')?.remove();
+  document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
@@ -4906,8 +4965,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', e => {
     if (e.target.closest('#gameover-result-btn')) { openResultModal(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
-    // Clicking anywhere on the gameover screen (except zoom buttons) opens results
-    if (e.target.closest('#gameover-modal') && !e.target.closest('.mzb-go')) {
+    // Clicking anywhere on the gameover screen (except zoom buttons and the
+    // District Profile sheet) opens results
+    if (e.target.closest('#gameover-modal') && !e.target.closest('.mzb-go') && !e.target.closest('#gameover-census')) {
       openResultModal(); return;
     }
     const btn = e.target.closest('#gameover-modal .mzb-go');

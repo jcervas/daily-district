@@ -1762,32 +1762,103 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   min-height: 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-/* Collapsible District Profile on the game-over card (census facts). */
+/* ---- District Profile bottom sheet (game-over) ----
+   Open by default over a blurred backdrop; swipe down / chevron to minimize. */
 .gameover-census {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
+  position: fixed;
+  inset: var(--header-h) 0 0 0;
+  z-index: 200;
+  pointer-events: none;          /* only the backdrop, sheet & reopen pill are interactive */
+  overflow: hidden;
 }
-.gameover-census-summary {
-  list-style: none;
-  cursor: pointer;
+.gameover-census-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 15, 20, 0.45);
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+.gameover-census.open .gameover-census-backdrop { opacity: 1; pointer-events: auto; }
+
+.gameover-census-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 88%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -10px 34px rgba(0,0,0,0.30);
+  transform: translateY(101%);
+  transition: transform .34s cubic-bezier(.2,.7,.2,1);
+  pointer-events: auto;
+  touch-action: none;
+}
+.gameover-census.open .gameover-census-sheet { transform: translateY(0); }
+
+.gameover-census-handle {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 9px 0 4px;
+  cursor: grab;
+}
+.gameover-census-grip {
+  width: 38px; height: 4px; border-radius: 999px;
+  background: var(--muted-border, #c4c9d4);
+}
+.gameover-census-titlebar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 14px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text);
-  user-select: none;
+  padding: 2px 8px 8px 16px;
+  cursor: grab;
 }
-.gameover-census-summary::-webkit-details-marker { display: none; }
-.gameover-census-chevron { flex-shrink: 0; color: var(--muted); transition: transform .2s ease; }
-.gameover-census[open] .gameover-census-chevron { transform: rotate(180deg); }
+.gameover-census-title { font-weight: 800; font-size: 0.98rem; color: var(--text); }
+.gameover-census-close {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border: none; border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--text);
+  cursor: pointer;
+}
+.gameover-census-close:hover { background: var(--border); }
 .gameover-census-body {
-  padding: 0 14px 14px;
-  max-height: 42vh;
+  padding: 0 16px 18px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reopen pill — shown only when the sheet is minimized. */
+.gameover-census-reopen {
+  position: absolute;
+  left: 50%; bottom: 16px;
+  transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px;
+  border: 2px solid var(--cmu-red);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--cmu-red);
+  font-weight: 700; font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity .2s ease;
+}
+.gameover-census-reopen:hover { background: var(--cmu-red); color: #fff; }
+.gameover-census.open .gameover-census-reopen { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gameover-census-sheet, .gameover-census-backdrop { transition: none; }
 }
 
 .gameover-card-header {
