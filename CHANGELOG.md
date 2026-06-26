@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.15 — Divider between result-modal tab groups
+
+- Added a vertical divider (with symmetric padding) between the "Today's District" tabs (Result/Guesses) and the "Lifetime Statistics" tabs (Me/Everyone) so the two halves read as distinct.
+
+---
+
 ## v2.9.14 — Reveal tween on a state-phase loss
 
 - Losing in the state phase (6 wrong state guesses) skipped the reveal tween and showed a dead pause while the answer's shapes loaded, then jumped to the game-over screen. Now it plays the same expanding-fill reveal as the district phase — emanating from the answer state on the map — and loads the shapes in parallel under cover of the fill (no dead pause). Added a `ready` gate to `startGameOverTransition`.

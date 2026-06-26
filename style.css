@@ -898,12 +898,12 @@ circle.tile-ripple {
   align-items: center;
   gap: 14px;
 }
-/* Two labeled tab groups ("Today's District" | "Lifetime Statistics"), centred
-   with a generous gap that grows on wide screens. */
+/* Two labeled tab groups ("Today's District" | "Lifetime Statistics"), centred and
+   split by a vertical divider so the two halves read as distinct. */
 .result-modal-tabs {
   display: flex;
   justify-content: center;
-  gap: clamp(28px, 9vw, 110px);
+  gap: 0;
   border-bottom: 2px solid var(--border);
   padding: 14px 20px 0;
 }
@@ -911,6 +911,11 @@ circle.tile-ripple {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+.result-tab-group:first-child  { padding-right: clamp(18px, 6vw, 56px); }
+.result-tab-group + .result-tab-group {
+  padding-left: clamp(18px, 6vw, 56px);
+  border-left: 1.5px solid var(--border);
 }
 .result-tab-group-label {
   text-align: center;
