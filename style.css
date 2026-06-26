@@ -286,24 +286,35 @@ header h1 {
   justify-content: flex-end;
   min-width: 0;
 }
-/* Donate to CMU pill — outlined red pill (matches #play-again-btn). */
-.donate-btn {
+/* Header action pills — Sign in + Donate: identical size, outlined red, fill on
+   hover (matches #play-again-btn). Collapse to icon circles on narrow screens
+   (see the mobile media query). */
+.donate-btn,
+.header-signin-btn {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  min-width: 92px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid var(--cmu-red);
   background: transparent;
   color: var(--cmu-red);
-  border: 2px solid var(--cmu-red);
   text-decoration: none;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 5px 13px;
-  border-radius: 20px;
-  white-space: nowrap;
   line-height: 1;
-  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
 }
-.donate-btn:hover { background: var(--cmu-red); color: #fff; }
+.donate-btn:hover,
+.header-signin-btn:hover { background: var(--cmu-red); color: #fff; }
+.hdr-btn-icon { width: 17px; height: 17px; flex: 0 0 auto; display: none; } /* shown only in circle mode */
 .donate-short { display: none; }
 .timer {
   font-size: 0.95rem;
@@ -1892,15 +1903,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 }
 .account-btn:hover { filter: brightness(1.08); }
 
-/* Header "Sign in" button — shown when signed out (replaced by the avatar once in). */
-.header-signin-btn {
-  flex: 0 0 auto; cursor: pointer; white-space: nowrap;
-  height: 34px; padding: 0 14px; border-radius: 999px;
-  border: 1px solid var(--red, #C41230);
-  background: transparent; color: var(--red, #C41230);
-  font-weight: 700; font-size: 0.82rem; letter-spacing: 0.01em;
-}
-/* Fill + text-color handled by the slide-up ::before below (keeps the bg transparent so the fill shows). */
+/* Header "Sign in" button styling lives with .donate-btn (shared pill). */
 .header-signin-btn.hidden { display: none; }
 .account-menu {
   position: absolute; top: calc(100% + 8px); right: 0; left: auto;
@@ -2457,25 +2460,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 }
 
 /* ---- Clear button: header "Sign in" pill (fill slides up from the bottom) ---- */
-.header-signin-btn {
-  position: relative;
-  z-index: 0;                           /* own stacking context so ::before tucks behind the label */
-  overflow: clip;
-}
-.header-signin-btn::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--cmu-red);
-  transform: translateY(100%);
-  transition: transform .4s ease;
-  pointer-events: none;
-}
-.header-signin-btn:hover { color: #fff; }
-.header-signin-btn:hover::before { transform: translateY(0); }
-
 /* ---- Text links: carnegie-red with an underline that swipes in left→right
    on hover (jonathancervas.com / cmu_base ".link-underline-swipe"). The
    underline is a currentColor gradient grown from 0 to full width. ---- */
@@ -2522,7 +2506,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 @media (prefers-reduced-motion: reduce) {
   .login-submit, .welcome-action-btn:not(.secondary),
   .login-link, .welcome-how-to-link, .settings-link-btn, .settings-sub-link,
-  .header-signin-btn::before, .welcome-action-btn.secondary::before { transition: none; }
+  .welcome-action-btn.secondary::before { transition: none; }
 }
 
 /* ---- Confirm-selection pending indicator ---- */
@@ -2775,17 +2759,25 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   #timer-display { display: none; }        /* timer moves inline with guess dots */
   .header-inner h1 { font-size: 1rem; gap: 5px; max-width: 60vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .header-inner { height: 46px; padding: 0 8px; }
-  .donate-btn { font-size: 0.72rem; padding: 5px 10px; }
-  .donate-long { display: none; }
-  .donate-short { display: inline; }
+  /* Collapse the Sign in + Donate pills to icon circles to free up header space. */
+  .donate-btn,
+  .header-signin-btn {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+    gap: 0;
+    border-radius: 50%;
+  }
+  .donate-btn .hdr-btn-label,
+  .header-signin-btn .hdr-btn-label { display: none; }
+  .donate-btn .hdr-btn-icon,
+  .header-signin-btn .hdr-btn-icon { display: block; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }
   .game-logo { display: none; }   /* hide the US-map logo on mobile — saves header space */
   /* Compact the icon row so the centered wordmark keeps room beside the groups. */
   .header-left { gap: 2px; }
-  .header-signin-btn { height: 30px; padding: 0 10px; font-size: 0.72rem; }
   .btn-icon { width: 32px; height: 32px; }
-  @media (max-width: 380px) { .header-signin-btn { padding: 0 8px; font-size: 0.68rem; } }
   @media (max-width: 300px) { .header-wordmark { display: none; } }
 
   /* ── Game layout: fit in one screen ── */
@@ -2801,10 +2793,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   #state-chips-section { display: none; }
   #map-panel h3 { display: none; }
   #map-panel { padding: 6px 8px; gap: 4px; }
-  /* Donate: compact in header */
-  .donate-btn { font-size: 0.72rem; padding: 5px 10px; }
-  .donate-long { display: none; }
-  .donate-short { display: inline; }
 
   /* Game-over banner: sticky below header so it's always reachable */
   #already-played-banner:not(.hidden) {

@@ -2,6 +2,13 @@
 
 ---
 
+## v2.8.2 — Matching Sign in / Donate header pills
+
+- The header Sign in and Donate buttons are now identical size (92×34) outlined red pills with the same fill-on-hover style.
+- On narrow screens (≤480px) both collapse to 34px icon circles (person / heart) to free up header space, matching the other header icon buttons.
+
+---
+
 ## v2.8.1 — Donate button restyle
 
 - The Donate button no longer uses the CMU red-arrow style (the arrow looked bad on the compact mobile pill). It's now an outlined red pill that fills on hover, matching `#play-again-btn` / the Sign in pill. Play and login Sign in keep the red-arrow treatment.

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=81" />
+  <link rel="stylesheet" href="style.css?v=82" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -46,7 +46,10 @@
         <span id="timer-value">0:00</span>
       </div>
       <div class="account-wrap">
-        <button id="header-signin-btn" class="header-signin-btn hidden" title="Sign in or sign up">Sign in</button>
+        <button id="header-signin-btn" class="header-signin-btn hidden" title="Sign in or sign up">
+          <svg class="hdr-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span class="hdr-btn-label">Sign in</span>
+        </button>
         <button id="account-btn" class="account-btn hidden" title="Account" aria-haspopup="true" aria-expanded="false">
           <span id="account-initials" class="account-initials">?</span>
         </button>
@@ -60,9 +63,9 @@
         </div>
       </div>
       <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
-         class="donate-btn" target="_blank" rel="noopener">
-        <span class="donate-long">Donate to CMU</span>
-        <span class="donate-short">Donate</span>
+         class="donate-btn" target="_blank" rel="noopener" title="Donate to CMU">
+        <svg class="hdr-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span class="hdr-btn-label">Donate</span>
       </a>
     </div>
   </div>
@@ -537,6 +540,6 @@
 <script src="globe.js?v=2.2.15" defer></script>
 <script src="backend.js?v=16" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.8.1" defer></script>
+<script src="script.js?v=2.8.2" defer></script>
 </body>
 </html>
