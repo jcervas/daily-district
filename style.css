@@ -886,10 +886,33 @@ circle.tile-ripple {
   align-items: center;
   gap: 14px;
 }
+/* Two labeled tab groups ("Today's District" | "Lifetime Statistics"), centred
+   with a generous gap that grows on wide screens. */
 .result-modal-tabs {
   display: flex;
+  justify-content: center;
+  gap: clamp(28px, 9vw, 110px);
   border-bottom: 2px solid var(--border);
-  padding: 16px 20px 0;
+  padding: 14px 20px 0;
+}
+.result-tab-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.result-tab-group-label {
+  text-align: center;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.result-tab-group-btns {
+  display: flex;
+  justify-content: center;
   gap: 4px;
 }
 .result-tab-btn {
@@ -909,9 +932,6 @@ circle.tile-ripple {
   color: var(--cmu-red);
   border-bottom-color: var(--cmu-red);
 }
-/* Push this button (and any after it) to the right edge — Result/Guesses stay left,
-   Me/Everyone group right. */
-.result-tab-btn--right { margin-left: auto; }
 .result-tab-pane {
   display: none;
   padding: 20px;
@@ -1437,7 +1457,13 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 28px;
+  width: 100%;   /* fill the pane so cards are the same size on every tab */
 }
+/* The stats containers must fill the pane (the pane centres its children), so the
+   stat cards + histogram are the same width on the Result, Me and Everyone tabs. */
+#result-personal-stats,
+#result-stats,
+#personal-stats { width: 100%; }
 .stat-card {
   background: var(--surface-alt);
   border-radius: var(--radius);

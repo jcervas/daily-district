@@ -2,6 +2,13 @@
 
 ---
 
+## v2.9.7 — Grouped result-modal tabs + equal stat widths
+
+- The result-modal tabs are now two centered, labeled groups: "Today's District" (Result · Guesses) and "Lifetime Statistics" (Me · Everyone), with a gap that grows on wide screens instead of pinning them to the edges.
+- Fixed the stat cards + guess histograms being different widths across tabs: the Result and Me stat containers weren't `width:100%`, so they shrank to content inside the centered pane. All three tabs now render the stats at the full pane width (matching Everyone).
+
+---
+
 ## v2.9.6 — Result-modal tab polish
 
 - Renamed the stats tabs to "Me" (your stats) and "Everyone" (all players); reordered to Result · Guesses (left) and Me · Everyone (right-aligned).

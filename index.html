@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=96" />
+  <link rel="stylesheet" href="style.css?v=98" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -464,10 +464,20 @@
       <div id="result-district-preview"></div>
 
       <div class="result-modal-tabs">
-        <button class="result-tab-btn active" data-rtab="result">Result</button>
-        <button class="result-tab-btn" data-rtab="guesses">Guesses</button>
-        <button class="result-tab-btn result-tab-btn--right" data-rtab="mystats">Me</button>
-        <button class="result-tab-btn" data-rtab="alltime">Everyone</button>
+        <div class="result-tab-group">
+          <span class="result-tab-group-label">Today's District</span>
+          <div class="result-tab-group-btns">
+            <button class="result-tab-btn active" data-rtab="result">Result</button>
+            <button class="result-tab-btn" data-rtab="guesses">Guesses</button>
+          </div>
+        </div>
+        <div class="result-tab-group">
+          <span class="result-tab-group-label">Lifetime Statistics</span>
+          <div class="result-tab-group-btns">
+            <button class="result-tab-btn" data-rtab="mystats">Me</button>
+            <button class="result-tab-btn" data-rtab="alltime">Everyone</button>
+          </div>
+        </div>
       </div>
 
       <div id="result-section" class="result-tab-pane active">
@@ -531,6 +541,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=16" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.9.6" defer></script>
+<script src="script.js?v=2.9.7" defer></script>
 </body>
 </html>
