@@ -2,6 +2,13 @@
 
 ---
 
+## v2.9.1 — reopen pill: neutral glass + visible light stroke
+
+- Dropped the red tint on the reopen pill (neutral white glass now).
+- Light-mode stroke is now a visible dark `rgba(0,0,0,0.28)` (the previous white `0.3` was invisible on light backgrounds); dark mode keeps the solid black `rgba(0,0,0,1)` stroke.
+
+---
+
 ## v2.8.9 — Glass reopen pill
 
 - The "District Profile" reopen pill now uses the same frosted-glass treatment (red-tinted `rgba(196,18,48,0.2)` + `blur(5px)` + light border), filling solid red on hover.
