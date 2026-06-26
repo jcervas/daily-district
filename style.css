@@ -1671,11 +1671,13 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   height: 56px;
   border: none;
   border-radius: 6px 0 0 6px;
-  background: rgba(196,18,48,0.72);
+  background: var(--cmu-red);
   color: #fff;
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  /* No backdrop-filter here: this element pulses forever (animation: infinite),
+     and an animated backdrop-filter forces continuous recompositing/re-blurring
+     that's expensive on mobile (iOS especially) — for no visible benefit on a
+     small solid arrow. */
   animation: gra-pulse 2s ease-in-out infinite;
   pointer-events: auto;
 }

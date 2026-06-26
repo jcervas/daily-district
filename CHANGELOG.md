@@ -2,6 +2,13 @@
 
 ---
 
+## v2.9.3 — Mobile performance
+
+- The decorative globe loader's animation loop ran forever (an empty `requestAnimationFrame` loop every frame for the life of the page, even after the globe was gone). It now stops when no globes are present and restarts when one is added, so the page can go idle.
+- Removed `backdrop-filter: blur()` from the perpetually-pulsing "View Results" arrow on the game-over screen — an animated element with a backdrop-filter forces continuous recompositing (expensive on iOS) for no visible benefit. This overlaps the win confetti, so it should make that smoother.
+
+---
+
 ## v2.9.2 — Fix result-modal Donate button on mobile
 
 - The result modal's full-width "Donate to CMU" button was collapsing to a tiny empty icon-circle on mobile (it shares the `.donate-btn` class with the header pill). Excluded `.result-donate-btn` from the mobile circle-collapse so it stays a full-width outlined red pill.

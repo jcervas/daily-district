@@ -26,6 +26,7 @@
     this.ctx=this.canvas.getContext('2d'); this.a=0; this._bn=null; this._bg=null;
     this.set(opts||{}, true);
     TiledGlobe._list.push(this);
+    if (TiledGlobe._ensureLoop) TiledGlobe._ensureLoop();
   }
   TiledGlobe._list=[];
 
@@ -122,8 +123,8 @@
 
   TiledGlobe.prototype.step=function(dt){ this.a=(this.a+0.55*this.p.speed*dt)%TWO; this.render(); };
 
-  var last=performance.now();
-  (function loop(now){
+  var last=performance.now(), _raf=null;
+  function loop(now){
     var dt=Math.min((now-last)/1000,0.05); last=now;
     // Iterate backwards so detached globes (e.g. the welcome loader once the game replaces
     // #welcome-buttons) can be dropped from the list — otherwise they keep stepping +
@@ -133,8 +134,15 @@
       if(gl.canvas && !gl.canvas.isConnected){ TiledGlobe._list.splice(i,1); continue; }
       gl.step(dt);
     }
-    requestAnimationFrame(loop);
-  })(last);
+    // Stop the rAF loop entirely once no globes remain, so the page can go idle
+    // (a perpetual empty loop keeps the main thread/GPU awake — bad on mobile).
+    _raf = TiledGlobe._list.length ? requestAnimationFrame(loop) : null;
+  }
+  // (Re)start the loop when a globe is added and it isn't already running.
+  TiledGlobe._ensureLoop = function(){
+    if(_raf==null && TiledGlobe._list.length){ last=performance.now(); _raf=requestAnimationFrame(loop); }
+  };
+  TiledGlobe._ensureLoop();
 
   window.TiledGlobe=TiledGlobe;
 
