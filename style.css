@@ -286,23 +286,24 @@ header h1 {
   justify-content: flex-end;
   min-width: 0;
 }
-/* Donate to CMU pill — Wordle-style action button */
+/* Donate to CMU pill — outlined red pill (matches #play-again-btn). */
 .donate-btn {
   display: inline-flex;
   align-items: center;
-  background: var(--cmu-red);
-  color: white;
+  background: transparent;
+  color: var(--cmu-red);
+  border: 2px solid var(--cmu-red);
   text-decoration: none;
   font-size: 0.78rem;
   font-weight: 700;
-  padding: 6px 13px;
+  padding: 5px 13px;
   border-radius: 20px;
   white-space: nowrap;
   line-height: 1;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
-/* Hover handled by the slide-up fill (::before) below. */
+.donate-btn:hover { background: var(--cmu-red); color: #fff; }
 .donate-short { display: none; }
 .timer {
   font-size: 0.95rem;
@@ -2419,8 +2420,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
      1px → 2px on hover.
    ============================================================ */
 
-/* ---- Red "alt" CTAs: Play / Donate / login Sign in ---- */
-.donate-btn,
+/* ---- Red "alt" CTAs: Play / login Sign in ---- */
 .login-submit,
 .welcome-action-btn:not(.secondary) {
   --arrow-w: 40px;
@@ -2440,7 +2440,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   padding-right: calc(var(--arrow-w) + 1rem);  /* keep the label visually centred */
   transition: background-size .4s ease, color .4s ease;
 }
-.donate-btn::before,
 .login-submit::before,
 .welcome-action-btn:not(.secondary)::before {
   content: "";
@@ -2451,14 +2450,11 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   mask: var(--cmu-arrow) center / 42% no-repeat;
   pointer-events: none;
 }
-.donate-btn:hover,
 .login-submit:hover,
 .welcome-action-btn:not(.secondary):hover {
   color: #fff;
   background-size: 100% 100%;           /* …red sweeps across to fill on hover */
 }
-/* Compact header Donate pill: smaller arrow box. */
-.donate-btn { --arrow-w: 30px; padding-left: calc(30px + .6rem); padding-right: .9rem; }
 
 /* ---- Clear button: header "Sign in" pill (fill slides up from the bottom) ---- */
 .header-signin-btn {
@@ -2524,7 +2520,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .welcome-action-btn.secondary:hover::before { transform: translateY(0); }
 
 @media (prefers-reduced-motion: reduce) {
-  .donate-btn, .login-submit, .welcome-action-btn:not(.secondary),
+  .login-submit, .welcome-action-btn:not(.secondary),
   .login-link, .welcome-how-to-link, .settings-link-btn, .settings-sub-link,
   .header-signin-btn::before, .welcome-action-btn.secondary::before { transition: none; }
 }

@@ -2,6 +2,12 @@
 
 ---
 
+## v2.8.1 — Donate button restyle
+
+- The Donate button no longer uses the CMU red-arrow style (the arrow looked bad on the compact mobile pill). It's now an outlined red pill that fills on hover, matching `#play-again-btn` / the Sign in pill. Play and login Sign in keep the red-arrow treatment.
+
+---
+
 ## v2.8.0 — Consolidated results, leaderboard & district profile
 
 - **Leaderboard folded into the result modal** as a third tab (Today / All Time / My Stats sub-tabs). The standalone leaderboard modal and the header Leaderboard icon are removed; the leaderboard is now reachable from the result screen after playing.
