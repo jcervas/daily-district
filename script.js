@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.9';
+const VERSION_NUMBER = '2.9.10';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -397,6 +397,14 @@ let topoStates          = {};    // state abbr → merged state Feature for clea
 let rawTopo             = null;  // raw TopoJSON topology — kept for topojson.mesh() calls
 let adjMap              = new Map(); // state-district key → string[] of adjacent keys
 let currentMapStage     = 0;     // highest stage reached; preserved across re-renders
+// Tunable: fraction of the viewport the district/state zoom bbox fills (lower = more
+// padding around it, higher = tighter). Used by every district-fit zoomToBBox call.
+// Exposed on window so you can tweak it live in the console (e.g. DISTRICT_FIT_MARGIN = 0.7)
+// then trigger a re-zoom (press the Fit button / make a guess).
+let DISTRICT_FIT_MARGIN = 0.85;
+try { Object.defineProperty(window, 'DISTRICT_FIT_MARGIN', {
+  get: () => DISTRICT_FIT_MARGIN, set: v => { DISTRICT_FIT_MARGIN = v; },
+}); } catch (_) {}
 let todayDistrict       = null;   // feature object
 let todayKey            = '';     // 'YYYY-MM-DD'
 let map, terrainLayer, satelliteLayer, streetLayer, districtLayer;
@@ -3209,11 +3217,11 @@ function zoomUSRefMapToValid(animated = true) {
   if (gamePhase === 'district' && serverState && usRefPathGen) {
     const feat = topoStates[serverState];
     if (!feat) return;
-    const stateFit = zoomToBBox(usRefPathGen.bounds(feat), W, H, { margin: 0.85 });
+    const stateFit = zoomToBBox(usRefPathGen.bounds(feat), W, H, { margin: DISTRICT_FIT_MARGIN });
     districtStateFitTransform = stateFit;   // Fit button zooms out to this
 
     const tileBox = _districtTileBBox(getActiveDistrictKeys());
-    const t = tileBox ? zoomToBBox(tileBox, W, H, { margin: 0.85 }) : stateFit;
+    const t = tileBox ? zoomToBBox(tileBox, W, H, { margin: DISTRICT_FIT_MARGIN }) : stateFit;
     // Allow zooming out at least to the full-state fit.
     usRefZoom.scaleExtent([Math.min(stateFit.k, 0.3), Infinity]);
     if (!districtUserZoomed) districtSavedTransform = t;
@@ -3517,7 +3525,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   // Fit to the STATE outline (single non-secret shape), not the district polygons.
   const stateOutline = topoStates[stateAbbr];
   const stateBBox   = stateOutline ? pathGen.bounds(stateOutline) : pathGen.bounds(stateFC);
-  const stateFitTransform = zoomToBBox(stateBBox, W, H, { margin: 0.85, maxScale: W / 12 });
+  const stateFitTransform = zoomToBBox(stateBBox, W, H, { margin: DISTRICT_FIT_MARGIN, maxScale: W / 12 });
 
   // Bbox of a district-key set's TILE (dist-icon) positions — lets us fit the remaining
   // tiles WITHOUT touching the district polygon geometry (shapes only draw at game over).
@@ -3572,7 +3580,7 @@ function _applyDistrictZoom(ctx, zoomIn) {
   const { stateBBox, possibleKeys, tileBBox, W, H } = ctx;
 
   // State fit: bbox of the whole state outline (the "zoomed out" district reference).
-  const stateFit = zoomToBBox(stateBBox, W, H, { margin: 0.85 });
+  const stateFit = zoomToBBox(stateBBox, W, H, { margin: DISTRICT_FIT_MARGIN });
   districtStateFitTransform = stateFit;
 
   if (zoomIn) {
@@ -3584,7 +3592,7 @@ function _applyDistrictZoom(ctx, zoomIn) {
 
   // After a wrong district guess (rebuild): zoom the shared map to the bbox of the remaining
   // eligible TILES (dist-icon positions) so they fill the view — no district geometry.
-  const activeFit = zoomToBBox(tileBBox(possibleKeys), W, H, { margin: 0.85 });
+  const activeFit = zoomToBBox(tileBBox(possibleKeys), W, H, { margin: DISTRICT_FIT_MARGIN });
   districtSavedTransform = activeFit;
   const dur = 500 * (typeof ANIM_SLOW !== 'undefined' ? ANIM_SLOW : 1);
   usRefSvgSel.transition().duration(dur).ease(d3.easeCubicInOut).call(usRefZoom.transform, activeFit);
@@ -4177,7 +4185,7 @@ function buildGameoverMap(_retry = 0) {
 
   // ── Zoom setup ──────────────────────────────────────────────────────────
   _goZoomInitial = answerF
-    ? zoomToBBox(pathGen.bounds(answerF), W, H, { margin: 0.85, maxScale: 40 })
+    ? zoomToBBox(pathGen.bounds(answerF), W, H, { margin: DISTRICT_FIT_MARGIN, maxScale: 40 })
     : d3.zoomIdentity;
 
   // ── Badge inside zoom group — pans/zooms with map, scale(1/k) keeps it constant size ─

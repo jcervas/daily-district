@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.10 — Tunable district-fit margin
+
+- Extracted the repeated district zoom-fit margin (0.85, used in 6 places) into a single `DISTRICT_FIT_MARGIN` variable, exposed on `window` for live tweaking in the console (lower = more padding, higher = tighter). The two state-phase/fit-button `0.9` margins are left separate.
+
+---
+
 ## v2.9.9 — Hard Mode actually hides hints
 
 - Hard Mode was stored but never wired to anything (hints still showed). It now lives up to "No hints revealed — shape only": the clue/hint bar is replaced with a "Hard mode · no hints" note and the map stays shape-only (no terrain/urban/roads reveal) during play. Everything is revealed at game over. Toggling the setting applies immediately.
