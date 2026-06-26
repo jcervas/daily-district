@@ -2860,8 +2860,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   #timer-display { display: none; }        /* timer moves inline with guess dots */
   .header-inner h1 { font-size: 1rem; gap: 5px; max-width: 60vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .header-inner { height: 46px; padding: 0 8px; }
-  /* Collapse the Sign in + Donate pills to icon circles to free up header space. */
-  .donate-btn,
+  /* Collapse the *header* Sign in + Donate pills to icon circles to free up
+     header space — but NOT the full-width Donate button inside the result modal. */
+  .donate-btn:not(.result-donate-btn),
   .header-signin-btn {
     width: 34px;
     min-width: 34px;
@@ -2869,9 +2870,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
     gap: 0;
     border-radius: 50%;
   }
-  .donate-btn .hdr-btn-label,
+  .donate-btn:not(.result-donate-btn) .hdr-btn-label,
   .header-signin-btn .hdr-btn-label { display: none; }
-  .donate-btn .hdr-btn-icon,
+  .donate-btn:not(.result-donate-btn) .hdr-btn-icon,
   .header-signin-btn .hdr-btn-icon { display: block; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }

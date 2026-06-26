@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.2 — Fix result-modal Donate button on mobile
+
+- The result modal's full-width "Donate to CMU" button was collapsing to a tiny empty icon-circle on mobile (it shares the `.donate-btn` class with the header pill). Excluded `.result-donate-btn` from the mobile circle-collapse so it stays a full-width outlined red pill.
+
+---
+
 ## v2.9.1 — reopen pill: neutral glass + visible light stroke
 
 - Dropped the red tint on the reopen pill (neutral white glass now).
