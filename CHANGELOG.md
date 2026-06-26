@@ -2,6 +2,12 @@
 
 ---
 
+## v2.9.17 — How to Play: sign-in note
+
+- Added a line to the How to Play modal: sign in to track your statistics and compare with other players.
+
+---
+
 ## v2.9.16 — Drop "Solved in X guesses" from District Profile
 
 - The District Profile (game-over census sheet) no longer shows the "Solved in X guesses" line; it keeps the district code header.
