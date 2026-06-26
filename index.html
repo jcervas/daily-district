@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=92" />
+  <link rel="stylesheet" href="style.css?v=94" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -466,7 +466,8 @@
       <div class="result-modal-tabs">
         <button class="result-tab-btn active" data-rtab="result">Result</button>
         <button class="result-tab-btn" data-rtab="guesses">Guesses</button>
-        <button class="result-tab-btn" data-rtab="leaderboard">Leaderboard</button>
+        <button class="result-tab-btn" data-rtab="alltime">All Time</button>
+        <button class="result-tab-btn" data-rtab="mystats">My Stats</button>
       </div>
 
       <div id="result-section" class="result-tab-pane active">
@@ -508,22 +509,12 @@
         <div id="guess-remaining"></div>
       </div>
 
-      <div id="leaderboard-section" class="result-tab-pane">
-        <div id="lb-district-label" class="lb-district-label"></div>
-        <div class="leaderboard-tabs">
-          <button class="tab-btn active" data-tab="today">Today</button>
-          <button class="tab-btn" data-tab="alltime">All Time</button>
-          <button class="tab-btn" data-tab="personal">My Stats</button>
-        </div>
-        <div id="leaderboard-today" class="tab-panel active">
-          <div id="today-scores" class="scores-list">Loading…</div>
-        </div>
-        <div id="leaderboard-alltime" class="tab-panel">
-          <div id="alltime-scores" class="scores-list">Loading…</div>
-        </div>
-        <div id="leaderboard-personal" class="tab-panel">
-          <div id="personal-stats"></div>
-        </div>
+      <div id="alltime-section" class="result-tab-pane">
+        <div id="alltime-scores" class="scores-list">Loading…</div>
+      </div>
+
+      <div id="mystats-section" class="result-tab-pane">
+        <div id="personal-stats"></div>
       </div>
     </div>
   </div>
@@ -540,6 +531,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=16" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.9.4" defer></script>
+<script src="script.js?v=2.9.5" defer></script>
 </body>
 </html>

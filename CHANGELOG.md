@@ -2,6 +2,14 @@
 
 ---
 
+## v2.9.5 — Flatten leaderboard into result-modal tabs
+
+- Dropped the nested "Leaderboard" tab and its sub-tabs. "All Time" and "My Stats" are now top-level tabs in line with "Result" and "Guesses".
+- Removed the "Today" leaderboard view (it duplicated the Result tab).
+- Widened the result modal (480 → 680px on desktop) and tightened the tab row so all four tabs stay on one line; the stats now use much more horizontal space.
+
+---
+
 ## v2.9.4 — Keep the globe loop continuous
 
 - Reverted the globe loader's idle-stop from v2.9.3: the animation loop runs continuously again (it's a loader and should keep playing whenever it's on the page; it only "stops" by being dropped from the DOM, which the loop still handles).

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.4';
+const VERSION_NUMBER = '2.9.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1982,7 +1982,7 @@ function renderInlinePersonalStats() {
 function switchResultTab(tab) {
   document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.result-tab-btn').forEach(b => b.classList.remove('active'));
-  const paneId = { result: 'result-section', guesses: 'guesses-section', leaderboard: 'leaderboard-section' }[tab] || 'result-section';
+  const paneId = { result: 'result-section', guesses: 'guesses-section', alltime: 'alltime-section', mystats: 'mystats-section' }[tab] || 'result-section';
   const pane = document.getElementById(paneId);
   const btn  = document.querySelector(`.result-tab-btn[data-rtab="${tab}"]`);
   if (pane) pane.classList.add('active');
@@ -1991,7 +1991,7 @@ function switchResultTab(tab) {
     renderTabHeader('guesses-header');
     renderGuessHistory();
   }
-  if (tab === 'leaderboard') loadLeaderboardPanels();
+  if (tab === 'alltime' || tab === 'mystats') loadLeaderboardPanels();
 }
 
 async function fetchAndRenderCensusPanel(districtData) {
@@ -4647,12 +4647,12 @@ function openResultModal() {
   if (gameOver) {
     switchResultTab('result');
   } else {
-    // No finished game yet — land on the leaderboard and placeholder the rest.
+    // No finished game yet — land on All Time stats and placeholder the rest.
     const rs = document.getElementById('result-stats');
     const gh = document.getElementById('guess-history');
     if (rs) rs.innerHTML = '<div class="lb-empty">Finish today’s puzzle to see your result.</div>';
     if (gh) gh.innerHTML = '<div class="lb-empty">Finish today’s puzzle to see your guesses.</div>';
-    switchResultTab('leaderboard');
+    switchResultTab('alltime');
   }
   if (lastGameWon && !_resultConfettiFired) {
     _resultConfettiFired = true;
@@ -4761,33 +4761,27 @@ function escapeHtml(str) {
 }
 
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
+// Fills the All Time (global aggregate) and My Stats (personal) tab panes.
 async function loadLeaderboardPanels() {
-  const labelEl = document.getElementById('lb-district-label');
-  if (labelEl) labelEl.textContent =
-    (gameOver && todayDistrict) ? `${todayDistrict.properties['state-district']} · ${todayKey}` : todayKey;
-
-  const todayEl    = document.getElementById('today-scores');
   const alltimeEl  = document.getElementById('alltime-scores');
   const personalEl = document.getElementById('personal-stats');
-  todayEl.innerHTML = alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Loading…</div>';
+  if (!alltimeEl || !personalEl) return;
+  alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Loading…</div>';
 
   if (!window.DistrictBackend) {
-    todayEl.innerHTML = alltimeEl.innerHTML = personalEl.innerHTML =
-      '<div class="lb-empty">Leaderboard unavailable.</div>';
+    alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Stats unavailable.</div>';
     return;
   }
 
   try {
     // All stats come from the database — nothing local.
     const lb = await window.DistrictBackend.leaderboard();
-    todayEl.innerHTML   = renderAggregatePanel(lb.today,   "No one has finished today's puzzle yet.");
     alltimeEl.innerHTML = renderAggregatePanel(lb.allTime, 'No games recorded yet.');
     personalEl.innerHTML = (lb.user && lb.user.played > 0)
       ? renderUserStats(lb.user)
       : '<div class="lb-empty">Sign in and play to track your personal stats.</div>';
   } catch (e) {
-    todayEl.innerHTML = alltimeEl.innerHTML = personalEl.innerHTML =
-      '<div class="lb-empty">Couldn’t load the leaderboard.</div>';
+    alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Couldn’t load stats.</div>';
   }
 }
 
@@ -5249,17 +5243,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (modal.id === 'result-modal' && gameOver) {
         document.getElementById('gameover-modal')?.classList.remove('hidden');
       }
-    });
-  });
-
-  // Leaderboard tabs
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById(`leaderboard-${tab}`).classList.add('active');
     });
   });
 

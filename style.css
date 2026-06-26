@@ -864,9 +864,11 @@ circle.tile-ripple {
 
 /* ---- Result section ---- */
 /* ---- Result modal ---- */
-.result-modal-content {
-  max-width: 520px;
-  width: 92vw;
+/* `.modal-content.result-modal-content` (not just `.result-modal-content`) so this
+   beats the later `.modal-content { max-width: 480px }` base rule. */
+.modal-content.result-modal-content {
+  max-width: 680px;
+  width: 94vw;
   height: 85vh;
   max-height: 85vh;
   overflow: hidden;
@@ -900,6 +902,7 @@ circle.tile-ripple {
   font-weight: 700;
   color: var(--muted);
   cursor: pointer;
+  white-space: nowrap;
   transition: color 0.15s, border-color 0.15s;
 }
 .result-tab-btn.active {
@@ -2957,8 +2960,10 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
     padding: 12px 16px;
   }
   .result-modal-tabs {
-    padding: 8px 16px 0;
+    padding: 8px 10px 0;
+    gap: 0;
   }
+  .result-tab-btn { padding: 8px 9px; font-size: 0.84rem; }
 }
 
 /* ============================================================
