@@ -1881,9 +1881,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   transition: opacity .2s ease, background .15s ease, color .15s ease;
 }
 .gameover-census-reopen:hover { background: rgba(196, 18, 48, 0.85); color: #fff; }
-body.dark-mode .gameover-census-reopen { color: #fff; }
+body.dark-mode .gameover-census-reopen { color: #fff; border-color: rgba(0, 0, 0, 1); }
 @media (prefers-color-scheme: dark) {
-  body:not(.light-mode) .gameover-census-reopen { color: #fff; }
+  body:not(.light-mode) .gameover-census-reopen { color: #fff; border-color: rgba(0, 0, 0, 1); }
 }
 .gameover-census.open .gameover-census-reopen { opacity: 0; pointer-events: none; }
 
