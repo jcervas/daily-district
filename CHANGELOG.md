@@ -1,5 +1,16 @@
 # District Guess — Changelog
 
+## v2.9.19 — District Profile: full ACS demographic rebuild
+
+- Rebuilt every district's census from ACS 5-year (2019–2023) data aggregated to the **2026 boundaries** via a new reproducible pipeline (`tools/census/`), rolling Census **tract** estimates up to each district through the DRA block-assignment files (latest map year per state).
+- District Profile now shows ~22 facts (was 8): median age, gross rent, poverty rate, homeownership, mean commute + transit/WFH share, foreign-born %, non-English-speaking households, under-18 / 65+ share, veterans, uninsured, avg household size, and population density — alongside the existing population, income, home value, degrees, and race composition.
+- Medians (income, home value, rent, age) now use ACS bracket interpolation, which reproduces the published Census median; the prior stored income (e.g. TX-07 $125,841) corresponded to no standard ACS measure for the 2026 boundary and is replaced with the true median household income ($77,379).
+- Bachelor's-degree share is now "% of adults 25+" (was % of total population).
+- Connecticut handled specially: its block-assignment file predates the 2022 county→planning-region switch, so tracts are remapped to current GEOIDs by tract number.
+- `area_sqmi` and the 2024-presidential fields are preserved (not ACS-derived).
+
+---
+
 ## v2.9.18 — Spacing fixes (game-over ribbon + District Profile header)
 
 - `#gameover-next` had asymmetric vertical margin (10px top, 4px bottom) — now symmetric.

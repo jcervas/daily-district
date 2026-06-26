@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.18';
+const VERSION_NUMBER = '2.9.19';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1848,25 +1848,10 @@ function renderDistrict(feature) {
 async function getDistrictCensusData() {
   if (!todayDistrict) return null;
   // Census for the day's district is served (pre-aggregated, matching the 2026
-  // boundaries) only once the game is over, via the revealed answer.
+  // boundaries) only once the game is over, via the revealed answer. Pass the whole
+  // census object through so every field (incl. the expanded ACS facts) is available.
   if (!serverAnswer || !serverAnswer.census) return null;
-  const c = serverAnswer.census;
-  return {
-    name:       serverAnswer.districtId,
-    pop:        c.pop,
-    income:     c.income,
-    whiteNH:    c.whiteNH,
-    black:      c.black,
-    asian:      c.asian,
-    hispanic:   c.hispanic,
-    medianHome: c.medianHome,
-    bach:       c.bach,
-    master:     c.master,
-    area_sqmi:      c.area_sqmi,
-    Margin2024Pres: c.Margin2024Pres,
-    DemPct2024Pres: c.DemPct2024Pres,
-    RepPct2024Pres: c.RepPct2024Pres,
-  };
+  return { name: serverAnswer.districtId, ...serverAnswer.census };
 }
 
 async function fetchCensus(districtData, field) {
@@ -1993,7 +1978,11 @@ async function fetchAndRenderCensusPanel(districtData) {
   const hiPct    = total > 0 ? Math.round(parseInt(d.hispanic, 10) / total * 100) : 0;
   const asPct    = total > 0 ? Math.round(parseInt(d.asian,    10) / total * 100) : 0;
   const bachPlus = parseInt(d.bach, 10) + parseInt(d.master, 10);
-  const eduPct   = total > 0 ? Math.round(bachPlus / total * 100) : 0;
+  const edu25    = parseInt(d.edu_total, 10);
+  const eduPct   = edu25 > 0 ? Math.round(bachPlus / edu25 * 100)
+                 : total > 0 ? Math.round(bachPlus / total * 100) : 0;
+  // ACS percentages arrive pre-computed (e.g. 38.6); show — when absent.
+  const pv = (v, suf = '%') => (v == null || v === '') ? '—' : v + suf;
 
   // Shapefile-derived facts (precise values for District Profile)
   // Shapefile facts come from todayDistrict.properties in legacy mode; in server mode
@@ -2010,10 +1999,67 @@ async function fetchAndRenderCensusPanel(districtData) {
     : 'Competitive';
   const voteSub     = absMar == null ? '' : `${pctDem}D / ${pctRep}R`;
 
+  const density = areaMi2 > 0 ? Math.round(total / areaMi2) : 0;
+
   censusLoading.classList.add('hidden');
   censusDataEl.classList.remove('hidden');
   censusDataEl.innerHTML = `
     <div class="census-grid">
+      <div class="census-card">
+        <div class="label">Total Population</div>
+        <div class="value">${formatNumber(d.pop)}</div>
+        <div class="sub">${density > 0 ? formatNumber(density) + ' / sq mi' : 'ACS 5-year'}</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Median Age</div>
+        <div class="value">${d.medianAge != null ? d.medianAge + ' yrs' : '—'}</div>
+        <div class="sub">${pv(d.under18Pct)} under 18 · ${pv(d.age65Pct)} 65+</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Median Household Income</div>
+        <div class="value">${parseInt(d.income,10) > 0 ? formatCurrency(d.income) : 'N/A'}</div>
+        <div class="sub">${pv(d.povertyPct)} below poverty line</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Median Home Value</div>
+        <div class="value">${parseInt(d.medianHome,10) > 0 ? formatCurrency(d.medianHome) : 'N/A'}</div>
+        <div class="sub">${pv(d.homeownerPct)} owner-occupied</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Median Gross Rent</div>
+        <div class="value">${parseInt(d.medianRent,10) > 0 ? formatCurrency(d.medianRent) : 'N/A'}</div>
+        <div class="sub">per month · ${d.avgHHSize != null ? d.avgHHSize + ' per household' : '—'}</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Bachelor's Degree+</div>
+        <div class="value">${eduPct}%</div>
+        <div class="sub">of adults 25+</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Mean Commute</div>
+        <div class="value">${d.meanCommuteMin != null ? d.meanCommuteMin + ' min' : '—'}</div>
+        <div class="sub">${pv(d.transitPct)} transit · ${pv(d.wfhPct)} work from home</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Foreign-Born</div>
+        <div class="value">${pv(d.foreignBornPct)}</div>
+        <div class="sub">${pv(d.nonEnglishPct)} speak non-English at home</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Racial / Ethnic Composition</div>
+        <div class="value">${whPct}% White (non-Hispanic)</div>
+        <div class="sub">${blPct}% Black · ${hiPct}% Hispanic · ${asPct}% Asian</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Uninsured</div>
+        <div class="value">${pv(d.uninsuredPct)}</div>
+        <div class="sub">without health coverage</div>
+      </div>
+      <div class="census-card">
+        <div class="label">Veterans</div>
+        <div class="value">${pv(d.veteranPct)}</div>
+        <div class="sub">of adults 18+</div>
+      </div>
       <div class="census-card">
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
@@ -2029,33 +2075,8 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="value">${voteValue}</div>
         <div class="sub">${voteSub}</div>
       </div>
-      <div class="census-card">
-        <div class="label">Total Population</div>
-        <div class="value">${formatNumber(d.pop)}</div>
-        <div class="sub">ACS 2024 5-year</div>
-      </div>
-      <div class="census-card">
-        <div class="label">Median Household Income</div>
-        <div class="value">${parseInt(d.income,10) > 0 ? formatCurrency(d.income) : 'N/A'}</div>
-        <div class="sub">per year</div>
-      </div>
-      <div class="census-card">
-        <div class="label">Median Home Value</div>
-        <div class="value">${parseInt(d.medianHome,10) > 0 ? formatCurrency(d.medianHome) : 'N/A'}</div>
-        <div class="sub">owner-occupied</div>
-      </div>
-      <div class="census-card">
-        <div class="label">Bachelor's Degree+</div>
-        <div class="value">${eduPct}%</div>
-        <div class="sub">of population</div>
-      </div>
-      <div class="census-card">
-        <div class="label">Racial / Ethnic Composition</div>
-        <div class="value">${whPct}% White (non-Hispanic)</div>
-        <div class="sub">${blPct}% Black · ${hiPct}% Hispanic · ${asPct}% Asian</div>
-      </div>
     </div>
-    <div class="census-source">Source: U.S. Census Bureau, ACS 5-Year Estimates (2024) &amp; 2026 district boundaries. ${d.name}</div>
+    <div class="census-source">Source: U.S. Census Bureau, ACS 5-Year Estimates (2019–2023), aggregated to 2026 district boundaries. ${d.name}</div>
   `;
 }
 
