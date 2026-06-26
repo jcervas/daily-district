@@ -4,17 +4,46 @@ Reproducibly rebuilds the ACS demographic facts shown in the **District Profile*
 (`puzzles.census`) for all 435 congressional districts, aggregated to the **2026
 district boundaries**.
 
-## Quick start
+## TL;DR — when something changes
 
 ```bash
 cd tools/census
-export CENSUS_API_KEY=your_key          # optional; a project key is the default
-python3 build_census.py                 # ~5 min -> census_out.json (435 districts)
-python3 apply_census.py                 # -> census_update.sql
-# then run census_update.sql against the DB (psql / Supabase SQL editor / apply_migration)
+export DATABASE_URL='postgresql://...'   # once per shell (see Prerequisites)
+
+# A map (district boundary) changed — rebuild demographics and push:
+make census push-census
+
+# House membership changed — rebuild representatives and push:
+make reps push-reps
+
+# Rebuild and push everything:
+make all
 ```
 
-Build a single state while iterating: `python3 build_census.py TX`.
+`make census` reads the block-assignment maps in `DD_BAF_DIR`, aggregates ACS,
+and writes `census_out.json` + `census_update.sql`. `make reps` scrapes
+house.gov and writes `reps_out.json` + `reps_update.sql`. The `push-*` targets
+apply the generated `.sql` to the database with `psql`. Run `make help` for the
+full target list. (The generated `.sql` is also committed, so you can eyeball the
+diff before pushing.)
+
+Iterating on one state: `python3 build_census.py TX` (skips the push).
+
+## Prerequisites
+
+- **python3** (standard library only — no pip installs) and **psql**.
+- **`DD_BAF_DIR`** — folder of DRA block-assignment CSVs (`<ST> <year> Congressional.csv`).
+  The Makefile defaults to the local createMaps path; override with
+  `make census DD_BAF_DIR=/path/to/congress`. The **latest year on disk per
+  state** is treated as the current map (2026 where present, else 2024/2022), so
+  to adopt a new map just drop the newer-year CSV into that folder and re-run.
+- **`CENSUS_API_KEY`** — Census ACS key. A project key is the built-in default;
+  override via the environment if needed.
+- **`DATABASE_URL`** — Postgres connection string, required only for the `push-*`
+  targets. Get it from **Supabase → Project Settings → Database → Connection
+  string → Session pooler**. It contains the database password, so keep it out of
+  source control (export it in your shell). `reps` only touches `census->'rep'`;
+  `census` replaces the ACS fields (preserving the keys listed below).
 
 ## How it works
 
@@ -68,15 +97,9 @@ presidential fields `Margin2024Pres`, `DemPct2024Pres`, `RepPct2024Pres`, and
 `build_reps.py` scrapes the official directory at
 https://www.house.gov/representatives and writes a `rep` object onto each
 district's census (`{name, party, partyCode, url}`). Representatives change over
-time — re-run it whenever House membership shifts:
-
-```bash
-python3 build_reps.py        # -> reps_out.json + reps_update.sql
-# then apply reps_update.sql
-```
-
-It only touches `census->'rep'`, and a census rebuild won't drop it (the key is
-in `apply_census.py`'s preserve list).
+time — re-run `make reps push-reps` whenever House membership shifts. It only
+touches `census->'rep'`, and a census rebuild won't drop it (the key is in
+`apply_census.py`'s preserve list).
 
 ## Field glossary (`census_out.json`)
 
@@ -100,9 +123,20 @@ in `apply_census.py`'s preserve list).
 | `nonEnglishPct` | % households speaking a language other than English | C16002 |
 | `avgHHSize` | average household size | B25008 / B25003 |
 
+## How it reaches the live game
+
+The data lives in `puzzles.census` (one row per puzzle date, keyed by
+`district_id`). The `push-*` targets `UPDATE` those rows by `district_id`, so
+every scheduled puzzle for a district picks up the change. The `today` Edge
+Function reads `puzzle.census` live and returns it once a game is completed —
+no redeploy needed, the next page load serves the new numbers. (Note: an
+*anonymous* player who already finished today's puzzle keeps a browser-cached
+copy until the next day; signed-in players and all future days are immediate.)
+
 ## Files
 
+- `Makefile` — one-command build + push (`make help` for targets)
 - `build_census.py` — aggregator (ACS tract → district) → `census_out.json`
 - `apply_census.py` — `census_out.json` → `census_update.sql`
 - `build_reps.py` — scrape house.gov → `reps_out.json` + `reps_update.sql`
-- `*_out.json` / `*_update.sql` — generated artifacts (regenerable)
+- `*_out.json` / `*_update.sql` — generated artifacts (regenerable, committed)
