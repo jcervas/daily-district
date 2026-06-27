@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.2 — Archive: reset map-imagery stage on launch
+
+- Fixed archive replays jumping straight to satellite imagery after the first guess. `currentMapStage` is a persistent "highest stage reached" ratchet; launching an archive after finishing the daily (which reaches stage 3) carried that over. It's now reset to 0 on archive launch, so archives reveal the basemap in stages exactly like the daily.
+
 ## v2.10.1 — District Profile width matched to the map
 
 - The District Profile sheet no longer spans the full viewport on wide screens — it's now capped to the game-over map's width (mirroring `main`: 900px / 1400px in landscape ≥600px) and centered, so it lines up with the map behind it instead of overhanging it. Applies to both the default and full-height (expanded) states.

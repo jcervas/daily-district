@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.1';
+const VERSION_NUMBER = '2.10.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -847,6 +847,10 @@ async function startServerArchive(date, num, label) {
   elapsedSeconds     = 0;
   gameOver           = false;
   correctStateGuessed = false;
+  // Reset the map-imagery stage — it's a persistent "highest stage reached" ratchet, so
+  // without this a fresh archive launched after finishing the daily (stage 3) would jump
+  // straight to satellite on the first guess instead of revealing stages like the daily.
+  currentMapStage    = 0;
   // Reset to the state phase or zoomUSRefMapToValid skips the national-fit branch
   // (which requires gamePhase === 'state') and the ref map opens zoomed-in/stale
   // when an archive game is launched after finishing the daily.
