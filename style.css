@@ -1269,6 +1269,15 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
   font-weight: 800;
   color: var(--text);
 }
+/* Current Representative: the name is a link — match the other card values
+   (same color/weight/size) but keep an underline so it reads as clickable. */
+.census-card.census-rep .value a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.census-card.census-rep .value a:hover { text-decoration-thickness: 2px; }
 .census-card .sub {
   font-size: 0.78rem;
   color: var(--muted);
