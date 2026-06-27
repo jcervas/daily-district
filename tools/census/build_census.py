@@ -80,7 +80,7 @@ COUNT={
  "pov_universe":"C17002_001E","pov_lt50":"C17002_002E","pov_5099":"C17002_003E",
  "vet_universe":"B21001_001E","veterans":"B21001_002E",
  "ins_total":"B27001_001E",
- "lang_total":"C16002_001E","english_only":"C16002_002E",
+ "lang_total":"C16001_001E","english_only":"C16001_002E",  # person-level (pop 5+), not households
  "pop_in_hh":"B25008_001E",
 }
 UNINS=[f"B27001_{i:03d}E" for i in (5,8,11,14,17,20,23,26,29,33,36,39,42,45,48,51,54,57)]

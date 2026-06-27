@@ -35,7 +35,7 @@ PYTHON ?= python3
 DD_BAF_DIR ?= /Users/cervas/Library/CloudStorage/GoogleDrive-jcervas@andrew.cmu.edu/My Drive/GitHub/createMaps/dra-block-assignments/2022-2026/congress
 export DD_BAF_DIR
 
-.PHONY: all build census reps clues pop2020 push push-census push-reps push-clues push-derived push-pop2020 clean help
+.PHONY: all build census reps clues pop2020 lang push push-census push-reps push-clues push-derived push-pop2020 push-lang clean help
 
 help:
 	@grep -E '^#   make ' $(MAKEFILE_LIST) | sed 's/^#   //'
@@ -56,6 +56,9 @@ clues:                ## rebuild the 6 state + 6 district hint cards -> clues_up
 pop2020:              ## 2020 Census population per district -> pop2020_update.sql
 	$(PYTHON) build_pop2020.py
 
+lang:                 ## person-level non-English (C16001) -> lang_update.sql
+	$(PYTHON) build_lang.py
+
 # ---- push to the database (needs DATABASE_URL + psql) -------------
 push: push-census push-reps push-clues push-pop2020 push-derived
 
@@ -75,6 +78,10 @@ push-pop2020: pop2020_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f pop2020_update.sql
 	@echo "pop2020 pushed."
 
+push-lang: lang_update.sql guard-db
+	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f lang_update.sql
+	@echo "lang (person-level non-English) pushed."
+
 push-derived: derived_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f derived_update.sql
 	@echo "derived (perimeter + percentile ranks) pushed."
@@ -89,4 +96,4 @@ guard-db:
 	  exit 1; }
 
 clean:
-	rm -f census_out.json census_update.sql reps_out.json reps_update.sql clues_update.sql pop2020_update.sql
+	rm -f census_out.json census_update.sql reps_out.json reps_update.sql clues_update.sql pop2020_update.sql lang_update.sql

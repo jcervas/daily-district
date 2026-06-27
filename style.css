@@ -1244,6 +1244,7 @@ circle.tile-ripple {
   background: var(--surface-alt);
   border-radius: var(--radius);
   padding: 12px 14px;
+  min-height: 140px;   /* uniform card height so the grid isn't ragged */
 }
 /* Inside the frosted District Profile sheet, the cards are glassy too so the
    blurred map behind shows through them. */
@@ -1291,13 +1292,22 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .mp-track  { stroke: var(--border); stroke-width: 2.5; stroke-linecap: round; }
 .mp-tick   { fill: var(--cmu-red); }
 .mp-ends   { display: flex; justify-content: space-between; margin-top: 2px; font-size: 0.66rem; color: var(--muted); }
+/* Plain-words percentile rank under a bar ("Higher than 97% of districts"). */
+.mp-rank   { margin-top: 4px; font-size: 0.72rem; color: var(--muted); }
 /* 100%-stacked composition bar (race, 2024 vote). */
 .mini-stack { display: block; width: 100%; height: 9px; margin-top: 8px; border-radius: 5px; overflow: hidden; }
 .seg-white { fill: #9aa6b2; } .seg-black { fill: #566472; } .seg-hisp { fill: #cc7a3a; }
 .seg-asian { fill: #6f9a55; } .seg-other { fill: #ccd2d8; }
 .seg-dem   { fill: #3b6bc4; } .seg-rep   { fill: #c4123a; } .seg-oth  { fill: #ccd2d8; }
+/* Color-keyed legend so the stacked race bar is self-explanatory. */
+.race-legend { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 7px; font-size: 0.72rem; color: var(--muted); }
+.race-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.rl-dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.rl-white { background: #9aa6b2; } .rl-black { background: #566472; } .rl-hisp { background: #cc7a3a; }
+.rl-asian { background: #6f9a55; } .rl-other { background: #ccd2d8; }
 /* Party emblem on the representative card (donkey / elephant / star). */
 .party-icon { width: 1.5em; height: 1.5em; vertical-align: -0.34em; margin-right: 2px; }
+.party-icon.party-lg { display: block; width: 52px; height: 52px; vertical-align: 0; margin: 8px 0 0; }
 .party-icon.party-D { fill: #3b6bc4; } .party-icon.party-R { fill: #c4123a; } .party-icon.party-I { fill: #777; }
 /* Shape thumbnails: district-in-circle (compactness) and district-in-state. */
 .mini-shape  { display: block; width: 52px; height: 52px; margin-top: 8px; overflow: visible; }
@@ -1310,6 +1320,8 @@ body.dark-mode .ms-circle, body:not(.light-mode) .ms-circle { stroke: rgba(255,2
 body.dark-mode .seg-white, body:not(.light-mode) .seg-white { fill: #7c8794; }
 body.dark-mode .seg-other, body.dark-mode .seg-oth,
 body:not(.light-mode) .seg-other, body:not(.light-mode) .seg-oth { fill: #5a626b; }
+body.dark-mode .rl-white, body:not(.light-mode) .rl-white { background: #7c8794; }
+body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b; }
 .census-card .sub {
   font-size: 0.78rem;
   color: var(--muted);

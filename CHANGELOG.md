@@ -1,5 +1,13 @@
 # District Guess — Changelog
 
+## v2.9.28 — Race plurality + legend, percentile words, person-level language
+
+- **Racial composition** now headlines the **largest group** ("35% Hispanic plurality" / "…majority"), not always White, and adds a **color-keyed legend** so each bar segment is identifiable.
+- **Percentile in words** under every range bar: "Higher than 97% of districts" / "Lower than N% of districts" — the rank info the value-position bar alone didn't convey.
+- **Non-English language** is now its **own card**, **person-level** (% of residents 5+, table C16001), and clearly labeled — fixing the misleading "51% of the 38% foreign-born" nesting. (`build_lang.py` / `make lang push-lang`.)
+- **Median Gross Rent** sub clarified: "2.48 people per household" (was the bare "2.48 per household").
+- **Party emblem** enlarged to match the shape thumbnails; **all profile cards** now share a uniform minimum height.
+
 ## v2.9.27 — Bar fix, Population Change, party animals
 
 - **Fixed the bar position**: the tick now sits at the value's spot within the min–max range (so 38.6% on a 1–56% axis sits ~2/3 across), instead of by percentile rank — which was confusingly near the end for skewed metrics.
