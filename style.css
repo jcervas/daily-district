@@ -1286,20 +1286,29 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 
 /* ── District Profile mini-graphics ───────────────────────────────────────── */
 /* Percentile bar: where this district ranks among all 435 (tick = its position). */
-.mini-pct  { display: block; width: 100%; height: 9px; margin-top: 8px; overflow: visible; }
+.mp-wrap   { margin-top: 8px; }
+.mini-pct  { display: block; width: 100%; height: 9px; overflow: visible; }
 .mp-track  { stroke: var(--border); stroke-width: 2.5; stroke-linecap: round; }
 .mp-tick   { fill: var(--cmu-red); }
+.mp-ends   { display: flex; justify-content: space-between; margin-top: 2px; font-size: 0.66rem; color: var(--muted); }
 /* 100%-stacked composition bar (race, 2024 vote). */
 .mini-stack { display: block; width: 100%; height: 9px; margin-top: 8px; border-radius: 5px; overflow: hidden; }
 .seg-white { fill: #9aa6b2; } .seg-black { fill: #566472; } .seg-hisp { fill: #cc7a3a; }
 .seg-asian { fill: #6f9a55; } .seg-other { fill: #ccd2d8; }
 .seg-dem   { fill: #3b6bc4; } .seg-rep   { fill: #c4123a; } .seg-oth  { fill: #ccd2d8; }
+/* Party emblem on the representative card. */
+.party-badge { display: inline-block; min-width: 1.35em; height: 1.35em; line-height: 1.35em;
+  padding: 0 0.3em; border-radius: 999px; color: #fff; font-weight: 800; font-size: 0.82em;
+  text-align: center; vertical-align: 1px; }
+.party-D { background: #3b6bc4; } .party-R { background: #c4123a; } .party-I { background: #777; }
 /* Shape thumbnails: district-in-circle (compactness) and district-in-state. */
 .mini-shape  { display: block; width: 52px; height: 52px; margin-top: 8px; overflow: visible; }
-.ms-circle   { fill: var(--cmu-red); fill-opacity: 0.10; stroke: var(--border); stroke-width: 1; }
+.ms-circle   { fill: var(--cmu-red); fill-opacity: 0.10; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2; }
 .ms-district { fill: var(--cmu-red); fill-opacity: 0.38; stroke: var(--cmu-red); stroke-width: 1.3; stroke-linejoin: round; }
 .ms-state    { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-linejoin: round; }
 .ms-here     { fill: var(--cmu-red); stroke: var(--cmu-red); stroke-width: 0.6; }
+.ms-caption  { margin-top: 4px; font-size: 0.68rem; color: var(--muted); cursor: help; }
+body.dark-mode .ms-circle, body:not(.light-mode) .ms-circle { stroke: rgba(255,255,255,0.5); }
 body.dark-mode .seg-white, body:not(.light-mode) .seg-white { fill: #7c8794; }
 body.dark-mode .seg-other, body.dark-mode .seg-oth,
 body:not(.light-mode) .seg-other, body:not(.light-mode) .seg-oth { fill: #5a626b; }

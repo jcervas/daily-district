@@ -1,5 +1,15 @@
 # District Guess — Changelog
 
+## v2.9.26 — District Profile mini-graphics, round 2
+
+- **Reordered** the cards by what players care about most: Representative, 2024 Vote, Racial composition, District Area, Delegation, Foreign-born — then the rest.
+- **Population change since 2020** replaces the (meaningless) population-rank bar: 2020 Census counts aggregated to the 2026 districts (`build_pop2020.py`), shown as e.g. "−1.3% since 2020 · 751/sq mi".
+- **Racial-composition stacked bar** now follows the text order (White, Black, Hispanic, Asian, Other).
+- **Party emblem** (color-coded D/R/I badge) on the Representative card.
+- **Percentile bars** now carry min/max **range labels** so you can read the full span, not just the tick.
+- **Compactness shape**: the equal-area circle is now dashed and visible in dark mode, with a named, hover-explained **"Polsby–Popper"** caption; perimeter is stated separately as a plain fact (a long perimeter alone isn't compactness).
+- Pipeline: `make pop2020 / push-pop2020`; `pop2020` + `pct` preserved across census rebuilds.
+
 ## v2.9.25 — District Profile mini-graphics
 
 - Added four small inline-SVG visuals to the District Profile, each reinforcing a number without competing with it:
