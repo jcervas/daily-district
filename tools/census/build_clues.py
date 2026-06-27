@@ -49,7 +49,7 @@ def state_deck(st, income, deleg):
     deleg_val = ('At-large: only congressional district in its state' if deleg == 1
                  else f'One of {deleg} congressional districts in its state')
     return [
-        {"icon":"ruler",   "label":"State land area",
+        {"icon":"ruler",   "label":"Land area (state)",
          "value": f"{land_band(land)} — ~{land:,} sq mi" if land else "—"},
         {"icon":"dollar",  "label":"Median household income (state)",
          "value": f"${income:,}/yr" if income else "—"},
@@ -57,26 +57,26 @@ def state_deck(st, income, deleg):
          "value": f"${rent:,}/mo" if rent else "—"},
         {"icon":"people",  "label":"Foreign-born residents (state)",
          "value": f"{fb}% born outside the U.S." if fb is not None else "—"},
-        {"icon":"clock",   "label":"Time zone",
+        {"icon":"clock",   "label":"Time zone (state)",
          "value": f"{TZ.get(st,'—')} Time"},
-        {"icon":"building","label":"State delegation size", "value": deleg_val},
+        {"icon":"building","label":"Delegation size (state)", "value": deleg_val},
     ]
 
 # DISTRICT deck — computed in SQL from each row's census jsonb. Token placeholders
 # are replaced with the jsonb casts so the casts read cleanly.
 DISTRICT_SQL = """jsonb_build_array(
-  jsonb_build_object('icon','people','label','Median age','value',
+  jsonb_build_object('icon','people','label','Median age (district)','value',
     (p.census->>'medianAge') || ' years'),
-  jsonb_build_object('icon','dollar','label','Median household income','value',
+  jsonb_build_object('icon','dollar','label','Median household income (district)','value',
     '$' || to_char((p.census->>'income')::numeric,'FM999,999') || '/yr'),
-  jsonb_build_object('icon','people','label','Largest racial/ethnic group','value',
+  jsonb_build_object('icon','people','label','Largest racial/ethnic group (district)','value',
     CASE
       WHEN __W__>=__B__ AND __W__>=__A__ AND __W__>=__H__ THEN round(100*__W__/__P__)::int||'% White'||CASE WHEN __W__/__P__>0.5 THEN ' majority' ELSE ' plurality' END
       WHEN __B__>=__A__ AND __B__>=__H__ THEN round(100*__B__/__P__)::int||'% Black'||CASE WHEN __B__/__P__>0.5 THEN ' majority' ELSE ' plurality' END
       WHEN __A__>=__H__ THEN round(100*__A__/__P__)::int||'% Asian'||CASE WHEN __A__/__P__>0.5 THEN ' majority' ELSE ' plurality' END
       ELSE round(100*__H__/__P__)::int||'% Hispanic'||CASE WHEN __H__/__P__>0.5 THEN ' majority' ELSE ' plurality' END
     END),
-  jsonb_build_object('icon','flag','label','2024 Presidential vote','value',
+  jsonb_build_object('icon','flag','label','2024 Presidential vote (district)','value',
     (CASE WHEN __M__>0.30 THEN 'Strongly Democratic' WHEN __M__>0.10 THEN 'Likely Democratic'
           WHEN __M__>0.03 THEN 'Lean Democratic' WHEN __M__>=-0.03 THEN 'Competitive'
           WHEN __M__>-0.10 THEN 'Lean Republican' WHEN __M__>-0.30 THEN 'Likely Republican'
@@ -84,12 +84,12 @@ DISTRICT_SQL = """jsonb_build_array(
     || ' — ' || (CASE WHEN __M__>=0 THEN 'D+' ELSE 'R+' END)
     || to_char(round(100*abs(__M__),1),'FM990.0') || '% ('
     || round(100*__DEM__)::int || 'D / ' || round(100*__REP__)::int || 'R)'),
-  jsonb_build_object('icon','ruler','label','Population density','value',
+  jsonb_build_object('icon','ruler','label','Population density (district)','value',
     (CASE WHEN __D__>10000 THEN 'Dense urban' WHEN __D__>2000 THEN 'Urban / suburban'
           WHEN __D__>500 THEN 'Suburban' WHEN __D__>100 THEN 'Exurban / small-town'
           ELSE 'Rural' END)
     || ' — ' || to_char(round(__D__),'FM999,999') || ' people / sq mi'),
-  jsonb_build_object('icon','building','label','Current representative','value',
+  jsonb_build_object('icon','building','label','Current representative (district)','value',
     (p.census->'rep'->>'name') || COALESCE(' (' || (p.census->'rep'->>'partyCode') || ')',''))
 )"""
 
