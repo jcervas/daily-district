@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.23';
+const VERSION_NUMBER = '2.9.24';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2016,6 +2016,12 @@ async function fetchAndRenderCensusPanel(districtData) {
   const voteSub     = absMar == null ? '' : `${pctDem}D / ${pctRep}R`;
 
   const density = areaMi2 > 0 ? Math.round(total / areaMi2) : 0;
+  // Perimeter + Polsby-Popper compactness (4π·area/perimeter²; 1 = a circle, lower = more
+  // irregular/gerrymandered-looking). Reported alongside the district area.
+  const perimMi = Math.round(d.perimeter_mi || 0);
+  const ppScore = (areaMi2 > 0 && perimMi > 0) ? (4 * Math.PI * areaMi2) / (perimMi * perimMi) : null;
+  const ppLabel = ppScore == null ? '' : ppScore >= 0.45 ? 'very compact'
+                : ppScore >= 0.30 ? 'fairly compact' : ppScore >= 0.18 ? 'irregular' : 'very irregular';
 
   censusLoading.classList.add('hidden');
   censusDataEl.classList.remove('hidden');
@@ -2093,7 +2099,7 @@ async function fetchAndRenderCensusPanel(districtData) {
       <div class="census-card">
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
-        <div class="sub">2026 district boundaries</div>
+        <div class="sub">${perimMi > 0 ? `${perimMi.toLocaleString()} mi perimeter${ppLabel ? ` · ${ppLabel}` : ''}` : '2026 district boundaries'}</div>
       </div>
       <div class="census-card">
         <div class="label">State Delegation</div>
