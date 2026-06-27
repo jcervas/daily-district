@@ -2634,6 +2634,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   border-top: 1px solid var(--border);
   margin-top: 8px;
 }
+.settings-version { display: inline-block; margin-top: 4px; opacity: 0.75; font-size: 0.7rem; }
 
 .settings-sub-link {
   display: inline-block;
