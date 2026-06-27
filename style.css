@@ -1183,7 +1183,7 @@ circle.tile-ripple {
 /* Inside the frosted District Profile sheet, the cards are glassy too so the
    blurred map behind shows through them. */
 .gameover-census-sheet .census-card {
-  background: rgba(255, 255, 255, 0.55);   /* more opaque than the 0.2 sheet so cards stand out */
+  background: rgba(255, 255, 255, 0.75);   /* more opaque than the 0.2 sheet so cards stand out */
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
 .gameover-census-sheet .result-answer { background: transparent; padding: 2px 0 14px; }
@@ -1756,7 +1756,12 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 }
 .gameover-census-sheet {
   position: absolute;
-  left: 1%; right: 1%; bottom: 0;
+  /* Never wider than the game-over map behind it: the map fills `main`, which is
+     capped at 900px (16px padding) — 1400px (20px padding) in landscape ≥600px.
+     Match that width and center, so the sheet lines up with the map, not the viewport. */
+  left: 0; right: 0; bottom: 0;
+  width: min(100% - 32px, 868px);
+  margin-inline: auto;
   /* Open to ~66% so the result banner ("View Result") + headline/stats stay exposed
      above the sheet — makes it clear there are more pages behind the District Profile.
      The wrapper is pointer-events:none with no backdrop, so that exposed strip is
@@ -1780,12 +1785,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 }
 .gameover-census.open .gameover-census-sheet { transform: translateY(0); }
 /* Expanded: swipe the handle up (or tap it) to fill the area below the header —
-   edge-to-edge, full height, but never over the menu/header. */
+   full height, but still capped to the map width (never over the menu/header). */
 .gameover-census.expanded .gameover-census-sheet {
   max-height: 100%;
-  left: 0; right: 0;
-  border-radius: 0;
-  border-left: none; border-right: none;
 }
 
 .gameover-census-handle {
@@ -2674,6 +2676,8 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 
 @media (orientation: landscape) and (min-width: 600px) {
   main { max-width: 1400px; padding: 10px 20px; }
+  /* Keep the District Profile sheet matched to the wider map at this breakpoint. */
+  .gameover-census-sheet { width: min(100% - 40px, 1360px); }
 }
 
 /* ============================================================

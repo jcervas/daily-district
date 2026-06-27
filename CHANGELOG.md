@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.1 — District Profile width matched to the map
+
+- The District Profile sheet no longer spans the full viewport on wide screens — it's now capped to the game-over map's width (mirroring `main`: 900px / 1400px in landscape ≥600px) and centered, so it lines up with the map behind it instead of overhanging it. Applies to both the default and full-height (expanded) states.
+
 ## v2.10.0 — Hint clue cleanup
 
 - Every hint label now carries a consistent geographic-level suffix — `(state)` and `(district)` — instead of only the state clues being tagged.
