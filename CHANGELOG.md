@@ -1,5 +1,14 @@
 # District Guess — Changelog
 
+## v2.9.23 — Restored games show current data; tab hover line
+
+- A finished game restored from the browser now shows the **current** answer data (census, hint clues, current representative) instead of the snapshot saved at completion — so a same-day data change is reflected on reload. The client passes its local guess history to the `today` function (now v12), which verifies the win — the winning guess names the answer, so only a solver can produce it, no leak — and returns fresh data. Signed-in players already got this.
+- `.result-tab-btn` now shows a hover underline (the "mouseover line"); the active tab keeps its red line.
+
+## v2.9.22 — Current Representative link styling
+
+- The representative name (a link) now inherits the District Profile card's value color/weight/size with an underline, instead of default link coloring.
+
 ## v2.9.21 — Welcome loader globe no longer stutters
 
 - The spinning loader globe on the welcome splash froze/jumped during load: the heavy synchronous US reference-map build (D3/topojson) ran while the globe was animating, and a canvas can't repaint while the main thread is blocked.

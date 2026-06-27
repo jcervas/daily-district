@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.22';
+const VERSION_NUMBER = '2.9.23';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -580,7 +580,10 @@ async function initServer() {
     // ?dev=1 asks the server to reset today's result so the puzzle can be replayed.
     // The reset is gated to allowlisted test accounts server-side; harmless for anyone else.
     const devReset = new URLSearchParams(location.search).get('dev') === '1';
-    resp = await window.DistrictBackend.today({ reset: devReset });
+    // Anonymous completed games live only in the browser. Pass the saved guess history so
+    // the server can verify completion and return the FRESH answer + clues (reflecting any
+    // same-day data change) instead of our stale local snapshot. Ignored for signed-in.
+    resp = await window.DistrictBackend.today({ reset: devReset, history: loadAnonGame()?.guessHistory });
   } catch (err) {
     console.error('today() failed:', err);
     alert("Could not load today's puzzle. Please refresh.");
@@ -623,12 +626,16 @@ async function initServer() {
     const saved = loadAnonGame();
     if (saved && saved.date === resp.date &&
         ((saved.guessHistory && saved.guessHistory.length) || saved.gameOver)) {
-      serverPuzzle.clues      = saved.clues || [];
-      serverPuzzle.cluesTotal = saved.cluesTotal || MAX_GUESSES;
+      // If the server verified our completion it returns the FRESH answer + full clues
+      // (current census/clue data); prefer those over the local snapshot. In-progress or
+      // unverified games keep their locally-cached answer/clues.
+      const fresh = !!resp.answer;
+      serverPuzzle.clues      = (fresh ? resp.clues : saved.clues) || [];
+      serverPuzzle.cluesTotal = (fresh ? resp.cluesTotal : saved.cluesTotal) || MAX_GUESSES;
       await restoreServerGame(
         { guess_history: saved.guessHistory, guesses: saved.guessCount,
           seconds: saved.elapsedSeconds, completed: saved.gameOver },
-        saved.answer
+        fresh ? resp.answer : saved.answer
       );
       return;
     }

@@ -945,7 +945,12 @@ circle.tile-ripple {
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s;
 }
-.result-tab-btn.active {
+.result-tab-btn:hover {
+  color: var(--text);
+  border-bottom-color: var(--muted);   /* mouseover line */
+}
+.result-tab-btn.active,
+.result-tab-btn.active:hover {
   color: var(--cmu-red);
   border-bottom-color: var(--cmu-red);
 }

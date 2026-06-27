@@ -100,7 +100,12 @@
   async function today(opts = {}) {
     // opts.reset:true asks the server to wipe today's result first so the puzzle can
     // be replayed (gated server-side to allowlisted test accounts; ignored otherwise).
-    const body = opts.reset ? { reset: true } : {};
+    // opts.history (anonymous only): the player's local guess history. If it proves they
+    // already solved today's district, the server returns the FRESH answer/clues instead
+    // of the client's stale local snapshot (signed-in callers omit it).
+    const body = {};
+    if (opts.reset) body.reset = true;
+    if (Array.isArray(opts.history)) body.history = opts.history;
     const { data, error } = await client().functions.invoke('today', { body });
     if (error) throw error;
     return data; // { date, puzzleNumber, clues, cluesTotal, result, answer, tester, didReset }
