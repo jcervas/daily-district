@@ -1,5 +1,18 @@
 # District Guess — Changelog
 
+## v2.9.25 — District Profile mini-graphics
+
+- Added four small inline-SVG visuals to the District Profile, each reinforcing a number without competing with it:
+  - **Percentile tick bars** showing where the district ranks among all 435 for income, median age, home value, rent, density, education, commute, foreign-born, uninsured, and veterans (ranks precomputed in `census.pct`).
+  - **100%-stacked bars** for racial/ethnic composition and the 2024 D/R vote.
+  - **Compactness shape** — the district's outline drawn inside its equal-area circle (Polsby-Popper), on the District Area card.
+  - **State locator** — the district highlighted within its state's outline, on the Delegation card.
+- New reproducible `derived_update.sql` (+ `make push-derived`) recomputes perimeter and the percentile ranks from the DB after any census/map change.
+
+## v2.9.24 — District Profile: perimeter + compactness
+
+- District Area card now shows the perimeter and a Polsby-Popper compactness label (e.g. TX-07: "114 mi perimeter · very irregular"). `perimeter_mi` computed via PostGIS and added to the census preserve list.
+
 ## v2.9.23 — Restored games show current data; tab hover line
 
 - A finished game restored from the browser now shows the **current** answer data (census, hint clues, current representative) instead of the snapshot saved at completion — so a same-day data change is reflected on reload. The client passes its local guess history to the `today` function (now v12), which verifies the win — the winning guess names the answer, so only a solver can produce it, no leak — and returns fresh data. Signed-in players already got this.

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.24';
+const VERSION_NUMBER = '2.9.25';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1974,6 +1974,53 @@ function switchResultTab(tab) {
   if (tab === 'alltime' || tab === 'mystats') loadLeaderboardPanels();
 }
 
+// ── District Profile mini-graphics ─────────────────────────────────────────
+// Thin track with a tick showing where this district ranks among all 435 for a
+// metric (0 = lowest, 1 = highest). Percentiles are precomputed in census.pct.
+function pctBar(p) {
+  if (p == null || isNaN(p)) return '';
+  const x = Math.max(2, Math.min(98, p * 100));
+  return `<svg class="mini-pct" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">`
+       + `<line class="mp-track" x1="1.5" y1="5" x2="98.5" y2="5"/>`
+       + `<rect class="mp-tick" x="${(x - 0.9).toFixed(1)}" y="0.5" width="1.8" height="9" rx="0.9"/></svg>`;
+}
+// 100%-stacked bar from [{frac, cls}] segments (race composition, D/R vote, …).
+function stackBar(segs) {
+  let x = 0;
+  const rects = (segs || []).filter(s => s.frac > 0).map(s => {
+    const w = s.frac * 100;
+    const r = `<rect class="${s.cls}" x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="10"/>`;
+    x += w; return r;
+  }).join('');
+  return rects ? `<svg class="mini-stack" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">${rects}</svg>` : '';
+}
+// District outline overlaid on an equal-area circle (Polsby-Popper compactness:
+// a compact district fills its circle; an irregular one spills out / leaves gaps).
+function compactnessSvg(feature) {
+  if (!feature || !window.d3) return '';
+  try {
+    const S = 100, pad = 8;
+    const pg = d3.geoPath(d3.geoMercator().fitExtent([[pad, pad], [S - pad, S - pad]], feature));
+    const dPath = pg(feature), [cx, cy] = pg.centroid(feature), r = Math.sqrt(Math.abs(pg.area(feature)) / Math.PI);
+    if (!dPath || !isFinite(cx) || !isFinite(r) || r <= 0) return '';
+    return `<svg class="mini-shape" viewBox="0 0 ${S} ${S}" aria-hidden="true">`
+         + `<circle class="ms-circle" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}"/>`
+         + `<path class="ms-district" d="${dPath}"/></svg>`;
+  } catch (_) { return ''; }
+}
+// The district (filled) within its state's outline — "where in the state it sits".
+function stateLocatorSvg(stateFeat, distFeat) {
+  if (!stateFeat || !window.d3) return '';
+  try {
+    const S = 100, pad = 6;
+    const pg = d3.geoPath(d3.geoMercator().fitExtent([[pad, pad], [S - pad, S - pad]], stateFeat));
+    const sPath = pg(stateFeat), dPath = distFeat ? pg(distFeat) : '';
+    if (!sPath) return '';
+    return `<svg class="mini-shape" viewBox="0 0 ${S} ${S}" aria-hidden="true">`
+         + `<path class="ms-state" d="${sPath}"/>${dPath ? `<path class="ms-here" d="${dPath}"/>` : ''}</svg>`;
+  } catch (_) { return ''; }
+}
+
 async function fetchAndRenderCensusPanel(districtData) {
   // District Profile now lives in the game-over card, so render its header here
   // (it used to be drawn when switching to the result-modal census tab).
@@ -2034,6 +2081,23 @@ async function fetchAndRenderCensusPanel(districtData) {
     ? `${rep.party}${rep.partyCode ? ` (${rep.partyCode})` : ''}`
     : 'Vacant';
 
+  // Mini-graphic inputs: percentiles (census.pct), district/state shapes, stacked bars.
+  const pct       = d.pct || {};
+  const compactSvg = compactnessSvg(todayDistrict);
+  const stateSvg   = stateLocatorSvg(topoStates[districtData.state], todayDistrict);
+  const raceStack  = total > 0 ? stackBar([
+    { frac: parseInt(d.whiteNH, 10) / total,  cls: 'seg-white' },
+    { frac: parseInt(d.hispanic, 10) / total, cls: 'seg-hisp'  },
+    { frac: parseInt(d.black, 10) / total,    cls: 'seg-black' },
+    { frac: parseInt(d.asian, 10) / total,    cls: 'seg-asian' },
+    { frac: Math.max(0, 1 - (parseInt(d.whiteNH,10)+parseInt(d.hispanic,10)+parseInt(d.black,10)+parseInt(d.asian,10)) / total), cls: 'seg-other' },
+  ]) : '';
+  const voteStack  = (pctDem || pctRep) ? stackBar([
+    { frac: pctDem / 100, cls: 'seg-dem' },
+    { frac: pctRep / 100, cls: 'seg-rep' },
+    { frac: Math.max(0, 1 - (pctDem + pctRep) / 100), cls: 'seg-oth' },
+  ]) : '';
+
   censusDataEl.innerHTML = `
     <div class="census-grid">
       <div class="census-card census-rep">
@@ -2045,71 +2109,85 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="label">Total Population</div>
         <div class="value">${formatNumber(d.pop)}</div>
         <div class="sub">${density > 0 ? formatNumber(density) + ' / sq mi' : 'ACS 5-year'}</div>
+        ${pctBar(pct.density)}
       </div>
       <div class="census-card">
         <div class="label">Median Age</div>
         <div class="value">${d.medianAge != null ? d.medianAge + ' yrs' : '—'}</div>
         <div class="sub">${pv(d.under18Pct)} under 18 · ${pv(d.age65Pct)} 65+</div>
+        ${pctBar(pct.medianAge)}
       </div>
       <div class="census-card">
         <div class="label">Median Household Income</div>
         <div class="value">${parseInt(d.income,10) > 0 ? formatCurrency(d.income) : 'N/A'}</div>
         <div class="sub">${pv(d.povertyPct)} below poverty line</div>
+        ${pctBar(pct.income)}
       </div>
       <div class="census-card">
         <div class="label">Median Home Value</div>
         <div class="value">${parseInt(d.medianHome,10) > 0 ? formatCurrency(d.medianHome) : 'N/A'}</div>
         <div class="sub">${pv(d.homeownerPct)} owner-occupied</div>
+        ${pctBar(pct.medianHome)}
       </div>
       <div class="census-card">
         <div class="label">Median Gross Rent</div>
         <div class="value">${parseInt(d.medianRent,10) > 0 ? formatCurrency(d.medianRent) : 'N/A'}</div>
         <div class="sub">per month · ${d.avgHHSize != null ? d.avgHHSize + ' per household' : '—'}</div>
+        ${pctBar(pct.medianRent)}
       </div>
       <div class="census-card">
         <div class="label">Bachelor's Degree+</div>
         <div class="value">${eduPct}%</div>
         <div class="sub">of adults 25+</div>
+        ${pctBar(pct.edu)}
       </div>
       <div class="census-card">
         <div class="label">Mean Commute</div>
         <div class="value">${d.meanCommuteMin != null ? d.meanCommuteMin + ' min' : '—'}</div>
         <div class="sub">${pv(d.transitPct)} transit · ${pv(d.wfhPct)} work from home</div>
+        ${pctBar(pct.meanCommuteMin)}
       </div>
       <div class="census-card">
         <div class="label">Foreign-Born</div>
         <div class="value">${pv(d.foreignBornPct)}</div>
         <div class="sub">${pv(d.nonEnglishPct)} speak non-English at home</div>
+        ${pctBar(pct.foreignBornPct)}
       </div>
       <div class="census-card">
         <div class="label">Racial / Ethnic Composition</div>
         <div class="value">${whPct}% White (non-Hispanic)</div>
         <div class="sub">${blPct}% Black · ${hiPct}% Hispanic · ${asPct}% Asian</div>
+        ${raceStack}
       </div>
       <div class="census-card">
         <div class="label">Uninsured</div>
         <div class="value">${pv(d.uninsuredPct)}</div>
         <div class="sub">without health coverage</div>
+        ${pctBar(pct.uninsuredPct)}
       </div>
       <div class="census-card">
         <div class="label">Veterans</div>
         <div class="value">${pv(d.veteranPct)}</div>
         <div class="sub">of adults 18+</div>
+        ${pctBar(pct.veteranPct)}
       </div>
-      <div class="census-card">
+      <div class="census-card census-shape-card">
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
         <div class="sub">${perimMi > 0 ? `${perimMi.toLocaleString()} mi perimeter${ppLabel ? ` · ${ppLabel}` : ''}` : '2026 district boundaries'}</div>
+        ${compactSvg}
       </div>
-      <div class="census-card">
+      <div class="census-card census-shape-card">
         <div class="label">State Delegation</div>
         <div class="value">${delegCount === 1 ? 'At-Large' : delegCount + ' districts'}</div>
         <div class="sub">${STATE_NAMES[districtData.state] || districtData.state}</div>
+        ${stateSvg}
       </div>
       <div class="census-card">
         <div class="label">2024 Presidential Vote</div>
         <div class="value">${voteValue}</div>
         <div class="sub">${voteSub}</div>
+        ${voteStack}
       </div>
     </div>
     <div class="census-source">Sources: U.S. Census Bureau, ACS 5-Year Estimates (2019–2023), aggregated to 2026 district boundaries; representative via house.gov. ${d.name}</div>

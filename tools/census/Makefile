@@ -10,6 +10,7 @@
 #   make push-census   push only census_update.sql
 #   make push-reps     push only reps_update.sql
 #   make push-clues    push only clues_update.sql
+#   make push-derived  recompute perimeter + percentile ranks (after a census/map change)
 #   make all           build + push everything
 #   make clean         delete generated artifacts
 #
@@ -32,7 +33,7 @@ PYTHON ?= python3
 DD_BAF_DIR ?= /Users/cervas/Library/CloudStorage/GoogleDrive-jcervas@andrew.cmu.edu/My Drive/GitHub/createMaps/dra-block-assignments/2022-2026/congress
 export DD_BAF_DIR
 
-.PHONY: all build census reps clues push push-census push-reps push-clues clean help
+.PHONY: all build census reps clues push push-census push-reps push-clues push-derived clean help
 
 help:
 	@grep -E '^#   make ' $(MAKEFILE_LIST) | sed 's/^#   //'
@@ -51,7 +52,7 @@ clues:                ## rebuild the 6 state + 6 district hint cards -> clues_up
 	$(PYTHON) build_clues.py
 
 # ---- push to the database (needs DATABASE_URL + psql) -------------
-push: push-census push-reps push-clues
+push: push-census push-reps push-clues push-derived
 
 push-census: census_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f census_update.sql
@@ -64,6 +65,10 @@ push-reps: reps_update.sql guard-db
 push-clues: clues_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f clues_update.sql
 	@echo "clues pushed."
+
+push-derived: derived_update.sql guard-db
+	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f derived_update.sql
+	@echo "derived (perimeter + percentile ranks) pushed."
 
 all: build push
 
