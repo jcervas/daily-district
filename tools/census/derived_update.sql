@@ -1,24 +1,13 @@
--- Derived geometry/ranking fields for the District Profile, computed straight from
--- the DB (run after a census/map change: `make push-derived`). Two updates:
---   1. perimeter_mi  — district perimeter (PostGIS, miles), pairs with area_sqmi to
---      give Polsby-Popper compactness in the client.
---   2. census.pct    — each district's percentile rank (0..1) among all 435 for the
---      key numeric metrics; drives the "where this district ranks" tick bars.
+-- Percentile-rank fields for the District Profile, computed straight from the DB
+-- (run after a census/map change: `make push-derived`).
+--   census.pct — each district's percentile rank (0..1) among all 435 for the key
+--   numeric metrics; drives the "where this district ranks" tick bars.
+--
+-- The shape metrics this reads (area_sqmi, perimeter_mi, reock) are now computed in R
+-- (compactness.R + apply_compactness.py -> make push-compactness), NOT PostGIS. Run
+-- push-compactness before push-derived so the percentiles see fresh shape values.
 
--- 1. Perimeter (miles) + Reock compactness from the 2026 polygons.
---    Reock = area / area of the smallest enclosing circle (computed in the US
---    National Atlas Equal Area projection, EPSG:2163, so it works for all states).
-UPDATE puzzles p
-SET census = census || jsonb_build_object(
-  'perimeter_mi',
-  round((ST_Perimeter(ST_GeomFromGeoJSON(g.geometry::text)::geography)/1609.344)::numeric)::int,
-  'reock',
-  round((ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(g.geometry::text),4326),2163))
-    / (pi() * power((ST_MinimumBoundingRadius(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(g.geometry::text),4326),2163))).radius, 2)))::numeric, 3))
-FROM district_geometries g
-WHERE p.district_id = g.district_id;
-
--- 2. Percentile ranks across all districts (needs perimeter_mi from step 1).
+-- Percentile ranks across all districts.
 WITH d AS (SELECT DISTINCT ON (district_id) district_id, census FROM puzzles),
 r AS (
   SELECT district_id,

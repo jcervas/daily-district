@@ -163,4 +163,9 @@ copy until the next day; signed-in players and all future days are immediate.)
 - `apply_census.py` — `census_out.json` → `census_update.sql`
 - `build_reps.py` — scrape house.gov → `reps_out.json` + `reps_update.sql`
 - `build_clues.py` — rebuild the 6+6 hint cards → `clues_update.sql`
-- `*_out.json` / `*_update.sql` — generated artifacts (regenerable, committed)
+- `build_pop2020.py` — 2020 Census population per district → `pop2020_update.sql`
+- `build_lang.py` — person-level non-English (C16001) → `lang_update.sql`
+- `compactness.R` — area / perimeter / Reock per district in R (`sf`) → `compactness_out.csv`
+- `apply_compactness.py` — `compactness_out.csv` → `compactness_update.sql` (writes area_sqmi, perimeter_mi, reock into census). Replaces the old PostGIS perimeter/reock bake; run `make push-compactness` before `push-derived`.
+- `derived_update.sql` — percentile ranks (`census.pct`) over the census values
+- `*_out.json` / `*_out.csv` / `*_update.sql` — generated artifacts (regenerable, committed)
