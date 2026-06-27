@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.29 — Official party logos
+
+- Replaced the hand-drawn party silhouettes with the **official party marks** (Democratic donkey, Republican disc) from Wikimedia Commons (public domain), in their own brand colors; a neutral star for Independents.
+
 ## v2.9.28 — Race plurality + legend, percentile words, person-level language
 
 - **Racial composition** now headlines the **largest group** ("35% Hispanic plurality" / "…majority"), not always White, and adds a **color-keyed legend** so each bar segment is identifiable.

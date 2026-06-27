@@ -1305,10 +1305,10 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .rl-dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .rl-white { background: #9aa6b2; } .rl-black { background: #566472; } .rl-hisp { background: #cc7a3a; }
 .rl-asian { background: #6f9a55; } .rl-other { background: #ccd2d8; }
-/* Party emblem on the representative card (donkey / elephant / star). */
+/* Party emblem on the representative card — official party logos (own colors). */
 .party-icon { width: 1.5em; height: 1.5em; vertical-align: -0.34em; margin-right: 2px; }
 .party-icon.party-lg { display: block; width: 52px; height: 52px; vertical-align: 0; margin: 8px 0 0; }
-.party-icon.party-D { fill: #3b6bc4; } .party-icon.party-R { fill: #c4123a; } .party-icon.party-I { fill: #777; }
+.party-icon.party-I { fill: #777; }   /* the Independent star is the only themed mark */
 /* Shape thumbnails: district-in-circle (compactness) and district-in-state. */
 .mini-shape  { display: block; width: 52px; height: 52px; margin-top: 8px; overflow: visible; }
 .ms-circle   { fill: var(--cmu-red); fill-opacity: 0.10; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2; }
