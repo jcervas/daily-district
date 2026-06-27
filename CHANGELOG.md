@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.31 — Game-over: expose the result behind the Profile
+
+- The District Profile sheet now auto-opens to ~66% instead of ~88%, leaving the result banner ("View Result") + headline/stats exposed above it — making it clear there are more pages behind the Profile. The exposed strip stays directly clickable (no backdrop blocking it).
+
 ## v2.9.30 — Card polish, Reock, mobile-friendly compactness
 
 - **Footer graphics bottom-align** on every card, so the bars and their rank lines sit at a consistent height across the grid.

@@ -1921,7 +1921,11 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 .gameover-census-sheet {
   position: absolute;
   left: 1%; right: 1%; bottom: 0;
-  max-height: 88%;
+  /* Open to ~66% so the result banner ("View Result") + headline/stats stay exposed
+     above the sheet — makes it clear there are more pages behind the District Profile.
+     The wrapper is pointer-events:none with no backdrop, so that exposed strip is
+     still directly clickable. */
+  max-height: 66%;
   display: flex;
   flex-direction: column;
   /* Frosted glass (css.glass recipe) — translucent + blurred so the map behind
