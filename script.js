@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.20';
+const VERSION_NUMBER = '2.9.21';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -599,7 +599,12 @@ async function initServer() {
 
   initMap();
   setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-  requestAnimationFrame(() => { initUSRefMap(); zoomUSRefMapToValid(false); });
+  // The US reference map is a heavy synchronous D3/topojson build. Building it here
+  // would land on the still-spinning welcome loader globe and freeze it (a canvas
+  // can't repaint while the main thread is blocked). It isn't visible until the
+  // splash is dismissed, so we defer it: restore paths build it via ensureUSRefMap()
+  // below, and fresh play builds it once the loader globe has been replaced (see the
+  // _initPromise.then block).
 
   // Decorative overlays (roads + urban, counties) — also needed in server mode for
   // the game-over and district maps. Lazy-loaded, non-blocking.
@@ -686,6 +691,10 @@ async function enterServerDistrictPhase(state, instant = false) {
 // stored guess history; fetches state shapes if a state was solved or the game is done.
 async function restoreServerGame(result, answer) {
   _gameStarted   = true;
+  // Restoring an in-progress/finished game renders state eliminations onto the US
+  // reference map, so it must exist before we proceed (the loader-window build was
+  // deferred). Idempotent — no-op if already built.
+  ensureUSRefMap();
   guessHistory   = (result.guess_history || []).map(g => ({
     text: String(g.text), correct: !!g.correct, phase: g.phase, adjacent: !!g.adjacent,
   }));
@@ -2919,6 +2928,15 @@ function _addStateCallouts(g, geojson, pathGen, fipsToFeature) {
   });
 }
 
+// Build the US states reference map on demand (idempotent). Kept out of the
+// welcome-loader window so the heavy D3/topojson build doesn't freeze the spinning
+// loader globe — a canvas can't repaint while the main thread is blocked.
+function ensureUSRefMap() {
+  if (usRefMap) return;
+  initUSRefMap();
+  zoomUSRefMapToValid(false);
+}
+
 function initUSRefMap() {
   if (usRefMap) return;
   const container = document.getElementById('us-ref-map');
@@ -5129,6 +5147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function dismissAndStart() {
       const isFirstPlay = !localStorage.getItem(SETTINGS_SEEN_KEY);
       _gameStarted = true;
+      ensureUSRefMap();   // safety: build now if PLAY is clicked before the deferred build ran
       welcomeModal.classList.add('hidden');
       localStorage.setItem(WELCOME_SEEN_KEY, '1');
       localStorage.setItem(HOW_TO_SEEN_KEY, '1');
@@ -5184,6 +5203,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Build buttons after init() resolves so guessCount/gameOver reflect restored state
   _initPromise.then(() => {
   buildWelcomeButtons();
+
+  // buildWelcomeButtons() just replaced the loader globe with the splash buttons, so
+  // the heavy US-ref-map build can now run without freezing the globe. Two rAFs let the
+  // button swap paint first. Idempotent — a restore path may have built it already.
+  requestAnimationFrame(() => requestAnimationFrame(ensureUSRefMap));
 
   // How to play — auto-show on first visit (after welcome buttons ready)
   const howToModal = document.getElementById('how-to-modal');

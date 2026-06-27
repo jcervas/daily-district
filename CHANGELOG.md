@@ -1,5 +1,12 @@
 # District Guess — Changelog
 
+## v2.9.21 — Welcome loader globe no longer stutters
+
+- The spinning loader globe on the welcome splash froze/jumped during load: the heavy synchronous US reference-map build (D3/topojson) ran while the globe was animating, and a canvas can't repaint while the main thread is blocked.
+- The reference map isn't visible until the splash is dismissed, so its build is now deferred out of the loader window — fresh play builds it right after the loader globe is swapped for the PLAY/SIGN IN buttons; restore paths build it on demand via `ensureUSRefMap()` (idempotent). The globe now spins smoothly through load.
+
+---
+
 ## v2.9.20 — District Profile: current representative
 
 - Added the **current U.S. House member** to each District Profile (name, party, and a link to their official site), sourced from https://www.house.gov/representatives via a new `tools/census/build_reps.py` scraper. Stored as `census.rep` for all 435 districts.
