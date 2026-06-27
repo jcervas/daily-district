@@ -394,22 +394,6 @@ main:has(#already-played-banner:not(.hidden)) {
   transition: flex-basis 0.3s ease, opacity 0.3s ease;
 }
 
-/* After game-over: collapse the main map so ref panel fills the view */
-#game-section.map-collapsed #map {
-  flex: 0 0 0%;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  /* Remove the flex gap slot that the 0-height map would otherwise occupy */
-  margin-bottom: -10px;
-  /* Fade out instantly so map content doesn't linger as a thin bar during flex-basis transition */
-  transition: flex-basis 0.3s ease, opacity 0s;
-}
-
-#game-section.map-collapsed #game-controls {
-  display: none;
-}
-
 #map-panel {
   flex: 1;
   min-height: 0;
@@ -1770,16 +1754,6 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   pointer-events: none;          /* only the backdrop, sheet & reopen pill are interactive */
   overflow: hidden;
 }
-.gameover-census-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 15, 20, 0.30);   /* dim only — no blur on the content behind */
-  opacity: 0;
-  transition: opacity .3s ease;
-  pointer-events: none;
-}
-.gameover-census.open .gameover-census-backdrop { opacity: 1; pointer-events: auto; }
-
 .gameover-census-sheet {
   position: absolute;
   left: 1%; right: 1%; bottom: 0;
@@ -1880,7 +1854,7 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .gameover-census.open .gameover-census-reopen { opacity: 0; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gameover-census-sheet, .gameover-census-backdrop { transition: none; }
+  .gameover-census-sheet { transition: none; }
 }
 
 .gameover-card-header {
@@ -2751,15 +2725,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
     overflow: hidden;
   }
 
-  /* Map-collapsed (game-over): district map column collapses, reference fills */
-  #game-section.map-collapsed {
-    grid-template-columns: 0px auto 1fr;
-  }
-  #game-section.map-collapsed #map {
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-  }
 
   /* ---- Hints: vertical strip, icon-only cards ---- */
   #hint-bar {

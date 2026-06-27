@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.40 — Remove parked map-collapsed + census backdrop styles
+
+- Removed the inert `map-collapsed` rules (3 blocks incl. media query) and the unused District Profile `gameover-census-backdrop` styles (no element ever rendered them).
+
 ## v2.9.39 — Dead CSS + unused globals cleanup (−195 lines)
 
 - Removed unused JS globals: `CENSUS_API_KEY` (census fetching is server-side now), the `STATE_FIPS` and `STATE_REGIONS` lookup tables, and the `usDistLayers` map.
