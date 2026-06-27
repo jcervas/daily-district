@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.9.27 — Bar fix, Population Change, party animals
+
+- **Fixed the bar position**: the tick now sits at the value's spot within the min–max range (so 38.6% on a 1–56% axis sits ~2/3 across), instead of by percentile rank — which was confusingly near the end for skewed metrics.
+- **Total Population → Population Change**: shows the rounded ± % since the 2020 Census ("+2%", with "764,983 → 778,356" underneath) and its own range bar.
+- **Party emblem** is now a **donkey** (D) / **elephant** (R) / **star** (Independent), color-coded, replacing the letter badge.
+
 ## v2.9.26 — District Profile mini-graphics, round 2
 
 - **Reordered** the cards by what players care about most: Representative, 2024 Vote, Racial composition, District Area, Delegation, Foreign-born — then the rest.

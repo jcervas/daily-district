@@ -1296,11 +1296,9 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .seg-white { fill: #9aa6b2; } .seg-black { fill: #566472; } .seg-hisp { fill: #cc7a3a; }
 .seg-asian { fill: #6f9a55; } .seg-other { fill: #ccd2d8; }
 .seg-dem   { fill: #3b6bc4; } .seg-rep   { fill: #c4123a; } .seg-oth  { fill: #ccd2d8; }
-/* Party emblem on the representative card. */
-.party-badge { display: inline-block; min-width: 1.35em; height: 1.35em; line-height: 1.35em;
-  padding: 0 0.3em; border-radius: 999px; color: #fff; font-weight: 800; font-size: 0.82em;
-  text-align: center; vertical-align: 1px; }
-.party-D { background: #3b6bc4; } .party-R { background: #c4123a; } .party-I { background: #777; }
+/* Party emblem on the representative card (donkey / elephant / star). */
+.party-icon { width: 1.5em; height: 1.5em; vertical-align: -0.34em; margin-right: 2px; }
+.party-icon.party-D { fill: #3b6bc4; } .party-icon.party-R { fill: #c4123a; } .party-icon.party-I { fill: #777; }
 /* Shape thumbnails: district-in-circle (compactness) and district-in-state. */
 .mini-shape  { display: block; width: 52px; height: 52px; margin-top: 8px; overflow: visible; }
 .ms-circle   { fill: var(--cmu-red); fill-opacity: 0.10; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2; }
