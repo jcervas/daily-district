@@ -5,11 +5,16 @@
 --   2. census.pct    — each district's percentile rank (0..1) among all 435 for the
 --      key numeric metrics; drives the "where this district ranks" tick bars.
 
--- 1. Perimeter (miles) from the 2026 polygons.
+-- 1. Perimeter (miles) + Reock compactness from the 2026 polygons.
+--    Reock = area / area of the smallest enclosing circle (computed in the US
+--    National Atlas Equal Area projection, EPSG:2163, so it works for all states).
 UPDATE puzzles p
 SET census = census || jsonb_build_object(
   'perimeter_mi',
-  round((ST_Perimeter(ST_GeomFromGeoJSON(g.geometry::text)::geography)/1609.344)::numeric)::int)
+  round((ST_Perimeter(ST_GeomFromGeoJSON(g.geometry::text)::geography)/1609.344)::numeric)::int,
+  'reock',
+  round((ST_Area(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(g.geometry::text),4326),2163))
+    / (pi() * power((ST_MinimumBoundingRadius(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(g.geometry::text),4326),2163))).radius, 2)))::numeric, 3))
 FROM district_geometries g
 WHERE p.district_id = g.district_id;
 

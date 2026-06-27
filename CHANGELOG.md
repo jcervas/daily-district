@@ -1,5 +1,12 @@
 # District Guess — Changelog
 
+## v2.9.30 — Card polish, Reock, mobile-friendly compactness
+
+- **Footer graphics bottom-align** on every card, so the bars and their rank lines sit at a consistent height across the grid.
+- **Population Change** moved up to the second card (right after Representative).
+- Renamed cards: "Racial / Ethnic Composition" → **Demographics**, "Speak Another Language" → **Language**.
+- **Compactness** explainer is now a tap/click `<details>` (works on mobile, where the old hover tooltip didn't), and adds **Reock** (area ÷ smallest enclosing circle, EPSG:2163) alongside Polsby–Popper, each with a one-line definition.
+
 ## v2.9.29 — Official party logos
 
 - Replaced the hand-drawn party silhouettes with the **official party marks** (Democratic donkey, Republican disc) from Wikimedia Commons (public domain), in their own brand colors; a neutral star for Independents.

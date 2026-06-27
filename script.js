@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.29';
+const VERSION_NUMBER = '2.9.30';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2112,6 +2112,7 @@ async function fetchAndRenderCensusPanel(districtData) {
   // Perimeter + Polsby-Popper compactness (4π·area/perimeter²; 1 = a circle, lower = more
   // irregular/gerrymandered-looking). Reported alongside the district area.
   const perimMi = Math.round(d.perimeter_mi || 0);
+  const reock   = d.reock != null ? +d.reock : null;
   const ppScore = (areaMi2 > 0 && perimMi > 0) ? (4 * Math.PI * areaMi2) / (perimMi * perimMi) : null;
   const ppLabel = ppScore == null ? '' : ppScore >= 0.45 ? 'very compact'
                 : ppScore >= 0.30 ? 'fairly compact' : ppScore >= 0.18 ? 'irregular' : 'very irregular';
@@ -2158,7 +2159,13 @@ async function fetchAndRenderCensusPanel(districtData) {
   const partyEmblem = rep ? partyIcon(rep.partyCode, true) : '';
   // Polsby-Popper caption for the compactness shape (named + explained on hover).
   const ppCaption = ppScore == null ? '' :
-    `<div class="ms-caption" title="Polsby–Popper compactness = 4π × area ÷ perimeter². 1.0 = a perfect circle; lower = a more contorted shape.">Polsby–Popper ${ppScore.toFixed(2)} · ${ppLabel}</div>`;
+    `<details class="ms-caption">
+       <summary>Compactness ${ppLabel} <span class="ms-info">ⓘ</span></summary>
+       <div class="ms-explain">Both 0–1, higher = more regular shape.<br>
+         <b>Polsby–Popper ${ppScore.toFixed(2)}</b> — 4π × area ÷ perimeter² (penalizes squiggly edges).<br>
+         ${reock != null ? `<b>Reock ${reock.toFixed(2)}</b> — area ÷ area of the smallest circle that encloses the district (penalizes elongated shapes).` : ''}
+       </div>
+     </details>`;
 
   censusDataEl.innerHTML = `
     <div class="census-grid">
@@ -2169,13 +2176,19 @@ async function fetchAndRenderCensusPanel(districtData) {
         ${partyEmblem}
       </div>
       <div class="census-card">
+        <div class="label">Population Change</div>
+        <div class="value">${popChange != null ? (popChange >= 0 ? '+' : '−') + Math.abs(Math.round(popChange)) + '%' : '—'}</div>
+        <div class="sub">${d.pop2020 ? `${formatNumber(d.pop2020)} → ${formatNumber(d.pop)} since 2020` : 'since the 2020 Census'}</div>
+        ${pctBar(popChange, 'popChange', pct.popChange)}
+      </div>
+      <div class="census-card">
         <div class="label">2024 Presidential Vote</div>
         <div class="value">${voteValue}</div>
         <div class="sub">${voteSub}</div>
         ${voteStack}
       </div>
       <div class="census-card">
-        <div class="label">Racial / Ethnic Composition</div>
+        <div class="label">Demographics</div>
         <div class="value">${raceHeadline}</div>
         ${raceStack}${raceLegend}
       </div>
@@ -2198,16 +2211,10 @@ async function fetchAndRenderCensusPanel(districtData) {
         ${pctBar(d.foreignBornPct, 'foreignBornPct', pct.foreignBornPct)}
       </div>
       <div class="census-card">
-        <div class="label">Speak Another Language</div>
+        <div class="label">Language</div>
         <div class="value">${pv(d.nonEnglishPct)}</div>
         <div class="sub">of residents 5+ speak a language other than English at home</div>
         ${pctBar(d.nonEnglishPct, 'nonEnglishPct', pct.nonEnglishPct)}
-      </div>
-      <div class="census-card">
-        <div class="label">Population Change</div>
-        <div class="value">${popChange != null ? (popChange >= 0 ? '+' : '−') + Math.abs(Math.round(popChange)) + '%' : '—'}</div>
-        <div class="sub">${d.pop2020 ? `${formatNumber(d.pop2020)} → ${formatNumber(d.pop)} since 2020` : 'since the 2020 Census'}</div>
-        ${pctBar(popChange, 'popChange', pct.popChange)}
       </div>
       <div class="census-card">
         <div class="label">Median Age</div>

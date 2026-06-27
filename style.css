@@ -1245,7 +1245,15 @@ circle.tile-ripple {
   border-radius: var(--radius);
   padding: 12px 14px;
   min-height: 140px;   /* uniform card height so the grid isn't ragged */
+  display: flex;
+  flex-direction: column;
 }
+/* Footer graphic (bar / stack / shape / emblem) drops to the bottom of every card so
+   the bars + their rank lines align at a consistent height across the grid. */
+.census-card > .mp-wrap,
+.census-card > .mini-stack,
+.census-card > .mini-shape,
+.census-card > .party-icon.party-lg { margin-top: auto; }
 /* Inside the frosted District Profile sheet, the cards are glassy too so the
    blurred map behind shows through them. */
 .gameover-census-sheet .census-card {
@@ -1315,7 +1323,14 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .ms-district { fill: var(--cmu-red); fill-opacity: 0.38; stroke: var(--cmu-red); stroke-width: 1.3; stroke-linejoin: round; }
 .ms-state    { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-linejoin: round; }
 .ms-here     { fill: var(--cmu-red); stroke: var(--cmu-red); stroke-width: 0.6; }
-.ms-caption  { margin-top: 4px; font-size: 0.68rem; color: var(--muted); cursor: help; }
+/* Compactness explainer — a <details> so it works by tap on mobile and click on desktop. */
+.ms-caption  { margin-top: 6px; font-size: 0.68rem; color: var(--muted); }
+.ms-caption summary { cursor: pointer; list-style: none; }
+.ms-caption summary::-webkit-details-marker { display: none; }
+.ms-caption summary::marker { content: ''; }
+.ms-info     { opacity: 0.65; font-size: 0.62rem; vertical-align: 1px; }
+.ms-explain  { margin-top: 5px; line-height: 1.45; }
+.ms-explain b { color: var(--text); font-weight: 700; }
 body.dark-mode .ms-circle, body:not(.light-mode) .ms-circle { stroke: rgba(255,255,255,0.5); }
 body.dark-mode .seg-white, body:not(.light-mode) .seg-white { fill: #7c8794; }
 body.dark-mode .seg-other, body.dark-mode .seg-oth,
