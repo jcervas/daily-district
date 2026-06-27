@@ -16,6 +16,9 @@ make census push-census
 # House membership changed — rebuild representatives and push:
 make reps push-reps
 
+# Re-tune the hint cards (after any census/rep change) and push:
+make clues push-clues
+
 # Rebuild and push everything:
 make all
 ```
@@ -101,6 +104,26 @@ time — re-run `make reps push-reps` whenever House membership shifts. It only
 touches `census->'rep'`, and a census rebuild won't drop it (the key is in
 `apply_census.py`'s preserve list).
 
+## Hint clues (`puzzles.clues`)
+
+`build_clues.py` regenerates the six **state** and six **district** hint cards the
+`today` function reveals one-per-guess (each `{icon, label, value}`), ordered
+low-signal → "basically the answer":
+
+- **State:** land area · median household income · median gross rent · foreign-born
+  · time zone · delegation size
+- **District:** median age · median household income · largest racial/ethnic group
+  · 2024 presidential vote · population density · current representative
+
+The **state** deck is precomputed per state (state ACS from `state-acs.json`,
+state median income from ACS B19013, land area + time zone + delegation count).
+The **district** deck is computed in SQL straight from the live `census` jsonb, so
+re-running `make clues push-clues` after any census/representative change refreshes
+every district automatically — no per-district data to assemble. The qualitative
+bands (e.g. "Very large state", "Dense urban", "Likely Democratic") live in the
+generator. The live game renders these server strings directly (the client
+`FACT_DEFS` array is legacy).
+
 ## Field glossary (`census_out.json`)
 
 | key | meaning | ACS source |
@@ -139,4 +162,5 @@ copy until the next day; signed-in players and all future days are immediate.)
 - `build_census.py` — aggregator (ACS tract → district) → `census_out.json`
 - `apply_census.py` — `census_out.json` → `census_update.sql`
 - `build_reps.py` — scrape house.gov → `reps_out.json` + `reps_update.sql`
+- `build_clues.py` — rebuild the 6+6 hint cards → `clues_update.sql`
 - `*_out.json` / `*_update.sql` — generated artifacts (regenerable, committed)
