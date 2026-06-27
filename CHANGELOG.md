@@ -1,5 +1,12 @@
 # District Guess — Changelog
 
+## v2.10.0 — Hint clue cleanup
+
+- Every hint label now carries a consistent geographic-level suffix — `(state)` and `(district)` — instead of only the state clues being tagged.
+- Reordered the state clues to: Median household income → Foreign-born residents → Bachelor's degree+ → Land area → Time zone → Delegation size.
+- Replaced the state **Median gross rent** clue (too similar to income) with **Bachelor's degree+** (share of adults 25+ with a bachelor's degree or higher).
+- (Server-side: `build_clues.py` updated and `puzzles.clues` relabeled/reordered in place — no client logic change.)
+
 ## v2.9.40 — Remove parked map-collapsed + census backdrop styles
 
 - Removed the inert `map-collapsed` rules (3 blocks incl. media query) and the unused District Profile `gameover-census-backdrop` styles (no element ever rendered them).
