@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.9.39 — Dead CSS + unused globals cleanup (−195 lines)
+
+- Removed unused JS globals: `CENSUS_API_KEY` (census fetching is server-side now), the `STATE_FIPS` and `STATE_REGIONS` lookup tables, and the `usDistLayers` map.
+- Removed ~165 lines of dead CSS: the legacy leaderboard/`score-row` modal styles (replaced by the result-tab stats), the old `rstat-*`/`result-stats-grid`/`result-statistics-label`/`gs-*`/`guesses-summary-header` result blocks, and stray rules (`flash-correct/wrong`, `census-error`, `gameover-context`, `auto-scroll`, `donate-short`, `clue-num`, `dist-label`, `form-required`, `welcome-divider`).
+- Left in place (parked features, not dead leftovers): `map-collapsed` and the District Profile `gameover-census-backdrop` styles.
+
 ## v2.9.38 — Dead-code cleanup (−355 lines)
 
 - Removed unused/legacy functions: `_drawGameOverMap` (the `#gameover-map` modal path is the live one), the unused inner-point zoom helpers (`innerPointBBox`, `zoomToGeoBBoxCenteredOnPoints`, `fitToActiveKeys`), and stray helpers (`parseDistrict`, `normalizeGuess`, `renderGuessesSummary`, `escapeHtml`).

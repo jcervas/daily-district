@@ -315,7 +315,6 @@ header h1 {
 .donate-btn:hover,
 .header-signin-btn:hover { background: var(--cmu-red); color: #fff; }
 .hdr-btn-icon { width: 17px; height: 17px; flex: 0 0 auto; display: none; } /* shown only in circle mode */
-.donate-short { display: none; }
 .timer {
   font-size: 0.95rem;
   font-weight: 700;
@@ -553,13 +552,6 @@ main:has(#already-played-banner:not(.hidden)) {
   white-space: nowrap;
 }
 
-.hint-card-val.auto-scroll > span {
-  animation: hintScroll var(--scroll-duration, 6s) linear 1.2s infinite alternate;
-}
-.hint-card-val.auto-scroll:hover > span {
-  animation-play-state: paused;
-  cursor: grab;
-}
 
 @keyframes hintScroll {
   0%,  15% { margin-left: 0; }
@@ -676,7 +668,6 @@ main:has(#already-played-banner:not(.hidden)) {
 }
 .clue-item.locked .clue-icon { opacity: 0.4; }
 .clue-item.locked .clue-text { color: var(--muted-border); }
-.clue-item.locked .clue-num { display: none; }
 
 @keyframes clue-in {
   from { opacity: 0; transform: translateX(-6px); }
@@ -687,22 +678,6 @@ main:has(#already-played-banner:not(.hidden)) {
 #guesses-section.active {
   align-items: stretch;  /* override center so rows go full width */
   gap: 10px;
-}
-.guesses-summary-header {
-  text-align: center;
-  padding: 4px 0 8px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
-}
-.gs-answer {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-.gs-result {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 2px;
 }
 #guess-history {
   display: flex;
@@ -777,10 +752,6 @@ main:has(#already-played-banner:not(.hidden)) {
   60%     { transform: translateX(4px); }
   75%     { transform: translateX(-2px); }
 }
-#us-ref-map.flash-correct,
-#district-tiles.flash-correct { animation: flashCorrect 0.7s ease forwards; }
-#us-ref-map.flash-wrong,
-#district-tiles.flash-wrong   { animation: flashWrong   0.7s ease forwards; }
 
 /* Live state fills fade over the static grey basemap — true dimming on a pending guess and
    a smooth fade-out when a state is eliminated. Only the live layer's state paths animate. */
@@ -1130,35 +1101,6 @@ circle.tile-ripple {
 }
 .us-ref-tooltip.visible { display: block; }
 
-/* ---- Wordle-style inline stats (result modal) ---- */
-.result-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  width: 100%;
-  margin: 4px 0;
-}
-.rstat-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.rstat-big {
-  font-size: clamp(1.2rem, 3.5vh, 1.75rem);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--text);
-}
-.rstat-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-  text-align: center;
-  line-height: 1.2;
-}
 .result-dist {
   width: 100%;
 }
@@ -1350,11 +1292,6 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   color: var(--muted);
   margin-top: 2px;
 }
-.census-error {
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-style: italic;
-}
 .census-source {
   font-size: 0.75rem;
   color: var(--muted);
@@ -1456,58 +1393,6 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 .got-it-btn:hover { background: var(--cmu-red-dark); }
 
 /* ---- Leaderboard ---- */
-.leaderboard-content {
-  max-width: 560px;
-  width: 92vw;
-  height: 85vh;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-}
-.leaderboard-content h2 {
-  padding: 0 20px 4px;
-  flex-shrink: 0;
-}
-.leaderboard-content .lb-district-label {
-  padding: 0 20px;
-  flex-shrink: 0;
-}
-.leaderboard-content .leaderboard-tabs {
-  padding: 0 20px;
-  flex-shrink: 0;
-}
-/* Tab panels scroll independently */
-.leaderboard-content .tab-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-  min-height: 0;
-}
-.leaderboard-content .tab-panel.active { display: flex; flex-direction: column; }
-.leaderboard-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0;
-}
-.tab-btn {
-  background: none;
-  border: none;
-  padding: 8px 14px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: all 0.15s;
-}
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
 .scores-list {
   display: flex;
   flex-direction: column;
@@ -1516,32 +1401,7 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   /* No max-height/overflow here: the enclosing .tab-panel already scrolls. A cap here
      clips the lower part of the panel (e.g. the 5/6/X guess-distribution rows). */
 }
-.score-row {
-  display: grid;
-  grid-template-columns: 28px 1fr auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--surface-alt);
-  border-radius: 6px;
-  font-size: 0.88rem;
-}
-.score-row.me { background: var(--fact-bg); border: 1px solid var(--accent); }
-.score-row .rank { font-weight: 800; color: var(--muted); text-align: center; }
-.score-row .rank.gold { color: #d97706; }
-.score-row .rank.silver { color: #9ca3af; }
-.score-row .rank.bronze { color: #b45309; }
-.score-row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.score-row .guesses { font-weight: 700; color: var(--accent); text-align: right; }
-.score-row .time-val { font-weight: 500; color: var(--muted); text-align: right; min-width: 50px; }
-.score-row.lost-row .guesses { color: var(--red); }
 .lb-empty { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 20px; }
-.lb-district-label {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-bottom: 10px;
-  font-weight: 600;
-}
 
 /* ---- Personal stats ---- */
 .personal-grid {
@@ -1594,7 +1454,6 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   margin-bottom: 4px;
   font-size: 0.85rem;
 }
-.dist-row .dist-label { min-width: 14px; font-weight: 700; color: var(--muted); }
 .dist-row .dist-bar-wrap { flex: 1; background: #e5e7eb; border-radius: 4px; height: 18px; overflow: hidden; }
 .dist-row .dist-bar { background: var(--accent); height: 100%; border-radius: 4px; transition: width 0.4s ease; min-width: 2px; }
 .dist-row .dist-count { min-width: 20px; text-align: right; color: var(--muted); }
@@ -1856,11 +1715,6 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   transition: opacity 0.35s ease;
   overflow: hidden;
 }
-/* Game-over national context map — distinct background from gameplay district view */
-#district-tiles.gameover-context {
-  background: var(--surface-alt);
-}
-
 /* ===== GAME OVER ===== */
 #gameover-modal {
   flex: 1;
@@ -2436,12 +2290,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   line-height: 1.3;
   margin-bottom: clamp(12px, 2vh, 20px);
 }
-.welcome-divider {
-  width: 100%;
-  height: 1px;
-  background: var(--border);
-  margin-bottom: 0;
-}
 .welcome-mid-spacer { flex: 1; }
 .welcome-buttons {
   display: flex;
@@ -2815,16 +2663,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 }
 .result-modal-close:hover { color: var(--text); border-color: var(--text); }
 
-/* ---- STATISTICS label in result tab ---- */
-.result-statistics-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 2px;
-}
-
 /* ---- Utilities ---- */
 .hidden { display: none !important; }
 
@@ -3181,9 +3019,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   font-weight: 400;
   color: var(--muted);
   font-size: 0.8rem;
-}
-.form-required {
-  color: var(--cmu-red);
 }
 .form-error {
   color: var(--cmu-red);

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.38';
+const VERSION_NUMBER = '2.9.39';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -44,24 +44,9 @@ try { Object.defineProperty(window, 'DISTRICT_ACTIVE_FIT_MARGIN', {
   get: () => DISTRICT_FIT_MARGIN_ANSWER, set: v => { DISTRICT_FIT_MARGIN_ANSWER = v; },
 }); } catch (_) {}
 
-
-// ---- CENSUS API KEY (optional, free) -------------------------
-// Get one at https://api.census.gov/data/key_signup.html
-// Leave empty for keyless access (rate-limited but works fine).
-const CENSUS_API_KEY = '95fe940d2fe95c12900a6f024c35f29fac6f28ee';
-
 // ============================================================
 //  LOOKUP TABLES
 // ============================================================
-const STATE_FIPS = {
-  AL:'01',AK:'02',AZ:'04',AR:'05',CA:'06',CO:'08',CT:'09',DE:'10',
-  FL:'12',GA:'13',HI:'15',ID:'16',IL:'17',IN:'18',IA:'19',KS:'20',
-  KY:'21',LA:'22',ME:'23',MD:'24',MA:'25',MI:'26',MN:'27',MS:'28',
-  MO:'29',MT:'30',NE:'31',NV:'32',NH:'33',NJ:'34',NM:'35',NY:'36',
-  NC:'37',ND:'38',OH:'39',OK:'40',OR:'41',PA:'42',RI:'44',SC:'45',
-  SD:'46',TN:'47',TX:'48',UT:'49',VT:'50',VA:'51',WA:'53',WV:'54',
-  WI:'55',WY:'56',DC:'11'
-};
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
   CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
@@ -87,20 +72,6 @@ const STATE_TIMEZONES = {
   MT:'Mountain',ID:'Mountain',WY:'Mountain',CO:'Mountain',UT:'Mountain',
   AZ:'Mountain',NM:'Mountain',NV:'Pacific',WA:'Pacific',OR:'Pacific',CA:'Pacific',
   AK:'Alaska',HI:'Hawaii–Aleutian'
-};
-
-const STATE_REGIONS = {
-  ME:'Northeast',NH:'Northeast',VT:'Northeast',MA:'Northeast',RI:'Northeast',
-  CT:'Northeast',NY:'Northeast',NJ:'Northeast',PA:'Northeast',DE:'Northeast',
-  MD:'Northeast',DC:'Northeast',
-  VA:'South',WV:'South',KY:'South',TN:'South',NC:'South',SC:'South',
-  GA:'South',FL:'South',AL:'South',MS:'South',AR:'South',LA:'South',
-  TX:'South',OK:'South',
-  OH:'Midwest',IN:'Midwest',IL:'Midwest',MI:'Midwest',WI:'Midwest',
-  MN:'Midwest',IA:'Midwest',MO:'Midwest',ND:'Midwest',SD:'Midwest',
-  NE:'Midwest',KS:'Midwest',
-  MT:'West',ID:'West',WY:'West',CO:'West',NM:'West',AZ:'West',
-  UT:'West',NV:'West',WA:'West',OR:'West',CA:'West',AK:'West',HI:'West'
 };
 
 // Adjacency: which states share a land border.
@@ -401,7 +372,6 @@ let usRefSvgSel         = null;   // d3 selection of the SVG element
 let usRefProjection     = null;   // d3.geoAlbersUsa() instance for inner-point bbox on ref map
 let _usRefFullFitTransform = null; // full-US zoom (all 435 pts) saved once; used by fit-toggle zoom-out
 let usRefPathGen        = null;   // reusable geoPath generator (set after projection.fitSize)
-let usDistLayers        = {};     // distPart ('01','02'…) → D3 path selection for district overlay
 let eliminatedStates    = new Set(); // all states removed from valid set (wrong guess + adjacency)
 let districtZoomBehavior    = null;   // saved d3.zoom instance for district tiles map
 let districtUserZoomed      = false;  // true once user manually pans/zooms district map
