@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.37 — Game-over: frame the answer on the behind-the-sheet map
+
+- At game over the pick map (behind the result sheet) is re-zoomed to fit the **answer district** instead of staying frozen at the tight remaining-districts zoom. Uses `DISTRICT_FIT_MARGIN_ANSWER` (live-tweakable; `maxScale: 40`).
+
 ## v2.9.35 — Looser zoom when picking among remaining districts
 
 - After a wrong district guess (and on the locate-button "remaining" press), the map now leaves more breathing room so the district markers + badges aren't flush against the edges. Controlled by a new `DISTRICT_ACTIVE_FIT_MARGIN` (0.74); the initial state-entry fit is unchanged.

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.36';
+const VERSION_NUMBER = '2.9.37';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -38,6 +38,12 @@ let DISTRICT_ACTIVE_FIT_MARGIN = 0.74;
 try { Object.defineProperty(window, 'DISTRICT_ACTIVE_FIT_MARGIN', {
   get: () => DISTRICT_ACTIVE_FIT_MARGIN, set: v => { DISTRICT_ACTIVE_FIT_MARGIN = v; },
 }); } catch (_) {}
+
+let DISTRICT_FIT_MARGIN_ANSWER = 0.50;
+try { Object.defineProperty(window, 'DISTRICT_ACTIVE_FIT_MARGIN', {
+  get: () => DISTRICT_FIT_MARGIN_ANSWER, set: v => { DISTRICT_FIT_MARGIN_ANSWER = v; },
+}); } catch (_) {}
+
 
 // ---- CENSUS API KEY (optional, free) -------------------------
 // Get one at https://api.census.gov/data/key_signup.html
@@ -3478,6 +3484,20 @@ function zoomUSRefMapToValid(animated = true) {
   if (!usRefSvgSel || !usRefZoom || !usRefProjection) return;
   const W = _usRefW, H = _usRefH;
 
+  // Game over: the pick map (behind the result sheet) would otherwise stay frozen at the
+  // tight remaining-districts zoom, so frame the actual answer district instead.
+  if (gameOver && todayDistrict && usRefPathGen) {
+    const akey = todayDistrict.properties['state-district'];
+    const af = districts.find(f => f.properties['state-district'] === akey);
+    if (af) {
+      const t = zoomToBBox(usRefPathGen.bounds(af), W, H, { margin: DISTRICT_FIT_MARGIN_ANSWER, maxScale: 40 });
+      usRefZoom.scaleExtent([Math.min(t.k, 0.3), Infinity]);
+      if (animated) usRefSvgSel.transition().duration(600).ease(d3.easeCubicInOut).call(usRefZoom.transform, t);
+      else usRefSvgSel.call(usRefZoom.transform, t);
+      return;
+    }
+  }
+
   // No district inner points are shipped, so state-phase zoom is driven by the
   // geometry of the remaining valid STATES instead of getActiveDistrictKeys().
   if (gamePhase === 'state') {
@@ -4474,7 +4494,7 @@ function buildGameoverMap(_retry = 0) {
 
   // ── Zoom setup ──────────────────────────────────────────────────────────
   _goZoomInitial = answerF
-    ? zoomToBBox(pathGen.bounds(answerF), W, H, { margin: DISTRICT_FIT_MARGIN, maxScale: 40 })
+    ? zoomToBBox(pathGen.bounds(answerF), W, H, { margin: DISTRICT_FIT_MARGIN_ANSWER, maxScale: 40 })
     : d3.zoomIdentity;
 
   // ── Badge inside zoom group — pans/zooms with map, scale(1/k) keeps it constant size ─
@@ -4623,6 +4643,9 @@ async function showGameoverModal() {
 
   requestAnimationFrame(() => {
     try { buildGameoverMap(); } catch (e) { reportClientError('gameover_map', e); }
+    // Re-frame the pick map behind the sheet onto the answer district (it would
+    // otherwise stay frozen at the tight remaining-districts zoom).
+    try { zoomUSRefMapToValid(true); } catch (e) { reportClientError('gameover_refzoom', e); }
     if (mapWrap) mapWrap.classList.add(won ? 'gameover-win-pulse' : 'gameover-loss-shake');
   });
 }
