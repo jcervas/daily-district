@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.9.38 — Dead-code cleanup (−355 lines)
+
+- Removed unused/legacy functions: `_drawGameOverMap` (the `#gameover-map` modal path is the live one), the unused inner-point zoom helpers (`innerPointBBox`, `zoomToGeoBBoxCenteredOnPoints`, `fitToActiveKeys`), and stray helpers (`parseDistrict`, `normalizeGuess`, `renderGuessesSummary`, `escapeHtml`).
+- Removed the **vestigial Firebase leaderboard** subsystem (`loadFirebase`, `submitScore`, `loadTodayScores`, `loadAlltimeScores`, `renderScoreRow`, the `db` global) — it referenced an undeclared `FIREBASE_CONFIG` (would throw) and persistence already runs through Supabase (`DistrictBackend.guess` → `results`).
+- Map zoom math stays consolidated in the single `zoomToBBox` primitive; no behavior change.
+
 ## v2.9.37 — Game-over: frame the answer on the behind-the-sheet map
 
 - At game over the pick map (behind the result sheet) is re-zoomed to fit the **answer district** instead of staying frozen at the tight remaining-districts zoom. Uses `DISTRICT_FIT_MARGIN_ANSWER` (live-tweakable; `maxScale: 40`).

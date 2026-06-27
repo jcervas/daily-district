@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.37';
+const VERSION_NUMBER = '2.9.38';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -437,7 +437,6 @@ let _gameOverAnimsCallback  = null;   // deferred: pulse/shake/confetti, fired a
 let _goZoom         = null;   // gameover map zoom behavior
 let _goZoomInitial  = null;   // gameover map initial fit transform
 let _tileZoomInAnimating    = false;  // true during 700ms entry zoom-in so handler skips simulation re-runs
-let db                  = null;   // Firestore instance (if configured)
 let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
@@ -1248,26 +1247,6 @@ function getTodayKey() {
 // State selected via D3 map or chips only.
 // District selected via tile grid (shown after state is confirmed).
 
-function parseDistrict(raw) {
-  const t = raw.trim().toUpperCase()
-    .replace(/\s+/g, '-')
-    .replace(/([A-Z]{2})-?0+$/, '$1-AT-LARGE'); // XX-0 → AT-LARGE
-  return t;
-}
-
-function normalizeGuess(raw) {
-  let t = raw.trim().toUpperCase().replace(/\s+/g, '-');
-  // Insert dash if missing: NY14 → NY-14
-  t = t.replace(/^([A-Z]{2})(\d+)$/, '$1-$2');
-  // Normalize at-large variants
-  if (/^([A-Z]{2})-(0+|AL|AT-?LARGE|ATLARGE)$/.test(t)) {
-    t = t.replace(/^([A-Z]{2})-.*$/, '$1-AT-LARGE');
-  }
-  // Zero-pad single digit district numbers: NY-3 → NY-03 … but the data uses NY-03
-  t = t.replace(/^([A-Z]{2})-(\d)$/, '$1-0$2');
-  return t;
-}
-
 function formatTime(secs) {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
@@ -1295,60 +1274,6 @@ function zoomToBBox([[x0, y0], [x1, y1]], W, H, { margin = 0.85, maxScale = Infi
     .translate(W / 2, H / 2)
     .scale(k)
     .translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
-}
-
-// ============================================================
-//  INNER-POINT ZOOM (single source of truth for all map zooms)
-// ============================================================
-
-// Compute SVG bbox from projected inner points of the given district keys.
-// tileR adds a radius pad so tiles aren't clipped at the edge.
-function innerPointBBox(projection, activeKeys, tileR = 0) {
-  if (!projection || !activeKeys?.size) return null;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const key of activeKeys) {
-    const refPt = POINT_OVERRIDES[key] || districtPoints[key];
-    if (!refPt) continue;
-    const proj = projection(refPt);
-    if (!proj || !isFinite(proj[0])) continue;
-    const [px, py] = proj;
-    x0 = Math.min(x0, px - tileR); x1 = Math.max(x1, px + tileR);
-    y0 = Math.min(y0, py - tileR); y1 = Math.max(y1, py + tileR);
-  }
-  return isFinite(x0) ? [[x0, y0], [x1, y1]] : null;
-}
-
-// Fit using geographic bounds for zoom level, inner-point centroid for center.
-// For portrait states (CA, WA) in a landscape viewBox this prevents tiles from
-// appearing bunched to one side while still respecting the full state extent.
-function zoomToGeoBBoxCenteredOnPoints(geoBBox, innerBBox, W, H, { margin = DISTRICT_FIT_MARGIN } = {}) {
-  if (!geoBBox || !innerBBox) return null;
-  const [[gx0, gy0], [gx1, gy1]] = geoBBox;
-  const [[ix0, iy0], [ix1, iy1]] = innerBBox;
-  const bw = gx1 - gx0, bh = gy1 - gy0;
-  if (!(bw > 0) || !(bh > 0)) return null;
-  const k = margin / Math.max(bw / W, bh / H);
-  const cx = (ix0 + ix1) / 2, cy = (iy0 + iy1) / 2;
-  return d3.zoomIdentity.translate(W / 2 - k * cx, H / 2 - k * cy).scale(k);
-}
-
-// Zoom svgSel to fit activeKeys using their inner points.
-// Returns the computed ZoomTransform (or null if no points found).
-function fitToActiveKeys(svgSel, zoomBehavior, projection, W, H, activeKeys, {
-  animated = true, margin = 0.85, tileR = 0, duration = 500
-} = {}) {
-  const bbox = innerPointBBox(projection, activeKeys, tileR);
-  if (!bbox) return null;
-  const t = zoomToBBox(bbox, W, H, { margin });
-  if (svgSel && zoomBehavior) {
-    if (animated) {
-      svgSel.transition().duration(duration).ease(d3.easeCubicInOut)
-        .call(zoomBehavior.transform, t);
-    } else {
-      svgSel.call(zoomBehavior.transform, t);
-    }
-  }
-  return t;
 }
 
 // Return the set of active state-district keys for the current game phase:
@@ -1945,9 +1870,6 @@ function renderTabHeader(containerId) {
     <div class="result-time-line">${solveStr}</div>`;
 }
 
-// kept for backward compat call sites
-function renderGuessesSummary() { renderTabHeader('guesses-header'); }
-
 // Wordle-style personal stats grid (played, win%, streaks, distribution)
 function renderInlinePersonalStats() {
   const el = document.getElementById('result-personal-stats');
@@ -2353,96 +2275,6 @@ async function fetchAndRenderCensusPanel(districtData) {
     </div>
     <div class="census-source">Sources: U.S. Census Bureau — ACS 5-Year (2019–2023) &amp; 2020 Census, aggregated to 2026 district boundaries; representative via house.gov. ${d.name}</div>
   `;
-}
-
-// ============================================================
-//  FIREBASE / LEADERBOARD
-// ============================================================
-let _firebaseReady = null; // Promise that resolves when Firebase is loaded and initialized
-
-function loadFirebase() {
-  if (_firebaseReady) return _firebaseReady;
-  if (!FIREBASE_CONFIG) { _firebaseReady = Promise.resolve(); return _firebaseReady; }
-  _firebaseReady = new Promise(resolve => {
-    const s1 = document.createElement('script');
-    s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-    s1.onload = () => {
-      const s2 = document.createElement('script');
-      s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
-      s2.onload = () => {
-        try {
-          firebase.initializeApp(FIREBASE_CONFIG);
-          db = firebase.firestore();
-        } catch (e) { console.warn('Firebase init failed:', e); }
-        resolve();
-      };
-      s2.onerror = resolve; // non-fatal
-      document.head.appendChild(s2);
-    };
-    s1.onerror = resolve; // non-fatal
-    document.head.appendChild(s1);
-  });
-  return _firebaseReady;
-}
-
-async function submitScore(won, guesses, seconds) {
-  await loadFirebase();
-  if (!db) return;
-  try {
-    await db.collection('scores').add({
-      date: todayKey,
-      username,
-      guesses: won ? guesses : MAX_GUESSES + 1,
-      time: seconds,
-      won,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch (e) {
-    console.warn('Score submit failed:', e);
-  }
-}
-
-async function loadTodayScores() {
-  await loadFirebase();
-  if (!db) return null;
-  try {
-    const snap = await db.collection('scores')
-      .where('date', '==', todayKey)
-      .orderBy('won', 'desc')
-      .orderBy('guesses', 'asc')
-      .orderBy('time', 'asc')
-      .limit(50)
-      .get();
-    return snap.docs.map(d => d.data());
-  } catch { return null; }
-}
-
-async function loadAlltimeScores() {
-  await loadFirebase();
-  if (!db) return null;
-  try {
-    // Fetch recent 500 scores and aggregate client-side
-    const snap = await db.collection('scores')
-      .where('won', '==', true)
-      .orderBy('timestamp', 'desc')
-      .limit(500)
-      .get();
-    const rows = snap.docs.map(d => d.data());
-
-    // Aggregate by username
-    const agg = {};
-    for (const r of rows) {
-      if (!agg[r.username]) agg[r.username] = { username: r.username, games: 0, wins: 0, totalGuesses: 0, totalTime: 0 };
-      agg[r.username].games++;
-      agg[r.username].wins++;
-      agg[r.username].totalGuesses += r.guesses;
-      agg[r.username].totalTime    += r.time;
-    }
-    return Object.values(agg)
-      .map(a => ({ ...a, avgGuesses: a.totalGuesses / a.wins, avgTime: a.totalTime / a.wins }))
-      .sort((a, b) => a.avgGuesses - b.avgGuesses || a.avgTime - b.avgTime)
-      .slice(0, 30);
-  } catch { return null; }
 }
 
 // ============================================================
@@ -3666,11 +3498,10 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
 
 // ─── District D3 Map ────────────────────────────────────────────────────────
 //
-// Split into four focused functions:
+// Split into focused functions:
 //   buildDistrictD3Map   — thin coordinator: clears container, builds context, routes
 //   _buildDistrictCtx    — creates SVG, projection, zoom behavior; returns shared context
 //   _applyDistrictZoom   — picks and applies the correct initial transform
-//   _drawGameOverMap     — game-over render (answer highlight, badge, spark, context layers)
 //   _drawGameplayTiles   — gameplay render (clickable circles + force simulation)
 
 // Counter-scale the district tiles / connectors / game-over badge / context layers so
@@ -3907,170 +3738,6 @@ function _applyDistrictZoom(ctx, zoomIn) {
   usRefSvgSel.transition().duration(dur).ease(d3.easeCubicInOut).call(usRefZoom.transform, activeFit);
 }
 
-// Renders the game-over view: national context, district boundary lines, answer highlight,
-// leader-line badge, and deferred spark/confetti animations.
-function _drawGameOverMap(ctx, animateReveal) {
-  const { svg, g, pathGen, projection, cssScale, W, H, dark, tilesEl, stateAbbr,
-          stateFeatures, stateFC, wonDist, wonDistPart, isAtLarge, answerKey } = ctx;
-
-  const answerLabel = isAtLarge ? stateAbbr : answerKey;
-
-  // ── National context layers ───────────────────────────────────────────────
-  if (rawTopo) {
-    const allStateFills = Object.values(topoStates).filter(f => f.properties?.state !== stateAbbr);
-
-    g.append('g').attr('class', 'context-state-fills').attr('pointer-events', 'none')
-      .selectAll('path').data(allStateFills).join('path').attr('d', pathGen)
-      .attr('fill', dark ? 'rgba(255,255,255,0.06)' : 'rgba(100,100,120,0.12)')
-      .attr('stroke', 'none');
-
-    // Clip roads/urban to the US land boundary. Legacy mode merges the district
-    // geometries; server mode ships a states-only topo, so fall back to merging
-    // the states. (Previously this skipped the clipPath entirely in server mode,
-    // but the layers still referenced url(#clip) → they were clipped to nothing
-    // and roads/urban never appeared.)
-    const clipId = 'gameover-us-land-clip';
-    let landGeom = null;
-    if (rawTopo.objects.districts)   landGeom = topojson.merge(rawTopo, rawTopo.objects.districts.geometries);
-    else if (rawTopo.objects.states) landGeom = topojson.merge(rawTopo, rawTopo.objects.states.geometries);
-    if (landGeom) {
-      let defs = svg.select('defs');
-      if (defs.empty()) defs = svg.insert('defs', ':first-child');
-      defs.selectAll(`#${clipId}`).remove();
-      defs.append('clipPath').attr('id', clipId)
-        .append('path').datum(landGeom).attr('d', pathGen);
-    }
-    const clipRef = landGeom ? `url(#${clipId})` : null;
-
-    if (topoUrban) {
-      g.append('g').attr('class', 'context-urban')
-        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
-        .selectAll('path').data(topoUrban.features).join('path').attr('d', pathGen)
-        .attr('fill', dark ? 'rgba(255,255,255,0.06)' : 'rgba(80,80,140,0.08)').attr('stroke', 'none');
-    }
-    if (topoRoads) {
-      g.append('g').attr('class', 'context-roads')
-        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
-        .selectAll('path').data(topoRoads.features).join('path').attr('d', pathGen)
-        .attr('fill', 'none')
-        .attr('stroke', dark ? 'rgba(255,255,255,0.14)' : 'rgba(60,60,100,0.18)')
-        .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke');
-    }
-    if (topoCounties) {
-      g.append('g').attr('class', 'context-counties')
-        .attr('clip-path', clipRef).attr('opacity', 0).attr('pointer-events', 'none')
-        .selectAll('path').data(topoCounties.features).join('path').attr('d', pathGen)
-        .attr('fill', 'none')
-        .attr('stroke', dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)')
-        .attr('stroke-width', 0.5).attr('stroke-dasharray', '2 3').attr('vector-effect', 'non-scaling-stroke');
-    }
-
-    // Sync context-layer opacity to current zoom (zoom handler fired before these existed)
-    {
-      const k0 = d3.zoomTransform(svg.node()).k || 1;
-      const cOp = k0 > 3 ? Math.min(0.65, (k0 - 3) * 0.25) : 0;
-      const fOp = k0 > 2 ? Math.min(1,    (k0 - 2) * 0.35) : 0;
-      g.select('.context-counties').attr('opacity', cOp);
-      g.select('.context-roads').attr('opacity', fOp);
-      g.select('.context-urban').attr('opacity', fOp);
-    }
-
-    // National district-boundary mesh (legacy topo only; server mode has no
-    // nationwide district geometry — the target state's own districts still
-    // draw below from stateFeatures).
-    if (rawTopo.objects.districts) {
-      g.append('path')
-        .datum(topojson.mesh(rawTopo, rawTopo.objects.districts,
-          (a, b) => a !== b && a.properties?.state === b.properties?.state && a.properties?.state !== stateAbbr))
-        .attr('class', 'context-district-lines').attr('d', pathGen)
-        .attr('fill', 'none')
-        .attr('stroke', dark ? 'rgba(255,255,255,0.22)' : 'rgba(60,60,90,0.50)')
-        .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
-    }
-
-    g.append('g').attr('class', 'context-state-borders').attr('pointer-events', 'none')
-      .selectAll('path').data(allStateFills).join('path').attr('d', pathGen)
-      .attr('fill', 'none')
-      .attr('stroke', dark ? 'rgba(255,255,255,0.30)' : 'rgba(40,40,60,0.60)')
-      .attr('stroke-width', 0.7).attr('vector-effect', 'non-scaling-stroke');
-  }
-
-  // ── Target-state district boundaries ─────────────────────────────────────
-  stateFeatures.forEach(f => {
-    g.append('path').datum(f)
-      .attr('data-key', f.properties['state-district']).attr('d', pathGen)
-      .attr('fill', 'none')
-      .attr('stroke', dark ? 'rgba(255,255,255,0.35)' : 'rgba(60,60,80,0.25)')
-      .attr('stroke-width', 0.8).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
-  });
-
-  // ── Answer district highlight + spark + badge ─────────────────────────────
-  const answerFeature = stateFeatures.find(f => f.properties['state-district'] === answerKey);
-  if (answerFeature) {
-    const won = !!wonDist;
-
-    const answerPath = g.append('path').datum(answerFeature).attr('d', pathGen)
-      .attr('fill',   dark ? 'rgba(196,18,48,0.55)' : 'rgba(196,18,48,0.30)')
-      .attr('stroke', '#C41230').attr('stroke-width', 2)
-      .attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
-
-    // ── Leader line + pill badge ──────────────────────────────────────────
-    const initK  = d3.zoomTransform(svg.node()).k || 1;
-    const initR  = Math.max(1, 13 / initK);
-    const [[dbx0, dby0], [dbx1, dby1]] = pathGen.bounds(answerFeature);
-    const screenGap = 18 / (initK * cssScale);
-    let bx = dbx1 + screenGap;
-    let by = (dby0 + dby1) / 2;
-    if (bx + initR > W - 4) bx = dbx0 - screenGap;
-    bx = Math.max(initR + 4, Math.min(W - initR - 4, bx));
-    by = Math.max(initR + 4, Math.min(H - initR - 4, by));
-
-    g.append('line').attr('class', 'dist-leader')
-      .attr('x1', dbx1).attr('y1', by).attr('x2', bx).attr('y2', by)
-      .attr('stroke', dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)')
-      .attr('stroke-width', 1 / (initK * cssScale)).attr('pointer-events', 'none')
-      .attr('data-dbx0', dbx0).attr('data-dbx1', dbx1)
-      .attr('data-dby0', dby0).attr('data-dby1', dby1);
-
-    const iconSize = 13 / (initK * cssScale), iconGap = 4 / (initK * cssScale);
-    const pillH = 26 / (initK * cssScale);
-    const pillW = (answerLabel.length * 7.5 + 22) / (initK * cssScale) + iconSize + iconGap;
-    const badge = g.append('g').attr('class', 'dist-icons').attr('transform', `translate(${bx},${by})`);
-    badge.append('rect')
-      .attr('x', -pillW / 2).attr('y', -pillH / 2).attr('width', pillW).attr('height', pillH)
-      .attr('rx', pillH / 2)
-      .attr('fill', 'rgba(196,18,48,0.82)').attr('stroke', 'rgba(255,255,255,0.35)')
-      .attr('stroke-width', 1 / (initK * cssScale));
-
-    const iconX    = -pillW / 2 + 7 / (initK * cssScale) + iconSize / 2;
-    const iconScale = iconSize / 24;
-    const iconG = badge.append('g').attr('class', 'gc-icon-svg')
-      .attr('transform', `translate(${iconX},0) scale(${iconScale}) translate(-12,-12)`)
-      .attr('fill', 'none').attr('stroke', '#fff')
-      .attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
-      .html(wonDist ? ICON_PATHS.checkCircle : ICON_PATHS.xCircle);
-    iconG.selectAll('path, circle, line, polyline').attr('vector-effect', 'non-scaling-stroke');
-
-    badge.append('text')
-      .attr('x', iconSize / 2 + iconGap / 2)
-      .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
-      .attr('font-size', `${12 / (initK * cssScale)}px`).attr('font-weight', '600')
-      .attr('fill', '#fff').attr('letter-spacing', 0.3 / (initK * cssScale))
-      .attr('pointer-events', 'none').text(answerLabel);
-  }
-
-  // ── State outline (topmost) ───────────────────────────────────────────────
-  const stateOutline = topoStates[stateAbbr];
-  if (stateOutline) {
-    g.append('path').datum(stateOutline).attr('d', pathGen)
-      .attr('fill', 'none').attr('stroke', dark ? '#aaa' : '#555')
-      .attr('stroke-width', 2).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
-  }
-  g.select('.dist-leader').raise();
-  g.select('.dist-icons').raise();
-  g.select('.spark-layer').raise();
-}
-
 // Renders the gameplay tile view: state context fill, clickable circles with
 // hot/cold styling, connector lines, and a force-directed collision layout.
 function _drawGameplayTiles(ctx) {
@@ -4273,11 +3940,8 @@ function endGame(won, { skipAnims = false } = {}) {
     }
   }
   saveGameState();
-
-  // Submit to Firebase. Anonymous outcomes are never submitted (no leaderboard entry);
-  // telemetry still fires elsewhere. The District Profile is rendered by
-  // showGameoverModal() (the game-over card owns it now).
-  if (!isAnonymousPlayer) submitScore(won, guessCount, elapsedSeconds);
+  // Results persist server-side via DistrictBackend.guess() (Supabase). The District
+  // Profile is rendered by showGameoverModal() (the game-over card owns it now).
 }
 
 // ============================================================
@@ -5062,25 +4726,6 @@ function buildShareText() {
   const grid = [...usedSlots, ...Array(unusedCount).fill('⬜')].join(' ');
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
   return `🗺️ Daily District — ${outcome}\n${grid}\nCan you identify it? https://daily-district.com/`;
-}
-
-// ============================================================
-//  LEADERBOARD UI
-// ============================================================
-function renderScoreRow(entry, rank, isMe) {
-  const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
-  const guessLabel = entry.won === false ? 'X' : entry.guesses;
-  return `
-    <div class="score-row ${isMe ? 'me' : ''} ${entry.won === false ? 'lost-row' : ''}">
-      <span class="rank ${rankClass}">${rank}</span>
-      <span class="name">${escapeHtml(entry.username)}${isMe ? ' (you)' : ''}</span>
-      <span class="guesses">${guessLabel} guess${guessLabel !== 1 ? 'es' : ''}</span>
-      <span class="time-val">${formatTime(entry.time || 0)}</span>
-    </div>`;
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
