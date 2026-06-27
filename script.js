@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.35';
+const VERSION_NUMBER = '2.9.36';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3508,7 +3508,8 @@ function zoomUSRefMapToValid(animated = true) {
     districtStateFitTransform = stateFit;   // Fit button zooms out to this
 
     const tileBox = _districtTileBBox(getActiveDistrictKeys());
-    const t = tileBox ? zoomToBBox(tileBox, W, H, { margin: DISTRICT_FIT_MARGIN }) : stateFit;
+    // Looser margin so the remaining district markers + badges aren't flush to the edges.
+    const t = tileBox ? zoomToBBox(tileBox, W, H, { margin: DISTRICT_ACTIVE_FIT_MARGIN }) : stateFit;
     // Allow zooming out at least to the full-state fit.
     usRefZoom.scaleExtent([Math.min(stateFit.k, 0.3), Infinity]);
     if (!districtUserZoomed) districtSavedTransform = t;
