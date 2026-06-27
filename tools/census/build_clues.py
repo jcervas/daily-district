@@ -49,12 +49,12 @@ def state_deck(st, income, deleg):
     deleg_val = ('At-large: only congressional district in its state' if deleg == 1
                  else f'One of {deleg} congressional districts in its state')
     return [
-        {"icon":"ruler",   "label":"Land area (state)",
-         "value": f"{land_band(land)} — ~{land:,} sq mi" if land else "—"},
         {"icon":"dollar",  "label":"Median household income (state)",
          "value": f"${income:,}/yr" if income else "—"},
         {"icon":"dollar",  "label":"Median gross rent (state)",
          "value": f"${rent:,}/mo" if rent else "—"},
+        {"icon":"ruler",   "label":"Land area (state)",
+         "value": f"{land_band(land)} — ~{land:,} sq mi" if land else "—"},
         {"icon":"people",  "label":"Foreign-born residents (state)",
          "value": f"{fb}% born outside the U.S." if fb is not None else "—"},
         {"icon":"clock",   "label":"Time zone (state)",
