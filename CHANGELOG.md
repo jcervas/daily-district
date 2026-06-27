@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.35 — Looser zoom when picking among remaining districts
+
+- After a wrong district guess (and on the locate-button "remaining" press), the map now leaves more breathing room so the district markers + badges aren't flush against the edges. Controlled by a new `DISTRICT_ACTIVE_FIT_MARGIN` (0.74); the initial state-entry fit is unchanged.
+
 ## v2.9.34 — District Profile: swipe up to full height
 
 - Drag the District Profile handle/titlebar **up** (mouse or finger) to expand it edge-to-edge to full height — stopping just below the header so the menu stays uncovered. Drag **down** to shrink back to the default sheet, then again to dismiss. A **tap** on the handle toggles between the two heights.

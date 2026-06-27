@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.34';
+const VERSION_NUMBER = '2.9.35';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -26,9 +26,17 @@ const GAME_VERSION = (() => {
 })();
 document.querySelectorAll('.beta-version').forEach(el => { el.textContent = VERSION_NUMBER; });
 
-let DISTRICT_FIT_MARGIN = 0.95;
+let DISTRICT_FIT_MARGIN = 0.90;
 try { Object.defineProperty(window, 'DISTRICT_FIT_MARGIN', {
   get: () => DISTRICT_FIT_MARGIN, set: v => { DISTRICT_FIT_MARGIN = v; },
+}); } catch (_) {}
+// Looser margin used only when fitting to the REMAINING districts (after a wrong
+// guess / locate press). The fit uses marker-dot centers, so the dots + badges sit
+// at the bbox edges — extra padding keeps them off the edge. Lower = more breathing
+// room. Tweak live with window.DISTRICT_ACTIVE_FIT_MARGIN.
+let DISTRICT_ACTIVE_FIT_MARGIN = 0.74;
+try { Object.defineProperty(window, 'DISTRICT_ACTIVE_FIT_MARGIN', {
+  get: () => DISTRICT_ACTIVE_FIT_MARGIN, set: v => { DISTRICT_ACTIVE_FIT_MARGIN = v; },
 }); } catch (_) {}
 
 // ---- CENSUS API KEY (optional, free) -------------------------
@@ -3266,7 +3274,7 @@ function initUSRefMap() {
             // First press: zoom to the remaining eligible TILES (dist-icon positions).
             districtUserZoomed = false;
             const activeBBox = _districtTileBBox(getActiveDistrictKeys());
-            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: DISTRICT_FIT_MARGIN }) : districtStateFitTransform;
+            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: DISTRICT_ACTIVE_FIT_MARGIN }) : districtStateFitTransform;
             if (t) {
               tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
                 .call(districtZoomBehavior.transform, t);
@@ -3871,7 +3879,8 @@ function _applyDistrictZoom(ctx, zoomIn) {
 
   // After a wrong district guess (rebuild): zoom the shared map to the bbox of the remaining
   // eligible TILES (dist-icon positions) so they fill the view — no district geometry.
-  const activeFit = zoomToBBox(tileBBox(possibleKeys), W, H, { margin: DISTRICT_FIT_MARGIN });
+  // Looser margin so the marker dots + badges aren't flush against the edges.
+  const activeFit = zoomToBBox(tileBBox(possibleKeys), W, H, { margin: DISTRICT_ACTIVE_FIT_MARGIN });
   districtSavedTransform = activeFit;
   const dur = 500 * (typeof ANIM_SLOW !== 'undefined' ? ANIM_SLOW : 1);
   usRefSvgSel.transition().duration(dur).ease(d3.easeCubicInOut).call(usRefZoom.transform, activeFit);
