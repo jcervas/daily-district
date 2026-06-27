@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.33';
+const VERSION_NUMBER = '2.9.34';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1630,12 +1630,13 @@ function wireGameoverCensus() {
   if (!wrap) return;
   const sheet = wrap.querySelector('.gameover-census-sheet');
   const open  = () => wrap.classList.add('open');
-  const close = () => wrap.classList.remove('open');
+  const close = () => { wrap.classList.remove('open'); wrap.classList.remove('expanded'); };
 
   wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
   wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
 
-  // Swipe the sheet down (from its top grip handle) to dismiss.
+  // Drag the grip handle: up → full height (below the header); down → shrink back
+  // to the default sheet, then dismiss. A tap toggles between the two heights.
   let startY = null, dy = 0;
   const onDown = (e) => {
     startY = e.clientY; dy = 0;
@@ -1644,24 +1645,33 @@ function wireGameoverCensus() {
   };
   const onMove = (e) => {
     if (startY == null || !sheet) return;
-    dy = Math.max(0, e.clientY - startY);
-    sheet.style.transform = `translateY(${dy}px)`;
+    dy = e.clientY - startY;
+    // Live follow only for downward drag (upward is handled as a state change on release).
+    sheet.style.transform = `translateY(${Math.max(0, dy)}px)`;
   };
   const onUp = () => {
     if (startY == null) return;
     if (sheet) { sheet.style.transition = ''; sheet.style.transform = ''; }
-    if (dy > 90) close();
+    const expanded = wrap.classList.contains('expanded');
+    if (Math.abs(dy) < 6) {                 // tap → toggle full / default
+      wrap.classList.toggle('expanded');
+    } else if (dy < -50) {                   // swipe up → full height
+      wrap.classList.add('expanded');
+    } else if (dy > 90) {                    // swipe down → shrink, then dismiss
+      if (expanded) wrap.classList.remove('expanded');
+      else close();
+    }
     startY = null; dy = 0;
   };
-  // Drag only from the grip handle — attaching to the titlebar would let
-  // setPointerCapture swallow the close button's click.
-  const z = wrap.querySelector('.gameover-census-handle');
-  if (z) {
-    z.addEventListener('pointerdown', onDown);
+  // Drag from the grip handle and the titlebar. Ignore pointerdowns on the close
+  // button so its click still fires (setPointerCapture would otherwise swallow it).
+  [wrap.querySelector('.gameover-census-handle'), wrap.querySelector('.gameover-census-titlebar')].forEach(z => {
+    if (!z) return;
+    z.addEventListener('pointerdown', (e) => { if (e.target.closest('.gameover-census-close')) return; onDown(e); });
     z.addEventListener('pointermove', onMove);
     z.addEventListener('pointerup', onUp);
     z.addEventListener('pointercancel', onUp);
-  }
+  });
 }
 
 function destroyGameoverDiv() {

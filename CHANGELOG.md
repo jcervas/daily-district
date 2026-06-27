@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.9.34 — District Profile: swipe up to full height
+
+- Drag the District Profile handle/titlebar **up** (mouse or finger) to expand it edge-to-edge to full height — stopping just below the header so the menu stays uncovered. Drag **down** to shrink back to the default sheet, then again to dismiss. A **tap** on the handle toggles between the two heights.
+
 ## v2.9.32 — Compactness comparison + Reock graphic, small label fixes
 
 - **Compactness now says how it ranks** ("Compactness — irregular, more compact than 24% of districts").

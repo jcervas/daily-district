@@ -1951,6 +1951,14 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   touch-action: none;
 }
 .gameover-census.open .gameover-census-sheet { transform: translateY(0); }
+/* Expanded: swipe the handle up (or tap it) to fill the area below the header —
+   edge-to-edge, full height, but never over the menu/header. */
+.gameover-census.expanded .gameover-census-sheet {
+  max-height: 100%;
+  left: 0; right: 0;
+  border-radius: 0;
+  border-left: none; border-right: none;
+}
 
 .gameover-census-handle {
   flex-shrink: 0;
