@@ -37,6 +37,7 @@ r AS (
     percent_rank() OVER (ORDER BY ((census->>'bach')::numeric+(census->>'master')::numeric)/NULLIF((census->>'edu_total')::numeric,0)) AS edu,
     percent_rank() OVER (ORDER BY (census->>'pop')::numeric/NULLIF((census->>'area_sqmi')::numeric,0)) AS density,
     percent_rank() OVER (ORDER BY 4*pi()*(census->>'area_sqmi')::numeric/power(NULLIF((census->>'perimeter_mi')::numeric,0),2)) AS compactness,
+    percent_rank() OVER (ORDER BY (census->>'reock')::numeric) AS reock,
     percent_rank() OVER (ORDER BY ((census->>'pop')::numeric-(census->>'pop2020')::numeric)/NULLIF((census->>'pop2020')::numeric,0)) AS "popChange"
   FROM d)
 UPDATE puzzles p SET census = census || jsonb_build_object('pct', jsonb_strip_nulls(jsonb_build_object(
@@ -45,5 +46,5 @@ UPDATE puzzles p SET census = census || jsonb_build_object('pct', jsonb_strip_nu
   'povertyPct',round(r."povertyPct"::numeric,3),'homeownerPct',round(r."homeownerPct"::numeric,3),'uninsuredPct',round(r."uninsuredPct"::numeric,3),
   'veteranPct',round(r."veteranPct"::numeric,3),'meanCommuteMin',round(r."meanCommuteMin"::numeric,3),'avgHHSize',round(r."avgHHSize"::numeric,3),
   'edu',round(r.edu::numeric,3),'density',round(r.density::numeric,3),'compactness',round(r.compactness::numeric,3),
-  'popChange',round(r."popChange"::numeric,3))))
+  'reock',round(r.reock::numeric,3),'popChange',round(r."popChange"::numeric,3))))
 FROM r WHERE p.district_id = r.district_id;

@@ -1,5 +1,12 @@
 # District Guess — Changelog
 
+## v2.9.32 — Compactness comparison + Reock graphic, small label fixes
+
+- **Compactness now says how it ranks** ("Compactness — irregular, more compact than 24% of districts").
+- The compactness expander shows **two labeled graphics in columns — Polsby–Popper and Reock** (district drawn in its smallest enclosing circle) — each with its score and percentile. Dropped the math formulas; "edges" → "lines".
+- **Population Change** sub is now the plain numeric change ("+10k since 2020").
+- **Demographics** headline drops "plurality"/"majority" (just "35% Hispanic") to save space.
+
 ## v2.9.31 — Game-over: expose the result behind the Profile
 
 - The District Profile sheet now auto-opens to ~66% instead of ~88%, leaving the result banner ("View Result") + headline/stats exposed above it — making it clear there are more pages behind the Profile. The exposed strip stays directly clickable (no backdrop blocking it).

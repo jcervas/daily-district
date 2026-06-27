@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.9.31';
+const VERSION_NUMBER = '2.9.32';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2054,6 +2054,59 @@ function compactnessSvg(feature) {
          + `<path class="ms-district" d="${dPath}"/></svg>`;
   } catch (_) { return ''; }
 }
+// Smallest circle enclosing a set of [x,y] points (Welzl's algorithm) — for the
+// Reock graphic (district drawn inside its minimum bounding circle).
+function minEnclosingCircle(points) {
+  const pts = points.slice();
+  for (let i = pts.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+  const inC = (c, p) => !!c && (p[0]-c.x)**2 + (p[1]-c.y)**2 <= c.r*c.r + 1e-7;
+  const c2  = (a, b) => { const x=(a[0]+b[0])/2, y=(a[1]+b[1])/2; return { x, y, r: Math.hypot(a[0]-x, a[1]-y) }; };
+  const c3  = (a, b, c) => {
+    const ax=a[0],ay=a[1],bx=b[0],by=b[1],cx=c[0],cy=c[1];
+    const d = 2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));
+    if (Math.abs(d) < 1e-9) { // collinear — use the farthest pair
+      const ps=[a,b,c]; let best=c2(a,b);
+      for (const [p,q] of [[a,c],[b,c]]) { const cc=c2(p,q); if (cc.r>best.r) best=cc; }
+      return best;
+    }
+    const a2=ax*ax+ay*ay, b2=bx*bx+by*by, cc2=cx*cx+cy*cy;
+    const ux=(a2*(by-cy)+b2*(cy-ay)+cc2*(ay-by))/d;
+    const uy=(a2*(cx-bx)+b2*(ax-cx)+cc2*(bx-ax))/d;
+    return { x: ux, y: uy, r: Math.hypot(ax-ux, ay-uy) };
+  };
+  let c = null;
+  for (let i = 0; i < pts.length; i++) {
+    if (inC(c, pts[i])) continue;
+    c = { x: pts[i][0], y: pts[i][1], r: 0 };
+    for (let j = 0; j < i; j++) {
+      if (inC(c, pts[j])) continue;
+      c = c2(pts[i], pts[j]);
+      for (let k = 0; k < j; k++) { if (!inC(c, pts[k])) c = c3(pts[i], pts[j], pts[k]); }
+    }
+  }
+  return c;
+}
+// The district drawn inside its smallest enclosing circle (the Reock circle).
+function reockSvg(feature) {
+  if (!feature || !window.d3) return '';
+  try {
+    const S = 100, pad = 8;
+    const proj = d3.geoMercator().fitExtent([[pad, pad], [S - pad, S - pad]], feature);
+    const dPath = d3.geoPath(proj)(feature);
+    const pts = [];
+    const g = feature.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+    polys.forEach(poly => poly.forEach(ring => ring.forEach(([lon, lat]) => {
+      const p = proj([lon, lat]); if (p && isFinite(p[0]) && isFinite(p[1])) pts.push(p);
+    })));
+    if (!dPath || pts.length < 3) return '';
+    const c = minEnclosingCircle(pts);
+    if (!c || !isFinite(c.r) || c.r <= 0) return '';
+    return `<svg class="mini-shape" viewBox="0 0 ${S} ${S}" aria-hidden="true">`
+         + `<circle class="ms-circle" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${c.r.toFixed(1)}"/>`
+         + `<path class="ms-district" d="${dPath}"/></svg>`;
+  } catch (_) { return ''; }
+}
 // The district (filled) within its state's outline — "where in the state it sits".
 function stateLocatorSvg(stateFeat, distFeat) {
   if (!stateFeat || !window.d3) return '';
@@ -2130,8 +2183,8 @@ async function fetchAndRenderCensusPanel(districtData) {
 
   // Percentile ranks (census.pct) drive the plain-words "Higher than X% of districts" lines.
   const pct = d.pct || {};
-  // Mini-graphic inputs: district/state shapes, stacked bars.
-  const compactSvg = compactnessSvg(todayDistrict);
+  // Mini-graphic inputs: state-locator shape + stacked bars (compactness shapes are
+  // built inline in the expander below).
   const stateSvg   = stateLocatorSvg(topoStates[districtData.state], todayDistrict);
   // Race/ethnicity groups, in bar order, with their legend swatch colors.
   const otherPct = Math.max(0, 100 - (whPct + blPct + hiPct + asPct));
@@ -2143,7 +2196,7 @@ async function fetchAndRenderCensusPanel(districtData) {
     { name: 'Other',    pct: otherPct, seg: 'seg-other', dot: 'rl-other' },
   ];
   const raceTop = raceGroups.reduce((a, b) => b.pct > a.pct ? b : a);
-  const raceHeadline = total > 0 ? `${raceTop.pct}% ${raceTop.name}${raceTop.pct >= 50 ? ' majority' : ' plurality'}` : '—';
+  const raceHeadline = total > 0 ? `${raceTop.pct}% ${raceTop.name}` : '—';
   // Stacked bar (bar order) + a color-keyed legend so the segments are identifiable.
   const raceStack  = total > 0 ? stackBar(raceGroups.map(g => ({ frac: g.pct / 100, cls: g.seg }))) : '';
   const raceLegend = total > 0 ? `<div class="race-legend">`
@@ -2156,14 +2209,23 @@ async function fetchAndRenderCensusPanel(districtData) {
   ]) : '';
   // Population change since the 2020 Census (pop2020 = decennial count, same boundaries).
   const popChange = (d.pop && d.pop2020) ? (d.pop - d.pop2020) / d.pop2020 * 100 : null;
+  const popDelta  = (d.pop && d.pop2020) ? d.pop - d.pop2020 : null;
+  const popDeltaStr = popDelta == null ? 'since the 2020 Census'
+    : `${popDelta >= 0 ? '+' : '−'}${Math.abs(popDelta) >= 1000 ? Math.round(Math.abs(popDelta) / 1000) + 'k' : Math.abs(popDelta)} since 2020`;
   const partyEmblem = rep ? partyIcon(rep.partyCode, true) : '';
-  // Polsby-Popper caption for the compactness shape (named + explained on hover).
+  // Compactness explainer — two labeled graphics (Polsby–Popper + Reock) in columns,
+  // each with its score and how it ranks among all districts.
+  const moreThan = p => (p == null || isNaN(p)) ? '' : `more compact than ${Math.round(p * 100)}% of districts`;
+  const ppRankTxt = moreThan(pct.compactness);
   const ppCaption = ppScore == null ? '' :
     `<details class="ms-caption">
-       <summary>Compactness ${ppLabel} <span class="ms-info">ⓘ</span></summary>
-       <div class="ms-explain">Both 0–1, higher = more regular shape.<br>
-         <b>Polsby–Popper ${ppScore.toFixed(2)}</b> — 4π × area ÷ perimeter² (penalizes squiggly edges).<br>
-         ${reock != null ? `<b>Reock ${reock.toFixed(2)}</b> — area ÷ area of the smallest circle that encloses the district (penalizes elongated shapes).` : ''}
+       <summary>Compactness — ${ppLabel}${ppRankTxt ? `, ${ppRankTxt}` : ''} <span class="ms-info">ⓘ</span></summary>
+       <div class="ms-explain">
+         <div class="cmpct-cols">
+           <div class="cmpct-col">${compactnessSvg(todayDistrict)}<div class="cmpct-name">Polsby–Popper</div><div class="cmpct-val">${ppScore.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
+           ${reock != null ? `<div class="cmpct-col">${reockSvg(todayDistrict)}<div class="cmpct-name">Reock</div><div class="cmpct-val">${reock.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.reock)}</div></div>` : ''}
+         </div>
+         <p class="cmpct-note">Both score 0–1; higher means a more regular shape. Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines); Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
        </div>
      </details>`;
 
@@ -2178,7 +2240,7 @@ async function fetchAndRenderCensusPanel(districtData) {
       <div class="census-card">
         <div class="label">Population Change</div>
         <div class="value">${popChange != null ? (popChange >= 0 ? '+' : '−') + Math.abs(Math.round(popChange)) + '%' : '—'}</div>
-        <div class="sub">${d.pop2020 ? `${formatNumber(d.pop2020)} → ${formatNumber(d.pop)} since 2020` : 'since the 2020 Census'}</div>
+        <div class="sub">${popDeltaStr}</div>
         ${pctBar(popChange, 'popChange', pct.popChange)}
       </div>
       <div class="census-card">
@@ -2196,7 +2258,7 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
         <div class="sub">${perimMi > 0 ? `${perimMi.toLocaleString()} mi perimeter` : '2026 district boundaries'}</div>
-        ${compactSvg}${ppCaption}
+        ${ppCaption}
       </div>
       <div class="census-card census-shape-card">
         <div class="label">State Delegation</div>
