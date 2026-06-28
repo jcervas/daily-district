@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.17 — Ad slot fills available space
+
+- The result ad placeholder now stretches to fill the leftover width and height of the results pane (with padding + a min height), instead of being a small fixed box.
+
 ## v2.10.16 — Generic back button + "Results" wording
 
 - The result modal's close button is now a generic "Back to district →" (no longer names the specific district).

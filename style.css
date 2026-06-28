@@ -2648,8 +2648,17 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .result-modal-close:hover { background: rgba(0, 0, 0, 0.65); }
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
-  margin: 10px 0 4px;
-  padding: 22px 12px;
+  /* Fill the leftover space in the result pane (the pane centers its children, so
+     align-self:stretch is needed for full width). */
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-height: 120px;
+  margin: 8px 0;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px dashed var(--border);
   border-radius: 8px;
   text-align: center;
