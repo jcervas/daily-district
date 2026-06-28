@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.11';
+const VERSION_NUMBER = '2.10.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3846,13 +3846,15 @@ function _drawGameplayTiles(ctx) {
 
   // Clickable tile circles
   const iconG   = g.append('g').attr('class', 'dist-icons');
+  // Tiles share the state palette so the two phases read as the same colors:
+  // in-play = valid, answer = confirmed, eliminated/cold = elim, hot = dimmed valid.
+  const c = dark ? STATE_COLOR.dark : STATE_COLOR.light;
   const iconEls = nodes.map(d => {
     const disabled  = d.isWrong || d.isCorrect;
-    const fillColor = d.isCorrect ? '#2563EB'
-                    : d.isCold   ? (dark ? '#333' : '#bbb')
-                    : d.isHot    ? (dark ? '#6b3030' : '#d4908a')
-                    : '#C41230';
-    const textColor = (d.isCold && !dark) ? '#888' : (d.isHot && !dark) ? '#7a2020' : '#fff';
+    const fillColor = d.isCorrect ? c.confirmed.fill
+                    : d.isCold   ? c.elim.fill
+                    : c.valid.fill;   // in-play and hot share the valid color (hot is dimmed via opacity)
+    const textColor = (d.isCold && !dark) ? '#888' : '#fff';
     const opacity   = d.isCold ? 0.18 : d.isHot ? 0.32 : 1;
 
     const grp = iconG.append('g')
@@ -3867,7 +3869,7 @@ function _drawGameplayTiles(ctx) {
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
     if (!disabled) {
-      grp.on('mouseover', function() { d3.select(this).select('circle').attr('fill', '#a01025'); })
+      grp.on('mouseover', function() { d3.select(this).select('circle').attr('fill', c.hover); })
          .on('mouseout',  function() { d3.select(this).select('circle').attr('fill', fillColor); })
          .on('click',     () => submitDistrictGuess(d.dist));
     }

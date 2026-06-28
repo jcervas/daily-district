@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.12 — Match district-tile colors to the state colors
+
+- District-pick tiles now use the same `STATE_COLOR` palette as the state map: in-play = valid color, answer = confirmed, eliminated/cold = elim, and the roll-over (hover) color now matches the state hover in both light and dark themes (the tile hover was previously a single hardcoded value).
+
 ## v2.10.11 — Final guess lands on the result modal
 
 - After the final guess (win or loss), the reveal tween now hands off from the gold/red flash to the result modal's background and opens the **result modal** directly, instead of stopping on the game-over screen.
