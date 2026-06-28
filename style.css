@@ -911,7 +911,7 @@ circle.tile-ripple {
 }
 .result-tab-pane {
   display: none;
-  padding: 20px;
+  padding: 8px 20px 20px;
 }
 
 /* District shape preview in result modal (both tabs) */
@@ -1403,7 +1403,7 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 .stat-card {
   background: var(--surface-alt);
   border-radius: var(--radius);
-  padding: 20px 12px;
+  padding: 10px 12px;
   text-align: center;
 }
 .stat-card .stat-val {
