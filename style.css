@@ -1787,6 +1787,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   touch-action: none;
 }
 .gameover-census.open .gameover-census-sheet { transform: translateY(0); }
+/* Content fits the available height → size the sheet to its content (show everything)
+   instead of the reduced 66% default. JS toggles `.fits` from a measured comparison. */
+.gameover-census.fits .gameover-census-sheet { max-height: 100%; }
 /* Expanded: swipe the handle up (or tap it) to fill the area below the header —
    full height, but still capped to the map width (never over the menu/header). */
 .gameover-census.expanded .gameover-census-sheet {

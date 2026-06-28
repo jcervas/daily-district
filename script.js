@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.7';
+const VERSION_NUMBER = '2.10.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1538,11 +1538,27 @@ function buildGameoverDiv() {
 
 // Wire the District Profile bottom sheet: open by default, dismiss via the
 // chevron / backdrop / swiping the handle down, reopen via the pill.
+// Size the District Profile to its content when it fits the area below the header;
+// otherwise keep the reduced default (66%) and let the user swipe up to expand. The
+// `.fits` class lifts the sheet's max-height so its content height drives it.
+function fitGameoverCensus() {
+  const wrap = document.getElementById('gameover-census');
+  if (!wrap) return;
+  if (wrap.classList.contains('expanded')) return;   // user chose full height — leave it
+  const handle = wrap.querySelector('.gameover-census-handle');
+  const bar    = wrap.querySelector('.gameover-census-titlebar');
+  const body   = wrap.querySelector('.gameover-census-body');
+  if (!body) return;
+  const avail  = wrap.clientHeight;                   // viewport minus the header
+  const needed = (handle?.offsetHeight || 0) + (bar?.offsetHeight || 0) + body.scrollHeight + 4;
+  wrap.classList.toggle('fits', avail > 0 && needed <= avail);
+}
+
 function wireGameoverCensus() {
   const wrap = document.getElementById('gameover-census');
   if (!wrap) return;
   const sheet = wrap.querySelector('.gameover-census-sheet');
-  const open  = () => wrap.classList.add('open');
+  const open  = () => { wrap.classList.add('open'); fitGameoverCensus(); };
   const close = () => { wrap.classList.remove('open'); wrap.classList.remove('expanded'); };
 
   wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
@@ -1575,6 +1591,7 @@ function wireGameoverCensus() {
       else close();
     }
     startY = null; dy = 0;
+    fitGameoverCensus();   // re-evaluate fit after collapsing out of the expanded state
   };
   // Drag from the grip handle and the titlebar. Ignore pointerdowns on the close
   // button so its click still fires (setPointerCapture would otherwise swallow it).
@@ -1585,6 +1602,13 @@ function wireGameoverCensus() {
     z.addEventListener('pointerup', onUp);
     z.addEventListener('pointercancel', onUp);
   });
+
+  // Decide the initial height once the content has laid out, and again on resize.
+  requestAnimationFrame(() => requestAnimationFrame(fitGameoverCensus));
+  if (!window._gameoverCensusResizeWired) {
+    window._gameoverCensusResizeWired = true;
+    window.addEventListener('resize', () => fitGameoverCensus());
+  }
 }
 
 function destroyGameoverDiv() {
@@ -2242,6 +2266,8 @@ async function fetchAndRenderCensusPanel(districtData) {
     </div>
     <div class="census-source">Sources: U.S. Census Bureau — ACS 5-Year (2019–2023) &amp; 2020 Census, aggregated to 2026 district boundaries; representative via house.gov. ${d.name}</div>
   `;
+  // Content height is now known — size the sheet to it if it fits the available area.
+  requestAnimationFrame(() => requestAnimationFrame(fitGameoverCensus));
 }
 
 // ============================================================

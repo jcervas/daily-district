@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.8 — District Profile auto-fits its content
+
+- The District Profile sheet now sizes to its content when that fits in the space below the header (showing everything by default), and only falls back to the reduced ~66% height — with swipe-up expansion — when the content is too tall to fit. Re-measured on open, after the profile loads, and on resize.
+
 ## v2.10.3 — Uniform 480px modal width
 
 - All modals now cap at the base 480px on desktop — capped the welcome modal (was 520px). Mobile stays full-screen (welcome/result). Cleaned up a stale comment on the result modal's width rule.
