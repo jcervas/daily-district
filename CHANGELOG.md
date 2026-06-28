@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.10.15 — Result modal: overlay back button + ad slot
+
+- The "Back to ‹district›" button now overlays the top-right of the district preview as a borderless translucent pill (removed its own header row, saving space).
+- Added a dashed "Ad Placeholder" slot between the action row and the Donate link, shown only to not-signed-in players.
+
 ## v2.10.14 — Percentile bars on more cards, header merge, cleaner share
 
 - Added percentile range bars to **District Area**, **District Perimeter**, and **2024 Presidential Vote** (area/perimeter are percentile-positioned since they're heavily skewed; vote shows an R↔D margin axis with "More Republican/Democratic than X% of districts"). Baked area/perimeter/margin percentiles.

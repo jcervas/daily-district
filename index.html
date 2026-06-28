@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=129" />
+  <link rel="stylesheet" href="style.css?v=130" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -458,10 +458,8 @@
   <!-- Result modal (opens on game end or "View Result" click) -->
   <div id="result-modal" class="modal hidden">
     <div class="modal-content result-modal-content">
-      <!-- Single district preview shared across all tabs -->
-      <div class="result-modal-header">
-        <button class="modal-close result-modal-close" id="result-back-btn">Back to map →</button>
-      </div>
+      <!-- Single district preview shared across all tabs; the close button overlays its top-right -->
+      <button class="modal-close result-modal-close" id="result-back-btn">Back to map →</button>
       <div id="result-district-preview"></div>
 
       <div class="result-modal-tabs">
@@ -507,6 +505,8 @@
             Play Archive
           </button>
         </div>
+        <!-- Ad slot for not-signed-in players (placeholder for now) -->
+        <div id="result-ad" class="result-ad hidden">Ad Placeholder</div>
         <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
            class="donate-btn result-donate-btn" target="_blank" rel="noopener">
           Donate to CMU
@@ -542,6 +542,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=17" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.10.14" defer></script>
+<script src="script.js?v=2.10.15" defer></script>
 </body>
 </html>

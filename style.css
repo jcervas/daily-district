@@ -2627,21 +2627,38 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   padding: 10px 12px 0;
   flex-shrink: 0;
 }
-/* Keep the result-modal back button in its own row (the base .modal-close is
-   position:absolute, which floated it over the district preview map). */
-#result-modal .result-modal-close { position: static; }
+/* Back button overlays the district preview's top-right corner (no border, saves a row).
+   A translucent pill keeps it legible over the map imagery. */
 .result-modal-close {
-  font-size: 0.82rem;
+  position: absolute;
+  top: 10px; right: 10px;
+  z-index: 3;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   padding: 4px 10px;
+  border: none;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: none;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   cursor: pointer;
+  color: #fff;
+}
+.result-modal-close:hover { background: rgba(0, 0, 0, 0.65); }
+/* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
+.result-ad {
+  margin: 10px 0 4px;
+  padding: 22px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted);
 }
-.result-modal-close:hover { color: var(--text); border-color: var(--text); }
 
 /* ---- Utilities ---- */
 .hidden { display: none !important; }

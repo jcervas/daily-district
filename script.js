@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.14';
+const VERSION_NUMBER = '2.10.15';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4735,6 +4735,8 @@ function showResult(won, autoOpen = true) {
   const personalStats = document.getElementById('result-personal-stats');
   if (anonCta) anonCta.classList.toggle('hidden', !isAnonymousPlayer);
   if (personalStats) personalStats.classList.toggle('hidden', isAnonymousPlayer);
+  // Ad slot: shown only to not-signed-in players.
+  document.getElementById('result-ad')?.classList.toggle('hidden', !isAnonymousPlayer);
 }
 
 function buildShareText() {
