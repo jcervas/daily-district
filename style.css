@@ -1291,7 +1291,9 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   padding: 24px;
   max-width: 480px;
   width: 100%;
-  max-height: 85vh;
+  /* Fill the full height below the header when content needs it (the .modal reserves
+     header-h + 16px on top and 16px below); scroll internally past that. */
+  max-height: calc(100dvh - var(--header-h) - 32px);
   overflow-y: auto;
   position: relative;
   box-shadow: var(--shadow-lg);
