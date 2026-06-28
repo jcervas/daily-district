@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.8';
+const VERSION_NUMBER = '2.10.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2156,7 +2156,7 @@ async function fetchAndRenderCensusPanel(districtData) {
   const ppRankTxt = moreThan(pct.compactness);
   const ppCaption = ppScore == null ? '' :
     `<details class="ms-caption">
-       <summary>Compactness — ${ppLabel}${ppRankTxt ? `, ${ppRankTxt}` : ''} <span class="ms-info">ⓘ</span></summary>
+       <summary>Polsby–Popper &amp; Reock <span class="ms-info">ⓘ</span></summary>
        <div class="ms-explain">
          <div class="cmpct-cols">
            <div class="cmpct-col">${compactnessSvg(todayDistrict)}<div class="cmpct-name">Polsby–Popper</div><div class="cmpct-val">${ppScore.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
@@ -2192,10 +2192,20 @@ async function fetchAndRenderCensusPanel(districtData) {
         ${raceStack}${raceLegend}
       </div>
       <div class="census-card census-shape-card">
+        <div class="label">Compactness</div>
+        <div class="value">${ppScore != null ? ppLabel.replace(/^./, c => c.toUpperCase()) : '—'}</div>
+        <div class="sub">${ppRankTxt || '2026 district boundaries'}</div>
+        ${ppCaption}
+      </div>
+      <div class="census-card">
+        <div class="label">District Perimeter</div>
+        <div class="value">${perimMi > 0 ? perimMi.toLocaleString() + ' mi' : '—'}</div>
+        <div class="sub">outline length</div>
+      </div>
+      <div class="census-card">
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
-        <div class="sub">${perimMi > 0 ? `${perimMi.toLocaleString()} mi perimeter` : '2026 district boundaries'}</div>
-        ${ppCaption}
+        <div class="sub">${density > 0 ? `${formatNumber(density)} people / sq mi` : '2026 district boundaries'}</div>
       </div>
       <div class="census-card census-shape-card">
         <div class="label">State Delegation</div>

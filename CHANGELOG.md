@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.9 — Split shape stats into three cards
+
+- The combined "District Area" card is now three separate District Profile cards: **Compactness** (with the expandable Polsby–Popper & Reock breakdown), **District Perimeter**, and **District Area**.
+
 ## v2.10.8 — District Profile auto-fits its content
 
 - The District Profile sheet now sizes to its content when that fits in the space below the header (showing everything by default), and only falls back to the reduced ~66% height — with swipe-up expansion — when the content is too tall to fit. Re-measured on open, after the profile loads, and on resize.
