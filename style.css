@@ -1723,9 +1723,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 /* Top ribbon */
 .gameover-ribbon {
   flex-shrink: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
+  margin-bottom: 10px;   /* sits at the top of #gameover-next, above the countdown text */
 }
 .gameover-ribbon-text {
   font-size: 0.95rem;

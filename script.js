@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.9';
+const VERSION_NUMBER = '2.10.10';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1470,13 +1470,6 @@ function buildGameoverDiv() {
   el.id = 'gameover-modal';
   el.innerHTML = `
     <div class="gameover-modal-content">
-      <div class="gameover-ribbon banner">
-        <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
-        <div class="banner-actions">
-          <button id="gameover-result-btn">View Result</button>
-          <button id="gameover-new-map-btn">Play Archive</button>
-        </div>
-      </div>
       <div class="gameover-card">
         <div class="gameover-card-header">
           <span id="gameover-headline" class="gameover-headline"></span>
@@ -1490,6 +1483,13 @@ function buildGameoverDiv() {
           </div>
         </div>
         <div id="gameover-next" class="gameover-next">
+          <div class="gameover-ribbon banner">
+            <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
+            <div class="banner-actions">
+              <button id="gameover-result-btn">View Result</button>
+              <button id="gameover-new-map-btn">Play Archive</button>
+            </div>
+          </div>
           <div class="gameover-next-main">
             <span class="gameover-next-title">That's today's district!</span>
             <span class="gameover-next-sub">New district in <strong id="gameover-next-countdown">--:--:--</strong> &middot; midnight ET</span>

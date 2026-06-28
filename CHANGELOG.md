@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.10 — Move the result ribbon into the game-over card
+
+- The "View Result / Play Archive" ribbon is now nested inside `#gameover-next` (above the countdown) instead of being a separate top-level bar — one unified block. Restyled it as a rounded banner to fit inside the card.
+
 ## v2.10.9 — Split shape stats into three cards
 
 - The combined "District Area" card is now three separate District Profile cards: **Compactness** (with the expandable Polsby–Popper & Reock breakdown), **District Perimeter**, and **District Area**.
