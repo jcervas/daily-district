@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.10.11 — Final guess lands on the result modal
+
+- After the final guess (win or loss), the reveal tween now hands off from the gold/red flash to the result modal's background and opens the **result modal** directly, instead of stopping on the game-over screen.
+- The result modal's top-right control now reads **"Back to <district> →"** (e.g., "Back to LA-04 →"); it closes the result and returns to the full game-over view (map + District Profile).
+
 ## v2.10.10 — Move the result ribbon into the game-over card
 
 - The "View Result / Play Archive" ribbon is now nested inside `#gameover-next` (above the countdown) instead of being a separate top-level bar — one unified block. Restyled it as a rounded banner to fit inside the card.

@@ -2623,7 +2623,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 /* ---- Result modal close button ---- */
 .result-modal-header {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;   /* "Back to district X" sits top-right */
   padding: 10px 12px 0;
   flex-shrink: 0;
 }

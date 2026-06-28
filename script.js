@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.10';
+const VERSION_NUMBER = '2.10.11';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2661,21 +2661,24 @@ function startGameOverTransition(won, dist, opts = {}) {
     .ease(d3.easeCubicInOut)
     .attrTween('d', () => t => toPath(interp(t)))
     .on('end', async () => {
-      // Remove the full-viewport flash overlay in a finally so an error in
-      // endGame()/showGameoverModal() can never leave the screen locked on the
-      // gold/red reveal. The fill holds full-screen while `ready` resolves.
+      // The fill holds full-screen while `ready` resolves, then we build the game-over
+      // screen behind it, land on the result modal, and hand the gold/red flash off to
+      // the result background before revealing it. Errors must never leave the screen
+      // locked on the flash, so always remove the overlay.
       try {
         if (ready) { try { await ready; } catch (_) {} }
         endGame(won, { skipAnims: true });
-        showGameoverModal();
-        if (_gameOverAnimsCallback) {
-          _gameOverAnimsCallback();
-          _gameOverAnimsCallback = null;
-        }
+        showGameoverModal();   // build the game-over screen…
+        openResultModal();     // …but land on the result modal on top of it
+        _gameOverAnimsCallback = null;
+        // Tween the flash colour to the result modal's background, then fade it away.
+        const surface = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#ffffff';
+        pathEl.transition().duration(300).ease(d3.easeCubicInOut).style('fill', surface)
+          .transition().duration(220).style('opacity', 0)
+          .on('end', () => svgEl.remove());
       } catch (e) {
         console.error('game-over reveal error:', e);
         reportClientError('gameover_reveal', e);
-      } finally {
         svgEl.remove();
       }
     });
@@ -4631,6 +4634,10 @@ function openResultModal() {
   document.querySelector('.gameover-results-arrow')?.remove();
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
+  // Label the close control with the answer district so it reads "Back to TX-07 →".
+  const backBtn = document.getElementById('result-back-btn');
+  const ansId = todayDistrict?.properties?.['state-district'];
+  if (backBtn) backBtn.textContent = (gameOver && ansId) ? `Back to ${ansId} →` : 'Back to map →';
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
@@ -5196,6 +5203,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameOver && todayDistrict) buildDistrictD3Map(todayDistrict.properties.state);
   });
 
+  // Closing the result modal at game-over returns to the full game-over view:
+  // reveal the game-over screen behind it and re-open the District Profile sheet.
+  const revealGameoverFromResult = () => {
+    document.getElementById('gameover-modal')?.classList.remove('hidden');
+    document.getElementById('gameover-census')?.classList.add('open');
+  };
+
   // Modal close buttons
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -5206,6 +5220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('hints-clues-list');
         if (list) list.innerHTML = '';
       }
+      if (modal.id === 'result-modal' && gameOver) revealGameoverFromResult();
     });
   });
 
@@ -5217,9 +5232,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target !== modal) return;
       if (modal.id === 'welcome-modal') return;
       modal.classList.add('hidden');
-      if (modal.id === 'result-modal' && gameOver) {
-        document.getElementById('gameover-modal')?.classList.remove('hidden');
-      }
+      if (modal.id === 'result-modal' && gameOver) revealGameoverFromResult();
     });
   });
 
