@@ -22,7 +22,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CREATEMAPS="$(cd "$SCRIPT_DIR/../../../createMaps" && pwd)"
+# createMaps is a sibling repo (…/GitHub/createMaps). Allow override via $CREATEMAPS.
+CREATEMAPS="${CREATEMAPS:-$(cd "$SCRIPT_DIR/../createMaps" && pwd)}"
 
 DISTRICTS_SRC="$CREATEMAPS/national/output/national-cd-2026.geojson"
 URBAN_SRC="$CREATEMAPS/us-urban.json"
