@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.10.16 — Generic back button + "Results" wording
+
+- The result modal's close button is now a generic "Back to district →" (no longer names the specific district).
+- "Result" → "Results" throughout the UI (the Results tab, "View Results", "Review Results").
+
 ## v2.10.15 — Result modal: overlay back button + ad slot
 
 - The "Back to ‹district›" button now overlays the top-right of the district preview as a borderless translucent pill (removed its own header row, saving space).

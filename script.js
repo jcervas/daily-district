@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.15';
+const VERSION_NUMBER = '2.10.16';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1475,7 +1475,7 @@ function buildGameoverDiv() {
           <div class="gameover-ribbon banner">
             <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
             <div class="banner-actions">
-              <button id="gameover-result-btn">View Result</button>
+              <button id="gameover-result-btn">View Results</button>
               <button id="gameover-new-map-btn">Play Archive</button>
             </div>
           </div>
@@ -4649,10 +4649,8 @@ function openResultModal() {
   document.querySelector('.gameover-results-arrow')?.remove();
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
-  // Label the close control with the answer district so it reads "Back to TX-07 →".
   const backBtn = document.getElementById('result-back-btn');
-  const ansId = todayDistrict?.properties?.['state-district'];
-  if (backBtn) backBtn.textContent = (gameOver && ansId) ? `Back to ${ansId} →` : 'Back to map →';
+  if (backBtn) backBtn.textContent = 'Back to district →';
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
@@ -5118,7 +5116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const btnResult = document.createElement('button');
       btnResult.className = 'welcome-action-btn secondary';
-      btnResult.textContent = 'Review Result';
+      btnResult.textContent = 'Review Results';
       btnResult.addEventListener('click', () => {
         welcomeModal.classList.add('hidden');
         openResultModal();
