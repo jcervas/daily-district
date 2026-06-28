@@ -924,6 +924,8 @@ circle.tile-ripple {
   border: 1px solid var(--border);
   flex: 0 0 clamp(130px, 27vh, 240px);
 }
+/* Inset the result preview so it reads as embedded in the modal (result modal has 0 padding). */
+#result-district-preview { margin: 12px 12px 0; }
 .district-preview-svg {
   width: 100%;
   height: 100%;
@@ -2631,7 +2633,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
    A translucent pill keeps it legible over the map imagery. */
 .result-modal-close {
   position: absolute;
-  top: 10px; right: 10px;
+  top: 20px; right: 20px;
   z-index: 3;
   font-size: 0.8rem;
   font-weight: 600;

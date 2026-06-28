@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.18 — Inset result preview
+
+- Added padding around the result district preview so it reads as embedded in the modal (was edge-to-edge); nudged the overlay back button to sit inside the inset corner.
+
 ## v2.10.17 — Ad slot fills available space
 
 - The result ad placeholder now stretches to fill the leftover width and height of the results pane (with padding + a min height), instead of being a small fixed box.
