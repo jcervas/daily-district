@@ -1255,7 +1255,7 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .ms-caption summary { cursor: pointer; list-style: none; }
 .ms-caption summary::-webkit-details-marker { display: none; }
 .ms-caption summary::marker { content: ''; }
-.ms-info     { opacity: 0.65; font-size: 0.62rem; vertical-align: 1px; }
+.ms-info     { color: var(--accent); font-size: 0.92rem; font-weight: 700; vertical-align: -1px; margin-left: 2px; }
 .ms-explain  { margin-top: 6px; line-height: 1.45; }
 .ms-explain b { color: var(--text); font-weight: 700; }
 /* Two labeled compactness graphics (Polsby–Popper + Reock) side by side. */

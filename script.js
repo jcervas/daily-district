@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.12';
+const VERSION_NUMBER = '2.10.13';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2154,14 +2154,17 @@ async function fetchAndRenderCensusPanel(districtData) {
   // each with its score and how it ranks among all districts.
   const moreThan = p => (p == null || isNaN(p)) ? '' : `more compact than ${Math.round(p * 100)}% of districts`;
   const ppRankTxt = moreThan(pct.compactness);
+  // The two shape graphics (+ score + rank) show right on the card; the definitions
+  // of Polsby–Popper / Reock stay tucked in the expander.
+  const ppGraphics = ppScore == null ? '' :
+    `<div class="cmpct-cols">
+       <div class="cmpct-col">${compactnessSvg(todayDistrict)}<div class="cmpct-name">Polsby–Popper</div><div class="cmpct-val">${ppScore.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
+       ${reock != null ? `<div class="cmpct-col">${reockSvg(todayDistrict)}<div class="cmpct-name">Reock</div><div class="cmpct-val">${reock.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.reock)}</div></div>` : ''}
+     </div>`;
   const ppCaption = ppScore == null ? '' :
     `<details class="ms-caption">
-       <summary>Polsby–Popper &amp; Reock <span class="ms-info">ⓘ</span></summary>
+       <summary>What do these mean? <span class="ms-info">ⓘ</span></summary>
        <div class="ms-explain">
-         <div class="cmpct-cols">
-           <div class="cmpct-col">${compactnessSvg(todayDistrict)}<div class="cmpct-name">Polsby–Popper</div><div class="cmpct-val">${ppScore.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
-           ${reock != null ? `<div class="cmpct-col">${reockSvg(todayDistrict)}<div class="cmpct-name">Reock</div><div class="cmpct-val">${reock.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.reock)}</div></div>` : ''}
-         </div>
          <p class="cmpct-note">Both score 0–1; higher means a more regular shape. Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines); Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
        </div>
      </details>`;
@@ -2194,13 +2197,12 @@ async function fetchAndRenderCensusPanel(districtData) {
       <div class="census-card census-shape-card">
         <div class="label">Compactness</div>
         <div class="value">${ppScore != null ? ppLabel.replace(/^./, c => c.toUpperCase()) : '—'}</div>
-        <div class="sub">${ppRankTxt || '2026 district boundaries'}</div>
+        ${ppGraphics}
         ${ppCaption}
       </div>
       <div class="census-card">
         <div class="label">District Perimeter</div>
         <div class="value">${perimMi > 0 ? perimMi.toLocaleString() + ' mi' : '—'}</div>
-        <div class="sub">outline length</div>
       </div>
       <div class="census-card">
         <div class="label">District Area</div>

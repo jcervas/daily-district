@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.10.13 — Compactness graphics on the card
+
+- The Compactness card now shows the Polsby–Popper and Reock shape graphics (with score + percentile) directly on the card; the expander now holds just the definitions.
+- Made the expander info "ⓘ" more prominent (accent-colored, larger).
+
 ## v2.10.12 — Match district-tile colors to the state colors
 
 - District-pick tiles now use the same `STATE_COLOR` palette as the state map: in-play = valid color, answer = confirmed, eliminated/cold = elim, and the roll-over (hover) color now matches the state hover in both light and dark themes (the tile hover was previously a single hardcoded value).
