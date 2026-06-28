@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.19 — Settings/Help open above the result modal
+
+- The header-triggered modals (Settings, How to Play, Hints, Feedback) now have a higher z-index than the game modals, so they always open on top of the result/game-over/welcome modals instead of silently behind them.
+
 ## v2.10.18 — Inset result preview
 
 - Added padding around the result district preview so it reads as embedded in the modal (was edge-to-edge); nudged the overlay back button to sit inside the inset corner.

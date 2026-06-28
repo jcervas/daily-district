@@ -917,7 +917,6 @@ circle.tile-ripple {
 /* District shape preview in result modal (both tabs) */
 #result-district-preview,
 #census-district-preview {
-  width: 100%;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--surface-alt);
@@ -2034,6 +2033,10 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 /* Sits above the welcome splash (z-index 200) so the sign-in gate shows first. */
 #login-modal { z-index: 300; }
 #profile-modal { z-index: 320; }
+/* Header-triggered utility modals must always supersede whatever game modal is up
+   (result / welcome / game-over, all z-index 200) — and login/profile — since the menu
+   bar (z-index 600) is reachable over everything. */
+#settings-modal, #how-to-modal, #hints-modal, #feedback-modal { z-index: 340; }
 .profile-checkbox {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; color: var(--muted); cursor: pointer; padding: 2px 0;
