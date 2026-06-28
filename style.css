@@ -831,10 +831,10 @@ circle.tile-ripple {
 
 /* ---- Result section ---- */
 /* ---- Result modal ---- */
-/* `.modal-content.result-modal-content` (not just `.result-modal-content`) so this
-   beats the later `.modal-content { max-width: 480px }` base rule. */
+/* All modals cap at the base 480px on desktop (full-screen on mobile, below); the
+   result modal just needs its own height/layout. */
 .modal-content.result-modal-content {
-  max-width: 680px;
+  max-width: 480px;
   width: 94vw;
   height: 85vh;
   max-height: 85vh;
@@ -2206,7 +2206,7 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 
 /* ---- Welcome / splash modal ---- */
 .welcome-modal-content {
-  max-width: 520px;
+  max-width: 480px;
   width: 92vw;
   height: min(94dvh, 760px);
   text-align: center;

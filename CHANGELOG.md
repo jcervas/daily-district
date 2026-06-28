@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.3 — Uniform 480px modal width
+
+- All modals now cap at the base 480px on desktop — capped the welcome modal (was 520px). Mobile stays full-screen (welcome/result). Cleaned up a stale comment on the result modal's width rule.
+
 ## v2.10.2 — Archive: reset map-imagery stage on launch
 
 - Fixed archive replays jumping straight to satellite imagery after the first guess. `currentMapStage` is a persistent "highest stage reached" ratchet; launching an archive after finishing the daily (which reaches stage 3) carried that over. It's now reset to 0 on archive launch, so archives reveal the basemap in stages exactly like the daily.
