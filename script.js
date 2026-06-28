@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.4';
+const VERSION_NUMBER = '2.10.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1856,12 +1856,6 @@ function renderInlinePersonalStats() {
   const wonToday = guessHistory.some(g => g.correct && g.phase === 'district');
   const hiKey = gameOver ? (wonToday ? guessCount : 'X') : null;
 
-  const avgSecs  = stats.won > 0 ? Math.round((stats.totalWonTime || 0) / stats.won) : null;
-  const avgLabel = avgSecs !== null ? formatTime(avgSecs) : '—';
-  const totalWonGuesses = [1,2,3,4,5,6].reduce((s, k) => s + k * (dist[k] || 0), 0);
-  const totalWonCount   = [1,2,3,4,5,6].reduce((s, k) => s + (dist[k] || 0), 0);
-  const avgGuesses = totalWonCount > 0 ? (totalWonGuesses / totalWonCount).toFixed(1) : '—';
-
   // Same markup/classes as the Me / Everyone tabs so the stat cards + histogram
   // are identical in style and width.
   el.innerHTML = `
@@ -1874,8 +1868,7 @@ function renderInlinePersonalStats() {
     <div class="result-dist">
       <h4>Guess Distribution</h4>
       ${renderDistBars(dist, hiKey)}
-    </div>
-    <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong> &nbsp;&middot;&nbsp; Avg. time: <strong>${avgLabel}</strong></div>`;
+    </div>`;
 }
 
 // Helper: switch the result modal between "result" and "census" tabs
@@ -4771,8 +4764,6 @@ function renderAggregatePanel(d, emptyMsg) {
 
 // My Stats — the signed-in player only (distribution + avg guesses + streaks).
 function renderUserStats(u) {
-  const avgGuesses = u.avgGuessesWin != null ? Number(u.avgGuessesWin).toFixed(1) : '—';
-  const avgTime    = u.avgSeconds != null ? formatTime(Number(u.avgSeconds)) : '—';
   const wonToday = gameOver && guessHistory.some(g => g.correct && g.phase === 'district');
   const hiKey = gameOver ? (wonToday ? guessCount : 'X') : null;
   return `
@@ -4785,8 +4776,7 @@ function renderUserStats(u) {
     <div class="result-dist">
       <h4>Guess Distribution</h4>
       ${renderDistBars(u.dist, hiKey)}
-    </div>
-    <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong> &nbsp;&middot;&nbsp; Avg. time: <strong>${avgTime}</strong></div>`;
+    </div>`;
 }
 
 
