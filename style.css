@@ -1263,8 +1263,8 @@ body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50
 .cmpct-cols  { display: flex; gap: 14px; }
 .cmpct-col   { flex: 1; min-width: 0; text-align: center; }
 .cmpct-col .mini-shape { width: 100%; height: auto; max-width: 64px; margin: 0 auto 4px; }
-.cmpct-name  { font-weight: 700; color: var(--text); font-size: 0.72rem; }
-.cmpct-val   { font-weight: 800; color: var(--text); font-size: 0.92rem; }
+.cmpct-name  { font-weight: 700; color: var(--text); font-size: 0.66rem; }
+.cmpct-val   { font-weight: 800; color: var(--text); font-size: 0.62rem; }
 .cmpct-rank  { font-size: 0.66rem; color: var(--muted); line-height: 1.3; }
 .cmpct-note  { margin: 8px 0 0; line-height: 1.45; }
 body.dark-mode .ms-circle, body:not(.light-mode) .ms-circle { stroke: rgba(255,255,255,0.5); }

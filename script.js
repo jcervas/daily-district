@@ -2166,14 +2166,17 @@ async function fetchAndRenderCensusPanel(districtData) {
   // of Polsby–Popper / Reock stay tucked in the expander.
   const ppGraphics = ppScore == null ? '' :
     `<div class="cmpct-cols">
-       <div class="cmpct-col">${compactnessSvg(todayDistrict)}<div class="cmpct-name">Polsby–Popper</div><div class="cmpct-val">${ppScore.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
-       ${reock != null ? `<div class="cmpct-col">${reockSvg(todayDistrict)}<div class="cmpct-name">Reock</div><div class="cmpct-val">${reock.toFixed(2)}</div><div class="cmpct-rank">${moreThan(pct.reock)}</div></div>` : ''}
+       <div class="cmpct-col"><div class="cmpct-name">Polsby–Popper</div>${compactnessSvg(todayDistrict)}<div class="cmpct-val">${ppScore.toFixed(2)}</div></div>
+       ${reock != null ? `<div class="cmpct-col"><div class="cmpct-name">Reock</div>${reockSvg(todayDistrict)}<div class="cmpct-val">${reock.toFixed(2)}</div></div>` : ''}
      </div>`;
   const ppCaption = ppScore == null ? '' :
     `<details class="ms-caption">
        <summary>What do these mean? <span class="ms-info">ⓘ</span></summary>
        <div class="ms-explain">
-         <p class="cmpct-note">Both score 0–1; higher means a more regular shape. Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines); Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
+    <div class="cmpct-cols">
+    <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
+    <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.reock)}</div></div></div>
+         <p class="cmpct-note">Both score 0–1; higher means a more regular shape.<br>Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines)<br>Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
        </div>
      </details>`;
 
@@ -4485,9 +4488,22 @@ function renderDistrictPreview(containerId = 'result-district-preview') {
   const projection = _previewProjection(W, H, pad);
   const pathGen = d3.geoPath(projection);
 
-  // Bounding box of district for filtering roads/urban to visible area
-  const [[bx0, by0], [bx1, by1]] = d3.geoBounds(todayDistrict);
-  const mg = 0.1;
+  // Filter roads/urban to the geographic area actually VISIBLE in the preview viewport
+  // (not just the district bbox) so they fill the whole box rather than stopping at the
+  // district edges. Invert the viewport corners; fall back to the district bbox. The
+  // preview container's overflow:hidden clips the overdraw cleanly at the box edges.
+  const db = d3.geoBounds(todayDistrict);
+  let bx0 = db[0][0], by0 = db[0][1], bx1 = db[1][0], by1 = db[1][1];
+  try {
+    const pts = [[0, 0], [W, 0], [0, H], [W, H]].map(p => projection.invert(p))
+      .filter(p => p && isFinite(p[0]) && isFinite(p[1]));
+    if (pts.length >= 2) {
+      const lons = pts.map(p => p[0]), lats = pts.map(p => p[1]);
+      bx0 = Math.min(...lons); bx1 = Math.max(...lons);
+      by0 = Math.min(...lats); by1 = Math.max(...lats);
+    }
+  } catch (_) { /* keep district bbox */ }
+  const mg = 0.05;
   const inBounds = f => {
     try {
       const [[fx0, fy0], [fx1, fy1]] = d3.geoBounds(f);
