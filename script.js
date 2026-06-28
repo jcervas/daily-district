@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.6';
+const VERSION_NUMBER = '2.10.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4764,6 +4764,8 @@ function renderAggregatePanel(d, emptyMsg) {
 
 // My Stats — the signed-in player only (distribution + avg guesses + streaks).
 function renderUserStats(u) {
+  const avgGuesses = u.avgGuessesWin != null ? Number(u.avgGuessesWin).toFixed(1) : '—';
+  const avgTime    = u.avgSeconds != null ? formatTime(Number(u.avgSeconds)) : '—';
   const wonToday = gameOver && guessHistory.some(g => g.correct && g.phase === 'district');
   const hiKey = gameOver ? (wonToday ? guessCount : 'X') : null;
   return `
@@ -4776,7 +4778,8 @@ function renderUserStats(u) {
     <div class="result-dist">
       <h4>Guess Distribution</h4>
       ${renderDistBars(u.dist, hiKey)}
-    </div>`;
+    </div>
+    <div class="rstat-avg-time">Avg. guesses (wins): <strong>${avgGuesses}</strong> &nbsp;&middot;&nbsp; Avg. time: <strong>${avgTime}</strong></div>`;
 }
 
 
