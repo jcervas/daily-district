@@ -2650,7 +2650,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   cursor: pointer;
   color: #fff;
 }
-.result-modal-close:hover { background: rgba(0, 0, 0, 0.65); }
+/* Keep the text white on hover — the base .modal-close:hover sets color:var(--text),
+   which turns it black on the dark pill in light mode. */
+.result-modal-close:hover { background: rgba(0, 0, 0, 0.65); color: #fff; }
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
   /* Fill the leftover space in the result pane (the pane centers its children, so
