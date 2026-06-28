@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.10.14 — Percentile bars on more cards, header merge, cleaner share
+
+- Added percentile range bars to **District Area**, **District Perimeter**, and **2024 Presidential Vote** (area/perimeter are percentile-positioned since they're heavily skewed; vote shows an R↔D margin axis with "More Republican/Democratic than X% of districts"). Baked area/perimeter/margin percentiles.
+- Merged the game-over `gameover-card-header` (answer + guess grid + time) into `#gameover-next`.
+- Shared results (text + image) no longer pad with empty `□` slots — only the guesses actually made are shown.
+
 ## v2.10.13 — Compactness graphics on the card
 
 - The Compactness card now shows the Polsby–Popper and Reock shape graphics (with score + percentile) directly on the card; the expander now holds just the definitions.

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.13';
+const VERSION_NUMBER = '2.10.14';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1471,23 +1471,23 @@ function buildGameoverDiv() {
   el.innerHTML = `
     <div class="gameover-modal-content">
       <div class="gameover-card">
-        <div class="gameover-card-header">
-          <span id="gameover-headline" class="gameover-headline"></span>
-          <div class="gameover-stats">
-            <span id="gameover-grid" class="gameover-grid"></span>
-            <span id="gameover-solved-label" class="gameover-solved-label"></span>
-            <span class="gameover-time-wrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span id="gameover-time" class="gameover-time"></span>
-            </span>
-          </div>
-        </div>
         <div id="gameover-next" class="gameover-next">
           <div class="gameover-ribbon banner">
             <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
             <div class="banner-actions">
               <button id="gameover-result-btn">View Result</button>
               <button id="gameover-new-map-btn">Play Archive</button>
+            </div>
+          </div>
+          <div class="gameover-card-header">
+            <span id="gameover-headline" class="gameover-headline"></span>
+            <div class="gameover-stats">
+              <span id="gameover-grid" class="gameover-grid"></span>
+              <span id="gameover-solved-label" class="gameover-solved-label"></span>
+              <span class="gameover-time-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="gameover-time" class="gameover-time"></span>
+              </span>
             </div>
           </div>
           <div class="gameover-next-main">
@@ -1934,23 +1934,31 @@ const METRICS = {
   edu:            { r: [11, 80],          f: _fmtPct },
   density:        { r: [1, 52265],        f: v => v >= 1000 ? Math.round(v / 1000) + 'k' : v },
   popChange:      { r: [-10, 6],          f: _fmtChg },
+  area:           { r: [13, 583360],      f: v => v >= 1000 ? Math.round(v / 1000) + 'k' : v },
+  perimeter:      { r: [18, 24535],       f: v => v >= 1000 ? Math.round(v / 1000) + 'k' : v },
+  margin:         { r: [-66, 77],         f: v => v > 0 ? 'D+' + v : v < 0 ? 'R+' + (-v) : 'EVEN' },
 };
 // Thin track with a tick at the value's position within the metric's full range,
 // min/max labels, and (if a percentile rank is supplied) a plain-words rank line —
 // e.g. "Higher than 97% of districts". `pctl` is census.pct[key] (0..1).
-function pctBar(value, key, pctl) {
+// opts.posByPct — place the tick at the percentile (for heavily-skewed metrics like
+// area/perimeter where a linear value position would bunch everything at one end).
+// opts.rank — { hi, lo } verbs for the rank line (default Higher/Lower).
+function pctBar(value, key, pctl, opts = {}) {
   const m = key && METRICS[key];
   if (value == null || isNaN(value) || !m) return '';
-  const pos = Math.max(0, Math.min(1, (value - m.r[0]) / (m.r[1] - m.r[0])));
+  const linPos = (value - m.r[0]) / (m.r[1] - m.r[0]);
+  const pos = Math.max(0, Math.min(1, (opts.posByPct && pctl != null) ? pctl : linPos));
   const x = Math.max(2, Math.min(98, pos * 100));
   const bar = `<svg class="mini-pct" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">`
             + `<line class="mp-track" x1="1.5" y1="5" x2="98.5" y2="5"/>`
             + `<rect class="mp-tick" x="${(x - 0.9).toFixed(1)}" y="0.5" width="1.8" height="9" rx="0.9"/></svg>`;
   let rank = '';
   if (pctl != null && !isNaN(pctl)) {
+    const w = opts.rank || { hi: 'Higher', lo: 'Lower' };
     rank = pctl >= 0.5
-      ? `<div class="mp-rank">Higher than ${Math.round(pctl * 100)}% of districts</div>`
-      : `<div class="mp-rank">Lower than ${Math.round((1 - pctl) * 100)}% of districts</div>`;
+      ? `<div class="mp-rank">${w.hi} than ${Math.round(pctl * 100)}% of districts</div>`
+      : `<div class="mp-rank">${w.lo} than ${Math.round((1 - pctl) * 100)}% of districts</div>`;
   }
   return `<div class="mp-wrap">${bar}<div class="mp-ends"><span>${m.f(m.r[0])}</span><span>${m.f(m.r[1])}</span></div>${rank}</div>`;
 }
@@ -2188,6 +2196,7 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="value">${voteValue}</div>
         <div class="sub">${voteSub}</div>
         ${voteStack}
+        ${margin != null ? pctBar(Math.round(+margin * 100), 'margin', pct.margin, { rank: { hi: 'More Democratic', lo: 'More Republican' } }) : ''}
       </div>
       <div class="census-card">
         <div class="label">Demographics</div>
@@ -2203,11 +2212,13 @@ async function fetchAndRenderCensusPanel(districtData) {
       <div class="census-card">
         <div class="label">District Perimeter</div>
         <div class="value">${perimMi > 0 ? perimMi.toLocaleString() + ' mi' : '—'}</div>
+        ${pctBar(perimMi, 'perimeter', pct.perimeter, { posByPct: true, rank: { hi: 'Longer', lo: 'Shorter' } })}
       </div>
       <div class="census-card">
         <div class="label">District Area</div>
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
         <div class="sub">${density > 0 ? `${formatNumber(density)} people / sq mi` : '2026 district boundaries'}</div>
+        ${pctBar(areaMi2, 'area', pct.area, { posByPct: true, rank: { hi: 'Larger', lo: 'Smaller' } })}
       </div>
       <div class="census-card census-shape-card">
         <div class="label">State Delegation</div>
@@ -4424,7 +4435,7 @@ function _renderShareBlob() {
   const outcome    = won ? `Solved in ${guessCount} / ${MAX_GUESSES}` : `Unsolved`;
   const usedSlots  = guessHistory.map(g =>
     g.correct && g.phase === 'district' ? '✓' : g.correct && g.phase === 'state' ? '○' : '✗');
-  const grid = [...usedSlots, ...Array(won ? MAX_GUESSES - guessCount : 0).fill('□')].join('  ');
+  const grid = usedSlots.join('  ');   // only the guesses made — no empty-slot padding
 
   const projection = _previewProjection(W, mapH, pad);
 
@@ -4736,8 +4747,7 @@ function buildShareText() {
     if (g.correct && g.phase === 'state')    return '○';  // correct state — not a "wrong" guess
     return '✗';
   });
-  const unusedCount = won ? MAX_GUESSES - guessCount : 0;
-  const grid = [...usedSlots, ...Array(unusedCount).fill('⬜')].join(' ');
+  const grid = usedSlots.join(' ');   // only the guesses made — no empty-slot padding
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
   return `🗺️ Daily District — ${outcome}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }

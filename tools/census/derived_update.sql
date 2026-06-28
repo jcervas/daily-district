@@ -27,7 +27,10 @@ r AS (
     percent_rank() OVER (ORDER BY (census->>'pop')::numeric/NULLIF((census->>'area_sqmi')::numeric,0)) AS density,
     percent_rank() OVER (ORDER BY 4*pi()*(census->>'area_sqmi')::numeric/power(NULLIF((census->>'perimeter_mi')::numeric,0),2)) AS compactness,
     percent_rank() OVER (ORDER BY (census->>'reock')::numeric) AS reock,
-    percent_rank() OVER (ORDER BY ((census->>'pop')::numeric-(census->>'pop2020')::numeric)/NULLIF((census->>'pop2020')::numeric,0)) AS "popChange"
+    percent_rank() OVER (ORDER BY ((census->>'pop')::numeric-(census->>'pop2020')::numeric)/NULLIF((census->>'pop2020')::numeric,0)) AS "popChange",
+    percent_rank() OVER (ORDER BY (census->>'area_sqmi')::numeric)    AS area,
+    percent_rank() OVER (ORDER BY (census->>'perimeter_mi')::numeric) AS perimeter,
+    percent_rank() OVER (ORDER BY (census->>'Margin2024Pres')::numeric) AS margin
   FROM d)
 UPDATE puzzles p SET census = census || jsonb_build_object('pct', jsonb_strip_nulls(jsonb_build_object(
   'income',round(r.income::numeric,3),'medianHome',round(r."medianHome"::numeric,3),'medianRent',round(r."medianRent"::numeric,3),
@@ -35,5 +38,6 @@ UPDATE puzzles p SET census = census || jsonb_build_object('pct', jsonb_strip_nu
   'povertyPct',round(r."povertyPct"::numeric,3),'homeownerPct',round(r."homeownerPct"::numeric,3),'uninsuredPct',round(r."uninsuredPct"::numeric,3),
   'veteranPct',round(r."veteranPct"::numeric,3),'meanCommuteMin',round(r."meanCommuteMin"::numeric,3),'avgHHSize',round(r."avgHHSize"::numeric,3),
   'edu',round(r.edu::numeric,3),'density',round(r.density::numeric,3),'compactness',round(r.compactness::numeric,3),
-  'reock',round(r.reock::numeric,3),'popChange',round(r."popChange"::numeric,3))))
+  'reock',round(r.reock::numeric,3),'popChange',round(r."popChange"::numeric,3),
+  'area',round(r.area::numeric,3),'perimeter',round(r.perimeter::numeric,3),'margin',round(r.margin::numeric,3))))
 FROM r WHERE p.district_id = r.district_id;
