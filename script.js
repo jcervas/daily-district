@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.20';
+const VERSION_NUMBER = '2.10.21';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5156,14 +5156,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Build buttons after init() resolves so guessCount/gameOver reflect restored state
+  // After init() resolves (data loaded), keep the loader globe spinning until the heavy
+  // US-ref map is actually BUILT — i.e. the game is ready behind the splash — then swap
+  // the globe for the Play buttons. (The synchronous build briefly freezes the globe at
+  // the very end; that's preferable to dropping the loader before the maps are ready.)
+  // A couple of rAFs let the globe paint before/around the blocking build.
   _initPromise.then(() => {
-  buildWelcomeButtons();
-
-  // buildWelcomeButtons() just replaced the loader globe with the splash buttons, so
-  // the heavy US-ref-map build can now run without freezing the globe. Two rAFs let the
-  // button swap paint first. Idempotent — a restore path may have built it already.
-  requestAnimationFrame(() => requestAnimationFrame(ensureUSRefMap));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { ensureUSRefMap(); } catch (e) { reportClientError('init_refmap', e); }
+    requestAnimationFrame(() => buildWelcomeButtons());
+  }));
 
   // How to play — auto-show on first visit (after welcome buttons ready)
   const howToModal = document.getElementById('how-to-modal');

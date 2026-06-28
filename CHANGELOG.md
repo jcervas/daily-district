@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.21 — Loader globe waits for the map to be ready
+
+- The welcome loader globe now keeps spinning until the US reference map is actually built (game ready), then swaps to the Play buttons — instead of dropping the globe as soon as the puzzle data finished loading, before the maps were built.
+
 ## v2.10.19 — Settings/Help open above the result modal
 
 - The header-triggered modals (Settings, How to Play, Hints, Feedback) now have a higher z-index than the game modals, so they always open on top of the result/game-over/welcome modals instead of silently behind them.
