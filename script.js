@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.22';
+const VERSION_NUMBER = '2.10.23';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2222,6 +2222,11 @@ async function fetchAndRenderCensusPanel(districtData) {
         <div class="value">${areaMi2 > 0 ? areaMi2.toLocaleString() + ' sq mi' : '—'}</div>
         <div class="sub">${density > 0 ? `${formatNumber(density)} people / sq mi` : '2026 district boundaries'}</div>
         ${pctBar(areaMi2, 'area', pct.area, { posByPct: true, rank: { hi: 'Larger', lo: 'Smaller' } })}
+      </div>
+      <div class="census-card">
+        <div class="label">District Plan Last Redrawn</div>
+        <div class="value">${d.planYear ? d.planYear : (isAtLarge ? 'At-large' : '—')}</div>
+        <div class="sub">${d.planYear ? (String(d.planYear) === '2022' ? 'post-2020 Census redistricting' : 'mid-decade redraw') : (isAtLarge ? 'single-district state — no redistricting' : '')}</div>
       </div>
       <div class="census-card census-shape-card">
         <div class="label">State Delegation</div>

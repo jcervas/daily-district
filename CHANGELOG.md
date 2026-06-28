@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.10.23 — "District plan last redrawn" card
+
+- New District Profile card showing the year the district's congressional map was last redrawn (per state), sourced from the latest DRA block-assignment plan year — `build_plan_year.py` / `make plan-year`. Shows "post-2020 Census redistricting" for 2022, "mid-decade redraw" for 2024/2026, and "At-large" for single-district states.
+
 ## v2.10.21 — Loader globe waits for the map to be ready
 
 - The welcome loader globe now keeps spinning until the US reference map is actually built (game ready), then swaps to the Play buttons — instead of dropping the globe as soon as the puzzle data finished loading, before the maps were built.

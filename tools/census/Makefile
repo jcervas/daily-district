@@ -6,6 +6,7 @@
 #   make reps          rebuild current House members (scraped from house.gov)
 #   make clues         rebuild the 6 state + 6 district hint cards (puzzles.clues)
 #   make pop2020       2020 Census population per district (for "change since 2020")
+#   make plan-year     latest congressional plan year per state
 #   make compactness   area / perimeter / Reock per district, computed in R (sf)
 #   make build         all of the above
 #   make push          push ALL generated SQL files to the database
@@ -42,13 +43,13 @@ export DD_DISTRICTS
 DD_BAF_DIR ?= /Users/cervas/Library/CloudStorage/GoogleDrive-jcervas@andrew.cmu.edu/My Drive/GitHub/createMaps/dra-block-assignments/2022-2026/congress
 export DD_BAF_DIR
 
-.PHONY: all build census reps clues pop2020 lang compactness push push-census push-reps push-clues push-derived push-pop2020 push-lang push-compactness clean help
+.PHONY: all build census reps clues pop2020 lang plan-year compactness push push-census push-reps push-clues push-derived push-pop2020 push-lang push-plan-year push-compactness clean help
 
 help:
 	@grep -E '^#   make ' $(MAKEFILE_LIST) | sed 's/^#   //'
 
 # ---- build (no database access) ----------------------------------
-build: census reps clues pop2020 compactness
+build: census reps clues pop2020 plan-year compactness
 
 census:               ## ACS tract aggregation -> census_out.json + census_update.sql
 	$(PYTHON) build_census.py
@@ -66,12 +67,15 @@ pop2020:              ## 2020 Census population per district -> pop2020_update.s
 lang:                 ## person-level non-English (C16001) -> lang_update.sql
 	$(PYTHON) build_lang.py
 
+plan-year:            ## latest congressional plan year per state -> plan_year_update.sql
+	$(PYTHON) build_plan_year.py
+
 compactness:          ## area/perimeter/Reock in R (sf) -> compactness_out.csv + compactness_update.sql
 	$(RSCRIPT) compactness.R "$(DD_DISTRICTS)" compactness_out.csv
 	$(PYTHON) apply_compactness.py
 
 # ---- push to the database (needs DATABASE_URL + psql) -------------
-push: push-census push-reps push-clues push-pop2020 push-compactness push-derived
+push: push-census push-reps push-clues push-pop2020 push-plan-year push-compactness push-derived
 
 push-census: census_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f census_update.sql
@@ -93,6 +97,10 @@ push-lang: lang_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f lang_update.sql
 	@echo "lang (person-level non-English) pushed."
 
+push-plan-year: plan_year_update.sql guard-db
+	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f plan_year_update.sql
+	@echo "plan-year pushed."
+
 push-compactness: compactness_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f compactness_update.sql
 	@echo "compactness (area + perimeter + reock) pushed."
@@ -111,4 +119,4 @@ guard-db:
 	  exit 1; }
 
 clean:
-	rm -f census_out.json census_update.sql reps_out.json reps_update.sql clues_update.sql pop2020_update.sql lang_update.sql compactness_out.csv compactness_update.sql
+	rm -f census_out.json census_update.sql reps_out.json reps_update.sql clues_update.sql pop2020_update.sql lang_update.sql plan_year_update.sql compactness_out.csv compactness_update.sql
