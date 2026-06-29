@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.6';
+const VERSION_NUMBER = '2.11.7';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2988,6 +2988,46 @@ function updateThemeToggle() {
   if (cb) cb.checked = isDarkMode();
 }
 
+// First-visit discoverability for the Settings gear: a small, non-blocking callout that
+// points at the icon (plus a brief icon pulse) instead of force-opening the modal. It
+// clears itself after 5s or on the player's first interaction with the gear.
+let _settingsHintTimer = null;
+function dismissSettingsHint() {
+  if (_settingsHintTimer) { clearTimeout(_settingsHintTimer); _settingsHintTimer = null; }
+  document.getElementById('settings-btn')?.classList.remove('hint-pulse');
+  const hint = document.getElementById('settings-hint');
+  if (hint) { hint.classList.remove('show'); setTimeout(() => hint.remove(), 250); }
+}
+function showSettingsHint() {
+  const btn = document.getElementById('settings-btn');
+  if (!btn || document.getElementById('settings-hint')) return;
+  // On first visit the "How to Play" modal is up over the header — wait until it's
+  // dismissed (any method) so the callout isn't hidden behind it or timed out unseen.
+  const howTo = document.getElementById('how-to-modal');
+  if (howTo && !howTo.classList.contains('hidden')) {
+    const mo = new MutationObserver(() => {
+      if (howTo.classList.contains('hidden')) { mo.disconnect(); setTimeout(showSettingsHint, 350); }
+    });
+    mo.observe(howTo, { attributes: true, attributeFilter: ['class'] });
+    return;
+  }
+  const hint = document.createElement('div');
+  hint.id = 'settings-hint';
+  hint.className = 'settings-hint';
+  hint.innerHTML = '<span class="settings-hint-gear">⚙️</span> Customize the theme &amp; map here';
+  document.body.appendChild(hint);
+  // Anchor below the gear with the arrow pointing up at it (arrow sits 18px from the
+  // bubble's left edge, so offset the bubble so that arrow lands on the gear's center).
+  const r = btn.getBoundingClientRect();
+  hint.style.top  = `${Math.round(r.bottom + 10)}px`;
+  hint.style.left = `${Math.round(r.left + r.width / 2 - 18)}px`;
+  btn.classList.add('hint-pulse');
+  requestAnimationFrame(() => hint.classList.add('show'));
+  hint.addEventListener('click', dismissSettingsHint);
+  btn.addEventListener('click', dismissSettingsHint, { once: true });
+  _settingsHintTimer = setTimeout(dismissSettingsHint, 5000);
+}
+
 // ---- US reference map (clickable states) ----
 
 // ---- D3 AlbersUSA reference map ----
@@ -5583,7 +5623,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (districtLayer) map.fitBounds(districtLayer.getBounds(), { padding: [40, 40], animate: false });
         if (isFirstPlay) {
           updateThemeToggle();
-          document.getElementById('settings-modal').classList.remove('hidden');
+          // Don't force the Settings modal open — point new players to it with a
+          // brief, non-blocking callout on the gear that fades after 5s or first tap.
+          showSettingsHint();
         }
       });
     }
@@ -5672,6 +5714,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Settings modal
   const settingsModal = document.getElementById('settings-modal');
   document.getElementById('settings-btn').addEventListener('click', () => {
+    dismissSettingsHint();
     updateThemeToggle();
     settingsModal.classList.remove('hidden');
   });
