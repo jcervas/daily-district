@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.39';
+const VERSION_NUMBER = '2.10.40';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -842,12 +842,18 @@ function injectArchiveShapes(data) {
 // keeps the canvas TiledGlobe). 18×18 tiles; each tile's animation-delay is derived from
 // its distance to the top-right corner (+ jitter) so the fill sweeps across like a
 // forming globe — generated here so the stylesheet needs no 324 per-tile rules.
+// Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~20% of tiles take a
+// random thread colour, the rest stay Carnegie red — the flecks that read as tartan.
+const GLOBE_THREADS = ['#dc506e', '#c41230', '#a00a28', '#820519', '#f0788c'];
+const GLOBE_THREAD_PROB = 0.2;
 function globeLoader(size = 96) {
   let tiles = '';
   for (let i = 0; i < 324; i++) {
     const row = Math.floor(i / 18), col = i % 18;
     const delay = -(0.05 * (row + (17 - col)) + Math.random() * 0.12);
-    tiles += `<i style="animation-delay:${delay.toFixed(3)}s"></i>`;
+    const thread = Math.random() < GLOBE_THREAD_PROB
+      ? `;background:${GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0]}` : '';
+    tiles += `<i style="animation-delay:${delay.toFixed(3)}s${thread}"></i>`;
   }
   return `<span class="globe-loader" role="status" aria-label="Loading" style="--size:${size}px;">`
     + `<span class="tiles">${tiles}</span><span class="shade"></span></span>`;
