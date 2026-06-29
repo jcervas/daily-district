@@ -1411,6 +1411,41 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 @keyframes spinner-rot { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
 
+/* CSS globe spinner — a shaded Carnegie-red sphere whose vertical "meridian" stripes
+   scroll horizontally to read as rotation. Pure CSS (transform-animated), so it spins
+   on the compositor and never freezes during a main-thread build — unlike the old
+   <canvas> TiledGlobe loader it replaces. Size via --gs. */
+.globe-spinner {
+  --gs: 96px;
+  width: var(--gs); height: var(--gs);
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 33% 28%,
+    #f2899a 0%, #d6304a 40%, #C41230 64%, #8a0e20 100%);
+  box-shadow:
+    inset -5px -7px 14px rgba(0,0,0,0.30),
+    inset 5px 6px 12px rgba(255,255,255,0.18),
+    0 2px 6px rgba(0,0,0,0.14);
+}
+/* meridians — vertical lines, scrolled with translateX (GPU-friendly) */
+.globe-spinner::before {
+  content: '';
+  position: absolute; top: 0; left: 0; height: 100%; width: 300%;
+  background-image: repeating-linear-gradient(90deg,
+    rgba(255,255,255,0.18) 0 1.5px, transparent 1.5px 12px);
+  animation: globe-roll 1.4s linear infinite;
+}
+/* parallels — static horizontal latitude lines for sphere structure */
+.globe-spinner::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(0deg,
+    rgba(0,0,0,0.12) 0 1px, transparent 1px 12px);
+}
+@keyframes globe-roll { to { transform: translateX(-48px); } } /* 4 × 12px stripe period → seamless */
+@media (prefers-reduced-motion: reduce) { .globe-spinner::before { animation-duration: 5s; } }
+
 /* ---- Personal stats ---- */
 .personal-grid {
   display: grid;
