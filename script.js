@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.57';
+const VERSION_NUMBER = '2.10.58';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5448,6 +5448,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Result-modal share buttons (shared logic with the game-over screen's Share/Post).
   document.getElementById('post-x-btn').addEventListener('click', shareResultText);
   document.getElementById('share-btn').addEventListener('click', shareResultImage);
+
+  // Census cards with an expander (<details>) toggle when their body is clicked — not just
+  // the small "What do these mean?" summary. Clicks on the summary or inside the expanded
+  // content are left alone (native toggle / so reading the text doesn't collapse it).
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('.census-card');
+    if (!card) return;
+    const details = card.querySelector('details');
+    if (!details || e.target.closest('details')) return;
+    details.open = !details.open;
+  });
 
   // Resize — keep Leaflet map tile grid current when container changes
   window.addEventListener('resize', () => {
