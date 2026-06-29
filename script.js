@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.29';
+const VERSION_NUMBER = '2.10.30';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -870,7 +870,15 @@ async function startServerArchive(date, num, label) {
   // Swap modals → game view.
   ['archive-modal', 'result-modal', 'welcome-modal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
   destroyGameoverDiv();
-  document.getElementById('archive-badge')?.classList.remove('hidden');
+  const archiveBadge = document.getElementById('archive-badge');
+  if (archiveBadge) {
+    archiveBadge.classList.remove('hidden');
+    archiveBadge.classList.add('archive-badge-clickable');
+    archiveBadge.setAttribute('role', 'button');
+    archiveBadge.setAttribute('tabindex', '0');
+    archiveBadge.title = "Return to today's district";
+    archiveBadge.innerHTML = `Archive · unofficial — not counted <span class="archive-badge-back">← Back to today</span>`;
+  }
   document.getElementById('game-section')?.remove();
   buildGameSection();
 
@@ -4815,12 +4823,17 @@ function showResult(won, autoOpen = true) {
   const stats = document.getElementById('result-stats');
 
   if (isArchiveGame) {
-    // Archive is unofficial — no won/lost line. Players only reach the archive after
-    // finishing the daily, so surface the daily ("today's district") + its countdown.
+    // Archive is unofficial — no won/lost line. This is a PAST puzzle (todayDistrict is
+    // the archive district here), so label it as such and offer a way back to the daily.
+    const num     = serverArchive?.puzzleNumber;
+    const dateStr = serverArchive?.date
+      ? new Date(serverArchive.date + 'T00:00:00').toLocaleDateString('en-US',
+          { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
     msg.className = 'gameover-next-main';
-    msg.innerHTML = `<span class="gameover-next-title">That's today's district!</span>` +
-      `<span class="gameover-next-sub">New district in <strong class="go-next-countdown">--:--:--</strong> &middot; midnight ET</span>`;
-    try { startNextDistrictCountdown(); } catch (_) {}
+    msg.innerHTML = `<span class="gameover-next-title">Archive${num != null ? ` · No. ${num}` : ''}</span>` +
+      `<span class="gameover-next-sub">${dateStr ? dateStr + ' &middot; ' : ''}unofficial — not counted</span>` +
+      `<button type="button" id="archive-back-today" class="archive-back-btn">← Back to today's district</button>`;
   } else if (won) {
     msg.innerHTML = guessCount === 1 ? 'Hole in one!' :
                     guessCount <= 3  ? 'Impressive!' : 'Got it!';
@@ -5088,6 +5101,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Game-over modal controls — delegated from document so they survive div recreation
   document.addEventListener('click', e => {
+    // Leave the archive and return to today's daily. A reload is the robust path: the
+    // daily is already finished, so the app reloads straight into its completed state.
+    if (e.target.closest('#archive-back-today') || e.target.closest('#archive-badge.archive-badge-clickable')) {
+      location.reload(); return;
+    }
     if (e.target.closest('#gameover-result-btn')) { openResultModal(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
     // Clicking anywhere on the gameover screen (except zoom buttons and the
