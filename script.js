@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.25';
+const VERSION_NUMBER = '2.10.26';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -495,21 +495,24 @@ function secondsUntilEasternMidnight() {
 // nudge the player to reload.
 function startNextDistrictCountdown() {
   stopNextDistrictCountdown();
-  const label = document.getElementById('gameover-next-countdown');
-  const sub   = document.querySelector('#gameover-next .gameover-next-sub');
-  if (!label) return;
+  // May drive more than one countdown label: the game-over screen and the result
+  // modal's archive "today's district" block both carry .go-next-countdown.
+  if (!document.querySelector('.go-next-countdown')) return;
   const tick = () => {
     const s = secondsUntilEasternMidnight();
     if (s <= 0) {
-      if (sub) sub.innerHTML = 'A new district is ready &middot; <a href="#" id="gameover-reload-link">refresh to play</a>';
-      document.getElementById('gameover-reload-link')?.addEventListener('click', (e) => { e.preventDefault(); location.reload(); });
+      document.querySelectorAll('.gameover-next-sub').forEach(sub => {
+        sub.innerHTML = 'A new district is ready &middot; <a href="#" class="gameover-reload-link">refresh to play</a>';
+      });
+      document.querySelectorAll('.gameover-reload-link').forEach(a =>
+        a.addEventListener('click', (e) => { e.preventDefault(); location.reload(); }));
       stopNextDistrictCountdown();
       return;
     }
     const hh = String(Math.floor(s / 3600)).padStart(2, '0');
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
-    label.textContent = `${hh}:${mm}:${ss}`;
+    document.querySelectorAll('.go-next-countdown').forEach(l => { l.textContent = `${hh}:${mm}:${ss}`; });
   };
   tick();
   _nextDistrictTimer = setInterval(tick, 1000);
@@ -1492,7 +1495,7 @@ function buildGameoverDiv() {
           </div>
           <div class="gameover-next-main">
             <span class="gameover-next-title">That's today's district!</span>
-            <span class="gameover-next-sub">New district in <strong id="gameover-next-countdown">--:--:--</strong> &middot; midnight ET</span>
+            <span class="gameover-next-sub">New district in <strong id="gameover-next-countdown" class="go-next-countdown">--:--:--</strong> &middot; midnight ET</span>
           </div>
           <div id="gameover-next-cta" class="gameover-next-cta hidden">
             <span>Sign in to keep track of your stats and see how you compare with other players.</span>
@@ -4490,8 +4493,10 @@ function renderDistrictPreview(containerId = 'result-district-preview') {
   container.innerHTML = '';
 
   const pad = 20;
-  const W = Math.max(container.offsetWidth  || 440, 100);
-  const H = Math.max(container.offsetHeight || 180, 100);
+  // Use the content box (clientWidth/Height) — offsetWidth/Height include the 1px
+  // border, which skews the viewBox aspect ratio and letterboxes a thin gap.
+  const W = Math.max(container.clientWidth  || 440, 100);
+  const H = Math.max(container.clientHeight || 180, 100);
   const dark = isDarkMode();
   const projection = _previewProjection(W, H, pad);
   const pathGen = d3.geoPath(projection);
@@ -4733,7 +4738,14 @@ function showResult(won, autoOpen = true) {
   const msg   = document.getElementById('result-message');
   const stats = document.getElementById('result-stats');
 
-  if (won) {
+  if (isArchiveGame) {
+    // Archive is unofficial — no won/lost line. Players only reach the archive after
+    // finishing the daily, so surface the daily ("today's district") + its countdown.
+    msg.className = 'gameover-next-main';
+    msg.innerHTML = `<span class="gameover-next-title">That's today's district!</span>` +
+      `<span class="gameover-next-sub">New district in <strong class="go-next-countdown">--:--:--</strong> &middot; midnight ET</span>`;
+    try { startNextDistrictCountdown(); } catch (_) {}
+  } else if (won) {
     msg.innerHTML = guessCount === 1 ? 'Hole in one!' :
                     guessCount <= 3  ? 'Impressive!' : 'Got it!';
     msg.className = 'won';
