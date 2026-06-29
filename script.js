@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.27';
+const VERSION_NUMBER = '2.10.28';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -405,7 +405,8 @@ let _districtStateFSnap  = null;     // stateFeatures cached from last build (fo
 let _gameOverTime        = 0;        // Date.now() when endGame() was called (confetti gate)
 let _gameOverAnimsCallback  = null;   // deferred: pulse/shake/confetti, fired after reveal circle collapses
 let _goZoom         = null;   // gameover map zoom behavior
-let _goZoomInitial  = null;   // gameover map initial fit transform
+let _goZoomInitial  = null;   // gameover map initial fit transform (district)
+let _goZoomState    = null;   // gameover map state-level fit transform
 let _tileZoomInAnimating    = false;  // true during 700ms entry zoom-in so handler skips simulation re-runs
 let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
@@ -1253,6 +1254,27 @@ function zoomToBBox([[x0, y0], [x1, y1]], W, H, { margin = 0.85, maxScale = Infi
     .translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
 }
 
+// Smoothly tween the game-over map's zoom transform to `target` (a d3 zoomIdentity-
+// derived transform). Shared by the district / state / nation zoom-level buttons.
+function _goAnimateTo(target, dur = 700) {
+  const svgSel = d3.select('#gameover-map svg');
+  if (svgSel.empty() || !_goZoom || !target) return;
+  const cur = d3.zoomTransform(svgSel.node());
+  const t0k = cur.k, t0x = cur.x, t0y = cur.y;
+  const t1k = target.k, t1x = target.x, t1y = target.y;
+  const ease = d3.easeCubicInOut;
+  const start = performance.now();
+  (function frame() {
+    const elapsed = performance.now() - start;
+    const t = ease(Math.min(elapsed / dur, 1));
+    const tr = d3.zoomIdentity
+      .translate(t0x + (t1x - t0x) * t, t0y + (t1y - t0y) * t)
+      .scale(t0k + (t1k - t0k) * t);
+    _goZoom.transform(svgSel, tr);
+    if (elapsed < dur) requestAnimationFrame(frame);
+  })();
+}
+
 // Return the set of active state-district keys for the current game phase:
 //   state phase   → all district keys of remaining valid states
 //   district phase → remaining valid district keys in the confirmed state (after eliminations)
@@ -1507,7 +1529,9 @@ function buildGameoverDiv() {
           <div class="map-zoom-btns">
             <button class="mzb mzb-go" data-dir="in" aria-label="Zoom in">+</button>
             <button class="mzb mzb-go" data-dir="out" aria-label="Zoom out">−</button>
-            <button class="mzb mzb-go mzb-go-fit" data-dir="fit" aria-label="Fit to district" title="Fit to district"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-district" aria-label="Zoom to district" title="Zoom to district"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg></button>
+            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-state" aria-label="Zoom to state" title="Zoom to state"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polygon points="4 8 9 4 20 7 19 16 11 20 4 16"/></svg></button>
+            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-nation" aria-label="Zoom to nation" title="Zoom to nation"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></button>
           </div>
         </div>
       </div>
@@ -1617,6 +1641,7 @@ function wireGameoverCensus() {
 function destroyGameoverDiv() {
   _goZoom = null;
   _goZoomInitial = null;
+  _goZoomState = null;
   stopNextDistrictCountdown();
   document.getElementById('gameover-modal')?.remove();
 }
@@ -4198,6 +4223,10 @@ function buildGameoverMap(_retry = 0) {
   _goZoomInitial = answerF
     ? zoomToBBox(pathGen.bounds(answerF), W, H, { margin: DISTRICT_FIT_MARGIN_ANSWER, maxScale: 40 })
     : d3.zoomIdentity;
+  // Intermediate fit: the whole answer state (between district and nation).
+  _goZoomState = stateOutline
+    ? zoomToBBox(pathGen.bounds(stateOutline), W, H, { margin: DISTRICT_FIT_MARGIN, maxScale: 40 })
+    : d3.zoomIdentity;
 
   // ── Badge inside zoom group — pans/zooms with map, scale(1/k) keeps it constant size ─
   // Badge is anchored at district right-edge in data (projection) space.
@@ -5029,22 +5058,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dir = btn.dataset.dir;
     if (dir === 'in')  svgSel.transition().duration(250).call(_goZoom.scaleBy, 1.6);
     else if (dir === 'out') svgSel.transition().duration(250).call(_goZoom.scaleBy, 1 / 1.6);
-    else if (dir === 'fit') {
-      const cur = d3.zoomTransform(svgSel.node());
-      const atDistrict = _goZoomInitial && Math.abs(cur.k - _goZoomInitial.k) / _goZoomInitial.k < 0.15;
-      const t1 = atDistrict ? d3.zoomIdentity : (_goZoomInitial || d3.zoomIdentity);
-      const t0k = cur.k, t0x = cur.x, t0y = cur.y;
-      const t1k = t1.k, t1x = t1.x, t1y = t1.y;
-      const dur = 700, ease = d3.easeCubicInOut;
-      const start = performance.now();
-      (function frame() {
-        const elapsed = performance.now() - start;
-        const t = ease(Math.min(elapsed / dur, 1));
-        const tr = d3.zoomIdentity.translate(t0x + (t1x - t0x) * t, t0y + (t1y - t0y) * t).scale(t0k + (t1k - t0k) * t);
-        _goZoom.transform(svgSel, tr);
-        if (elapsed < dur) requestAnimationFrame(frame);
-      })();
-    }
+    else if (dir === 'fit-district') _goAnimateTo(_goZoomInitial || d3.zoomIdentity);
+    else if (dir === 'fit-state')    _goAnimateTo(_goZoomState   || d3.zoomIdentity);
+    else if (dir === 'fit-nation')   _goAnimateTo(d3.zoomIdentity);
   });
 
   // Share — landscape image + text via Web Share API; falls back to Twitter/X intent
