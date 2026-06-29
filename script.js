@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.47';
+const VERSION_NUMBER = '2.10.48';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2737,9 +2737,10 @@ function updateGuessCounter() {
 
 // ---- Hard mode ----
 let hardMode = localStorage.getItem('districtguess_hardMode') === '1';
-// Hard mode can be toggled mid-game, so the live flag isn't a faithful record of how a
-// finished game was played. Capture it once when play begins (first guess → startTimer)
-// so the share text — and, later, the results DB — reflect the actual game.
+// True only if the player was in hard mode for the WHOLE game. Seeded at the first guess
+// (startTimer) and latched to false the instant hard mode is turned off during play — so
+// flipping it off to peek at hints/imagery, even briefly, disqualifies the game. Turning
+// it back on later does NOT restore it. Drives the share text (and, later, the results DB).
 let gameHardMode = hardMode;
 
 // ---- Confirm-selection mode ----
@@ -5602,6 +5603,10 @@ document.addEventListener('DOMContentLoaded', () => {
     hardToggle.addEventListener('change', () => {
       hardMode = hardToggle.checked;
       localStorage.setItem('districtguess_hardMode', hardMode ? '1' : '0');
+      // Turning hard mode off mid-game disqualifies this game from being a hard-mode
+      // game (latch — turning it back on doesn't restore it). timerRunning ⟺ a game is
+      // actively in progress (starts on first guess, stops at game over).
+      if (timerRunning && !hardMode) gameHardMode = false;
       reportSettings('change');
       // Apply immediately: refresh the hint bar + map imagery for the new mode.
       renderClues();
