@@ -966,14 +966,8 @@ circle.tile-ripple {
 }
 #result-message.won  { color: var(--green); }
 #result-message.lost { color: var(--red); }
-/* Archive: #result-message hosts the daily "today's district" block — drop the big
-   won/lost styling and let .gameover-next-main own the layout (incl. its own bg). */
-#result-message.gameover-next-main {
-  margin: 0; font-size: 1rem; font-weight: 400; text-align: left;
-  border-radius: var(--radius); overflow: hidden;
-}
 
-@media (max-height: 720px) { #result-message:not(.gameover-next-main) { display: none; } }
+@media (max-height: 720px) { #result-message { display: none; } }
 #result-stats {
   width: 100%;
   text-align: center;
@@ -2033,13 +2027,6 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
   margin-left: 6px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.4);
   text-decoration: underline; text-underline-offset: 2px;
 }
-/* "Back to today's district" button in the archive result block. */
-.archive-back-btn {
-  align-self: flex-start; margin-top: 8px; cursor: pointer;
-  padding: 8px 14px; border: none; border-radius: 999px;
-  background: var(--red, #C41230); color: #fff; font-weight: 700; font-size: 0.84rem;
-}
-.archive-back-btn:hover { filter: brightness(1.08); }
 .archive-month {
   font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--muted); padding: 12px 4px 4px;

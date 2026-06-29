@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.30';
+const VERSION_NUMBER = '2.10.31';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -752,6 +752,10 @@ async function restoreServerGame(result, answer) {
     renderClues();
     showResult(lastGameWon, false);
     showGameoverModal();   // also renders the District Profile into the game-over card
+    // Returning from an archive via "Today's Results" → land on the daily result modal.
+    let openRes = false;
+    try { openRes = sessionStorage.getItem('dd_open_result') === '1'; if (openRes) sessionStorage.removeItem('dd_open_result'); } catch (_) {}
+    if (openRes) openResultModal();
   }
 }
 
@@ -2767,10 +2771,15 @@ function startGameOverTransition(won, dist, opts = {}) {
         if (ready) { try { await ready; } catch (_) {} }
         endGame(won, { skipAnims: true });
         showGameoverModal();   // build the game-over screen…
-        openResultModal();     // …but land on the result modal on top of it
+        // Daily lands on the result modal; archive stays on the game-over screen with the
+        // archived district's profile (its result modal is today-only — reached via the
+        // game-over screen's "Today's Results" button, which returns to the daily).
+        if (!isArchiveGame) openResultModal();
         _gameOverAnimsCallback = null;
-        // Tween the flash colour to the result modal's background, then fade it away.
-        const surface = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#ffffff';
+        // Tween the flash colour to the destination's background, then fade it away —
+        // the result modal's --surface for the daily, the game-over --bg for archive.
+        const destVar = isArchiveGame ? '--bg' : '--surface';
+        const surface = getComputedStyle(document.documentElement).getPropertyValue(destVar).trim() || '#ffffff';
         pathEl.transition().duration(300).ease(d3.easeCubicInOut).style('fill', surface)
           .transition().duration(220).style('opacity', 0)
           .on('end', () => svgEl.remove());
@@ -4413,14 +4422,33 @@ async function showGameoverModal() {
     reportClientError('gameover_modal_content', e);
   }
 
-  // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
-  // sign-in nudge (track stats / compare); signed-in players just see the countdown.
-  const nextCta = document.getElementById('gameover-next-cta');
-  if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
-  document.getElementById('gameover-next-signin')?.addEventListener('click', () => {
-    document.getElementById('login-modal')?.classList.remove('hidden');
-  });
-  try { startNextDistrictCountdown(); } catch (e) { reportClientError('gameover_countdown', e); }
+  if (isArchiveGame) {
+    // Archive game-over: this is a PAST puzzle, not today's. Swap the "today's district"
+    // countdown block for archive context, hide the sign-in CTA, relabel "View Results"
+    // → "Today's Results", and don't run the daily countdown.
+    const num     = serverArchive?.puzzleNumber;
+    const dateStr = serverArchive?.date
+      ? new Date(serverArchive.date + 'T00:00:00').toLocaleDateString('en-US',
+          { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    const main = document.querySelector('#gameover-next .gameover-next-main');
+    if (main) {
+      main.innerHTML = `<span class="gameover-next-title">Archive${num != null ? ` · No. ${num}` : ''}</span>` +
+        `<span class="gameover-next-sub">${dateStr ? dateStr + ' &middot; ' : ''}unofficial — not counted</span>`;
+    }
+    document.getElementById('gameover-next-cta')?.classList.add('hidden');
+    const resBtn = document.getElementById('gameover-result-btn');
+    if (resBtn) resBtn.textContent = "Today's Results";
+  } else {
+    // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
+    // sign-in nudge (track stats / compare); signed-in players just see the countdown.
+    const nextCta = document.getElementById('gameover-next-cta');
+    if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
+    document.getElementById('gameover-next-signin')?.addEventListener('click', () => {
+      document.getElementById('login-modal')?.classList.remove('hidden');
+    });
+    try { startNextDistrictCountdown(); } catch (e) { reportClientError('gameover_countdown', e); }
+  }
 
   const mapWrap = document.getElementById('gameover-map-wrap');
 
@@ -4822,19 +4850,9 @@ function showResult(won, autoOpen = true) {
   const msg   = document.getElementById('result-message');
   const stats = document.getElementById('result-stats');
 
-  if (isArchiveGame) {
-    // Archive is unofficial — no won/lost line. This is a PAST puzzle (todayDistrict is
-    // the archive district here), so label it as such and offer a way back to the daily.
-    const num     = serverArchive?.puzzleNumber;
-    const dateStr = serverArchive?.date
-      ? new Date(serverArchive.date + 'T00:00:00').toLocaleDateString('en-US',
-          { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-      : '';
-    msg.className = 'gameover-next-main';
-    msg.innerHTML = `<span class="gameover-next-title">Archive${num != null ? ` · No. ${num}` : ''}</span>` +
-      `<span class="gameover-next-sub">${dateStr ? dateStr + ' &middot; ' : ''}unofficial — not counted</span>` +
-      `<button type="button" id="archive-back-today" class="archive-back-btn">← Back to today's district</button>`;
-  } else if (won) {
+  // The result modal is today-only — archive never opens it (archive ends on the
+  // game-over screen with the archived district's profile instead).
+  if (won) {
     msg.innerHTML = guessCount === 1 ? 'Hole in one!' :
                     guessCount <= 3  ? 'Impressive!' : 'Got it!';
     msg.className = 'won';
@@ -5101,16 +5119,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Game-over modal controls — delegated from document so they survive div recreation
   document.addEventListener('click', e => {
-    // Leave the archive and return to today's daily. A reload is the robust path: the
-    // daily is already finished, so the app reloads straight into its completed state.
-    if (e.target.closest('#archive-back-today') || e.target.closest('#archive-badge.archive-badge-clickable')) {
+    // Archive badge → leave the archive and return to today's daily. A reload is the
+    // robust path: the daily is already finished, so the app reloads into its done state.
+    if (e.target.closest('#archive-badge.archive-badge-clickable')) {
       location.reload(); return;
     }
-    if (e.target.closest('#gameover-result-btn')) { openResultModal(); return; }
+    if (e.target.closest('#gameover-result-btn')) {
+      // The result modal is today-only. From an archive game-over, "Today's Results"
+      // returns to the daily (reload) and opens its result modal on arrival.
+      if (isArchiveGame) { try { sessionStorage.setItem('dd_open_result', '1'); } catch (_) {} location.reload(); }
+      else openResultModal();
+      return;
+    }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
-    // Clicking anywhere on the gameover screen (except zoom buttons and the
-    // District Profile sheet) opens results
-    if (e.target.closest('#gameover-modal') && !e.target.closest('.mzb-go') && !e.target.closest('#gameover-census')) {
+    // Clicking anywhere on the daily game-over screen (except zoom buttons and the
+    // District Profile sheet) opens results. Disabled for archive — its result modal is
+    // today-only, so a stray click shouldn't yank the player out of the archive.
+    if (!isArchiveGame && e.target.closest('#gameover-modal')
+        && !e.target.closest('.mzb-go') && !e.target.closest('#gameover-census')) {
       openResultModal(); return;
     }
     const btn = e.target.closest('#gameover-modal .mzb-go');
