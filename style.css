@@ -2350,6 +2350,17 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   align-items: center;
   gap: 12px;
 }
+/* Full-screen build loader (archive fetch + map build) — covers the screen with the
+   app background and centers the welcome globe + "Loading..." text. */
+.build-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg, #fff);
+}
 .welcome-loading-text {
   font-size: 0.9rem;
   color: var(--muted);

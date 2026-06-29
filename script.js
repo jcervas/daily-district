@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.32';
+const VERSION_NUMBER = '2.10.33';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -838,12 +838,37 @@ function injectArchiveShapes(data) {
   });
 }
 
+// Full-screen loader (same spinning tartan globe as the welcome screen) shown while a
+// heavy build runs with no other UI up — e.g. an archive fetch + map build. The globe
+// auto-cleans from globe.js's rAF loop once its canvas leaves the DOM (overlay removed).
+function showBuildLoader(text = 'Loading...') {
+  if (document.getElementById('build-loader')) return;
+  const ov = document.createElement('div');
+  ov.id = 'build-loader';
+  ov.className = 'build-loader';
+  const letters = [...text].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
+  ov.innerHTML = `<div class="welcome-loading-container">`
+    + `<span class="build-loader-globe"></span>`
+    + `<div class="welcome-loading-text" aria-label="Loading">${letters}</div>`
+    + `</div>`;
+  document.body.appendChild(ov);
+  const host = ov.querySelector('.build-loader-globe');
+  if (window.TiledGlobe && host) {
+    try {
+      new window.TiledGlobe(host, { size: 96, origin: 'bottom-right', direction: 'ccw',
+        tiles: 100, tilt: 28, roll: 22, empty: 0.5, snap: 0.7, scatter: 0.18, gap: 0.16, mode: 'tartan' });
+    } catch (_) {}
+  }
+}
+function hideBuildLoader() { document.getElementById('build-loader')?.remove(); }
+
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
 async function startServerArchive(date, num, label) {
+  showBuildLoader();   // cover the fetch + heavy game/map build with the loader globe
   let data;
   try { data = await window.DistrictBackend.archivePuzzle(date); }
-  catch (err) { console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
+  catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
 
   // Snapshot the daily so we can return to it WITHOUT a reload. The resets below replace
   // these globals with fresh objects (new arrays/Sets), so the snapshot keeps the daily's
@@ -916,6 +941,8 @@ async function startServerArchive(date, num, label) {
     initUSRefMap();
     zoomUSRefMapToValid(false);
     if (map) map.invalidateSize();
+    // One more frame so the freshly built map paints before we pull the loader away.
+    requestAnimationFrame(() => hideBuildLoader());
   }));
 
   renderDistrict(todayDistrict);
