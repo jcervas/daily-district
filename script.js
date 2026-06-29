@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.55';
+const VERSION_NUMBER = '2.10.56';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2341,7 +2341,16 @@ async function fetchAndRenderCensusPanel(districtData) {
   const partyEmblem = rep ? partyIcon(rep.partyCode, true) : '';
   // Compactness explainer — two labeled graphics (Polsby–Popper + Reock) in columns,
   // each with its score and how it ranks among all districts.
-  const moreThan = p => (p == null || isNaN(p)) ? '' : `more compact than ${Math.round(p * 100)}% of districts`;
+  // Plain-words compactness rank (the raw "more compact than 14%" percentile reads
+  // backwards and is hard to parse). Higher percentile = more compact.
+  const moreThan = p => {
+    if (p == null || isNaN(p)) return '';
+    if (p >= 0.8) return 'More compact than nearly all districts';
+    if (p >= 0.6) return 'More compact than most districts';
+    if (p >= 0.4) return 'About average compactness';
+    if (p >= 0.2) return 'Less compact than most districts';
+    return 'Less compact than nearly all districts';
+  };
   const ppRankTxt = moreThan(pct.compactness);
   // The two shape graphics (+ score + rank) show right on the card; the definitions
   // of Polsby–Popper / Reock stay tucked in the expander.
