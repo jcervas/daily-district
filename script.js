@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.3';
+const VERSION_NUMBER = '2.11.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -380,6 +380,7 @@ let districtStateFitTransform = null; // full-state inner-point fit; used by fit
 let _districtProjection    = null;   // AlbersUSA projection from most recent district ctx build
 let _districtCssScale      = 1;      // cssScale from most recent district ctx build
 let _districtDensityScale  = 1;      // density factor (>1 shrinks tiles+collision for dense states)
+let _districtStateFitK     = 1;      // zoom scale at the full-state fit (density eases→1 as you zoom past it)
 let _districtPathGen       = null;   // d3.geoPath from most recent district ctx build
 let _districtStateFeatures = null;   // all features for the current state
 let _districtW             = REF_VB_W; // viewBox width from most recent district ctx build
@@ -3772,8 +3773,19 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
 // per-build zoom closure so the unified usRefZoom handler can call it too once the
 // district content lives in the ref map's SVG. `g` = the district render group, `k` =
 // the current zoom scale. Reads module render constants (cssScale=1, target=14px, W).
+// Effective density factor at zoom scale k. Dense states start shrunk (base > 1 at the
+// state-fit zoom), but as the player zooms IN past the state fit fewer tiles share the
+// viewport and there's room to grow — so ease the factor back toward 1 (standard 14px
+// radius), reaching it once you've zoomed in by the base factor.
+function _effDensity(k) {
+  const base = _districtDensityScale || 1;
+  const fitK = _districtStateFitK || 1;
+  if (base <= 1 || !fitK) return base;
+  return Math.max(1, base / Math.max(1, k / fitK));
+}
+
 function _applyTileZoomScaling(g, k) {
-  const targetCirclePx = 14, densityScale = _districtDensityScale || 1, cssScale = _districtCssScale || 1, W = _districtW;
+  const targetCirclePx = 14, densityScale = _effDensity(k), cssScale = _districtCssScale || 1, W = _districtW;
   const rk = targetCirclePx / (k * cssScale * densityScale);
 
   // Gameplay circles: radius, stroke, text
@@ -3937,6 +3949,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const stateOutline = topoStates[stateAbbr];
   const stateBBox   = stateOutline ? pathGen.bounds(stateOutline) : pathGen.bounds(stateFC);
   const stateFitTransform = zoomToBBox(stateBBox, W, H, { margin: DISTRICT_FIT_MARGIN, maxScale: W / 12 });
+  _districtStateFitK = stateFitTransform.k || 1;   // baseline zoom for density→1 easing
 
   // Bbox of a district-key set's TILE (dist-icon) positions — lets us fit the remaining
   // tiles WITHOUT touching the district polygon geometry (shapes only draw at game over).
@@ -4118,7 +4131,8 @@ function _drawGameplayTiles(ctx) {
   // zoomK is the scale that will actually be on screen — use it to size circles so they
   // render correctly before any subsequent zoom event fires.
   const zoomK = districtSavedTransform ? districtSavedTransform.k : stateFitTransform.k;
-  const R     = targetCirclePx / (zoomK * cssScale * densityScale);
+  const effDensity = _effDensity(zoomK);   // eases base→1 if restored already zoomed-in
+  const R     = targetCirclePx / (zoomK * cssScale * effDensity);
 
   // Connector lines (drawn first so they appear behind circles)
   const lineG   = g.append('g').attr('class', 'dist-connectors');
@@ -4150,7 +4164,7 @@ function _drawGameplayTiles(ctx) {
       .attr('fill', fillColor).attr('stroke', dark ? '#222' : '#fff').attr('stroke-width', 1.5 / zoomK);
     grp.append('text')
       .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
-      .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * densityScale)}px`)
+      .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * effDensity)}px`)
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
     if (!disabled) {
@@ -4162,7 +4176,7 @@ function _drawGameplayTiles(ctx) {
   });
 
   // Force simulation — run synchronously so tiles are at their final positions on first paint
-  const collide      = 16 / (zoomK * cssScale * densityScale);
+  const collide      = 16 / (zoomK * cssScale * effDensity);
   const forceStrength = Math.min(0.98, 0.6 + (zoomK - 1) * 0.15);
 
   function applyIconPositions() {
