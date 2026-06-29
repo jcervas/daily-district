@@ -2101,13 +2101,10 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .archive-num { font-weight: 700; }
 .archive-date { color: var(--muted); font-size: 0.9rem; }
 
-/* The District Profile sheet floats over the bright map with no dark scrim, so its
-   translucent-white glass reads light. The archive modal's default 50%-black .modal
-   scrim tinted the same glass dark — lighten the scrim (light mode only) so the two
-   match; keep the normal dark scrim in dark mode. */
-#archive-modal { background: rgba(0, 0, 0, 0.12); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-body.dark-mode #archive-modal { background: rgba(0, 0, 0, 0.5); }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) #archive-modal { background: rgba(0, 0, 0, 0.5); } }
+/* No scrim: like the District Profile, the panel floats over the un-dimmed screen and
+   its own backdrop-filter frosts what's directly behind it. The full-screen .modal layer
+   still blocks clicks to the background, so the scrim was only ever cosmetic. */
+#archive-modal { background: transparent; }
 
 /* Frosted-glass treatment matching the District Profile sheet (.district-profile):
    a translucent + blurred container, with glassy list items so they stand out on it. */
