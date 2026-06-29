@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.53';
+const VERSION_NUMBER = '2.10.54';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5320,6 +5320,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Play Archive — replay a past daily puzzle (unofficial, not counted) ────
   // Build + open the archive list: every past daily (newest first), fetched from the
   // `archive` endpoint. Past answers are public, so this is safe.
+  // Archive picker state: every past puzzle keyed by date, plus the months that have any.
+  let _archiveByDate = {};      // 'YYYY-MM-DD' -> { date, puzzleNumber }
+  let _archiveMonths = [];      // ['YYYY-MM', ...] newest first
+
   async function openArchive() {
     const list = document.getElementById('archive-list');
     list.innerHTML = loadingBlock();
@@ -5329,23 +5333,65 @@ document.addEventListener('DOMContentLoaded', () => {
     try { resp = await window.DistrictBackend.archiveList(); }
     catch (e) { list.innerHTML = '<div class="lb-empty">Could not load the archive.</div>'; return; }
     const puzzles = (resp && resp.puzzles) || [];
-    let html = '', curMonth = '';
-    for (const p of puzzles) {
-      const d = new Date(p.date + 'T00:00:00');
-      const month = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      if (month !== curMonth) { curMonth = month; html += `<div class="archive-month">${month}</div>`; }
-      const dayLabel  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const fullLabel = d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-      html += `<button class="archive-item" data-date="${p.date}" data-num="${p.puzzleNumber}" data-label="${fullLabel}">` +
-              `<span class="archive-num">No. ${p.puzzleNumber}</span><span class="archive-date">${dayLabel}</span></button>`;
+    _archiveByDate = {};
+    const months = new Set();
+    for (const p of puzzles) { _archiveByDate[p.date] = p; months.add(p.date.slice(0, 7)); }
+    _archiveMonths = [...months].sort().reverse();
+    renderArchiveMonths();
+  }
+
+  // Level 1: a list of months (newest first), each showing its puzzle count.
+  function renderArchiveMonths() {
+    const list = document.getElementById('archive-list');
+    list.classList.remove('archive-calendar-view');
+    if (!_archiveMonths.length) { list.innerHTML = '<div class="lb-empty">No past puzzles yet.</div>'; return; }
+    list.innerHTML = _archiveMonths.map(ym => {
+      const [y, m] = ym.split('-').map(Number);
+      const label  = new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      const count  = Object.keys(_archiveByDate).filter(d => d.startsWith(ym)).length;
+      return `<button class="archive-item archive-month-btn" data-ym="${ym}">` +
+             `<span class="archive-num">${label}</span>` +
+             `<span class="archive-date">${count} puzzle${count !== 1 ? 's' : ''} ›</span></button>`;
+    }).join('');
+  }
+
+  // Level 2: a calendar grid for one month; only days with a puzzle are clickable.
+  function renderArchiveCalendar(ym) {
+    const list = document.getElementById('archive-list');
+    const [y, m] = ym.split('-').map(Number);
+    const monthLabel  = new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    const firstDow    = new Date(y, m - 1, 1).getDay();   // 0 = Sunday
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+      .map(d => `<span class="archive-cal-wd">${d}</span>`).join('');
+    let cells = '';
+    for (let i = 0; i < firstDow; i++) cells += '<span class="archive-cal-cell empty"></span>';
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = `${ym}-${String(day).padStart(2, '0')}`;
+      const p = _archiveByDate[date];
+      if (p) {
+        const full = new Date(y, m - 1, day).toLocaleDateString('en-US',
+          { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        cells += `<button class="archive-cal-cell has-puzzle" data-date="${date}" ` +
+                 `data-num="${p.puzzleNumber}" data-label="${full}" title="No. ${p.puzzleNumber}">${day}</button>`;
+      } else {
+        cells += `<span class="archive-cal-cell">${day}</span>`;
+      }
     }
-    list.innerHTML = html || '<div class="lb-empty">No past puzzles yet.</div>';
+    list.classList.add('archive-calendar-view');
+    list.innerHTML =
+      `<div class="archive-cal-head"><button class="archive-cal-back" data-archive-back>‹ Months</button>` +
+      `<span class="archive-cal-title">${monthLabel}</span></div>` +
+      `<div class="archive-cal-grid">${weekdays}${cells}</div>`;
   }
 
   document.getElementById('archive-list').addEventListener('click', (e) => {
-    const item = e.target.closest('.archive-item');
-    if (!item || !item.dataset.date) return;
-    startServerArchive(item.dataset.date, parseInt(item.dataset.num, 10), item.dataset.label);
+    const monthBtn = e.target.closest('.archive-month-btn');
+    if (monthBtn) { renderArchiveCalendar(monthBtn.dataset.ym); return; }
+    if (e.target.closest('[data-archive-back]')) { renderArchiveMonths(); return; }
+    const cell = e.target.closest('.archive-cal-cell.has-puzzle');
+    if (!cell || !cell.dataset.date) return;
+    startServerArchive(cell.dataset.date, parseInt(cell.dataset.num, 10), cell.dataset.label);
   });
   document.getElementById('archive-close').addEventListener('click', () => {
     document.getElementById('archive-modal').classList.add('hidden');

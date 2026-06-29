@@ -2101,10 +2101,6 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
   margin-left: 6px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.4);
   text-decoration: underline; text-underline-offset: 2px;
 }
-.archive-month {
-  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  color: var(--muted); padding: 12px 4px 4px;
-}
 
 /* ===== Archive picker ===== */
 .archive-note { font-size: 0.85rem; color: var(--muted); margin: 0 0 12px; }
@@ -2118,6 +2114,33 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .archive-item:hover { background: var(--surface-alt); border-color: var(--muted); }
 .archive-num { font-weight: 700; }
 .archive-date { color: var(--muted); font-size: 0.9rem; }
+
+/* Archive calendar — month list drills into a day grid; only days with a puzzle click. */
+.archive-cal-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
+.archive-cal-back {
+  border: none; background: transparent; cursor: pointer;
+  color: var(--accent, #C41230); font-weight: 700; font-size: 0.9rem; padding: 4px 2px;
+}
+.archive-cal-title { font-weight: 800; font-size: 1rem; color: var(--text); }
+.archive-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.archive-cal-wd {
+  text-align: center; font-size: 0.7rem; font-weight: 700; color: var(--muted); padding-bottom: 2px;
+}
+.archive-cal-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  width: auto; padding: 0; font-size: 0.92rem; color: var(--muted);
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+}
+.archive-cal-cell.empty { visibility: hidden; }
+.archive-cal-cell.has-puzzle {
+  cursor: pointer; font-weight: 700; color: var(--text);
+  background: rgba(255, 255, 255, 0.75); border-color: rgba(255, 255, 255, 0.45);
+}
+.archive-cal-cell.has-puzzle:hover { background: rgba(255, 255, 255, 0.95); border-color: var(--muted); }
+body.dark-mode .archive-cal-cell.has-puzzle { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+@media (prefers-color-scheme: dark) {
+  body:not(.light-mode) .archive-cal-cell.has-puzzle { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+}
 
 /* No scrim: like the District Profile, the panel floats over the un-dimmed screen and
    its own backdrop-filter frosts what's directly behind it. The full-screen .modal layer
