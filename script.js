@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.51';
+const VERSION_NUMBER = '2.10.52';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1653,7 +1653,6 @@ function buildGameoverDiv() {
           <div class="banner-actions">
             <button id="gameover-result-btn">View Results</button>
             <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
-            <button id="gameover-post-btn" class="go-share-btn" aria-label="Share image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Post</button>
             <button id="gameover-new-map-btn">Play Archive</button>
           </div>
         </div>
@@ -2064,7 +2063,7 @@ function renderTabHeader(containerId) {
     <div class="result-time-line">${solveStr}</div>`;
 }
 
-// Wordle-style personal stats grid (played, win%, streaks, distribution)
+// Personal stats grid (played, win%, streaks, distribution)
 function renderInlinePersonalStats() {
   const el = document.getElementById('result-personal-stats');
   if (!el) return;
@@ -4618,9 +4617,8 @@ async function showGameoverModal() {
     document.getElementById('gameover-next-cta')?.classList.add('hidden');
     const resBtn = document.getElementById('gameover-result-btn');
     if (resBtn) resBtn.textContent = "Today's Results";
-    // Archive is unofficial — hide Share/Post so a past puzzle isn't shared as today's daily.
+    // Archive is unofficial — hide Share so a past puzzle isn't shared as today's daily.
     document.getElementById('gameover-share-btn')?.classList.add('hidden');
-    document.getElementById('gameover-post-btn')?.classList.add('hidden');
   } else {
     // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
     // sign-in nudge (track stats / compare); signed-in players just see the countdown.
@@ -5369,7 +5367,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (e.target.closest('#gameover-share-btn')) { shareResultText(); return; }
-    if (e.target.closest('#gameover-post-btn'))  { shareResultImage(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
     // Clicking anywhere on the daily game-over screen (except zoom buttons and the
     // District Profile sheet) opens results. Disabled for archive — its result modal is
