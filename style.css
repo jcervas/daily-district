@@ -1175,6 +1175,7 @@ circle.tile-ripple {
   gap: 12px;
 }
 .census-card {
+  position: relative;   /* positioning context for the corner ⓘ */
   background: var(--surface-alt);
   border-radius: var(--radius);
   padding: 12px 14px;
@@ -1258,19 +1259,20 @@ body.dark-mode .district-profile .census-card { background: rgba(44, 44, 50, 0.6
 .ms-state    { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-linejoin: round; }
 .ms-here     { fill: var(--cmu-red); stroke: var(--cmu-red); stroke-width: 0.6; }
 /* Compactness explainer — a <details> so it works by tap on mobile and click on desktop. */
-/* Cards with an expander are clickable anywhere to toggle it. */
-.census-card:has(details) { cursor: pointer; }
-.ms-caption  { margin-top: 6px; font-size: 0.68rem; color: var(--muted); }
-.ms-caption summary { cursor: pointer; list-style: none; }
-.ms-caption summary::-webkit-details-marker { display: none; }
-.ms-caption summary::marker { content: ''; }
-.ms-info     { color: var(--accent); font-size: 0.92rem; font-weight: 700; vertical-align: -1px; margin-left: 2px; }
-.ms-explain  { margin-top: 6px; line-height: 1.45; }
+/* Cards with an explanation are clickable anywhere to toggle it; a small ⓘ in the corner
+   is the only affordance (no "What do these mean?" label) so the card keeps max space. */
+.census-card:has(.ms-explain) { cursor: pointer; }
+.ms-info {
+  position: absolute; top: 6px; right: 8px;
+  color: var(--accent); font-size: 0.92rem; font-weight: 700; line-height: 1;
+}
+.ms-explain  { display: none; margin-top: 6px; font-size: 0.68rem; color: var(--muted); line-height: 1.45; }
+.census-card.expanded .ms-explain { display: block; }
 .ms-explain b { color: var(--text); font-weight: 700; }
 /* Two labeled compactness graphics (Polsby–Popper + Reock) side by side. */
 .cmpct-cols  { display: flex; gap: 14px; }
 .cmpct-col   { flex: 1; min-width: 0; text-align: center; }
-.cmpct-col .mini-shape { width: 100%; height: auto; max-width: 64px; margin: 0 auto 4px; }
+.cmpct-col .mini-shape { width: 100%; height: auto; max-width: 54px; margin: 0 auto 4px; }
 .cmpct-name  { font-weight: 700; color: var(--text); font-size: 0.60rem; }
 .cmpct-val   { font-weight: 800; color: var(--text); font-size: 0.62rem; }
 .cmpct-rank  { font-size: 0.66rem; color: var(--muted); line-height: 1.3; }

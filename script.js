@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.58';
+const VERSION_NUMBER = '2.11.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2360,16 +2360,16 @@ async function fetchAndRenderCensusPanel(districtData) {
        <div class="cmpct-col"><div class="cmpct-name">Polsby–Popper</div>${compactnessSvg(todayDistrict)}<div class="cmpct-val">${ppScore.toFixed(2)}</div></div>
        ${reock != null ? `<div class="cmpct-col"><div class="cmpct-name">Reock</div>${reockSvg(todayDistrict)}<div class="cmpct-val">${reock.toFixed(2)}</div></div>` : ''}
      </div>`;
+  // Corner ⓘ hint + the explanation; the card toggles `.expanded` on click to reveal it.
   const ppCaption = ppScore == null ? '' :
-    `<details class="ms-caption">
-       <summary>What do these mean? <span class="ms-info">ⓘ</span></summary>
-       <div class="ms-explain">
-    <div class="cmpct-cols">
-    <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
-    <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.reock)}</div></div></div>
-         <p class="cmpct-note">Both score 0–1; higher means a more regular shape.<br>Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines)<br>Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
+    `<span class="ms-info" aria-hidden="true">ⓘ</span>
+     <div class="ms-explain">
+       <div class="cmpct-cols">
+         <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.compactness)}</div></div>
+         <div class="cmpct-col"><div class="cmpct-rank">${moreThan(pct.reock)}</div></div>
        </div>
-     </details>`;
+       <p class="cmpct-note">Both score 0–1; higher means a more regular shape.<br>Polsby–Popper compares the perimeter to a circle (penalizes squiggly lines)<br>Reock compares the area to the smallest circle that encloses the district (penalizes long, stretched shapes).</p>
+     </div>`;
 
   censusDataEl.innerHTML = `
     <div class="census-grid">
@@ -5449,15 +5449,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('post-x-btn').addEventListener('click', shareResultText);
   document.getElementById('share-btn').addEventListener('click', shareResultImage);
 
-  // Census cards with an expander (<details>) toggle when their body is clicked — not just
-  // the small "What do these mean?" summary. Clicks on the summary or inside the expanded
-  // content are left alone (native toggle / so reading the text doesn't collapse it).
+  // Census cards that have an explanation (.ms-explain) toggle it open/closed when clicked
+  // anywhere — single toggle source, so a second click always collapses it.
   document.addEventListener('click', (e) => {
     const card = e.target.closest('.census-card');
-    if (!card) return;
-    const details = card.querySelector('details');
-    if (!details || e.target.closest('details')) return;
-    details.open = !details.open;
+    if (!card || !card.querySelector('.ms-explain')) return;
+    card.classList.toggle('expanded');
   });
 
   // Resize — keep Leaflet map tile grid current when container changes
