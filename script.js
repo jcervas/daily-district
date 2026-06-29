@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.26';
+const VERSION_NUMBER = '2.10.27';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1959,9 +1959,12 @@ function pctBar(value, key, pctl, opts = {}) {
   let rank = '';
   if (pctl != null && !isNaN(pctl)) {
     const w = opts.rank || { hi: 'Higher', lo: 'Lower' };
-    rank = pctl >= 0.5
-      ? `<div class="mp-rank">${w.hi} than ${Math.round(pctl * 100)}% of districts</div>`
-      : `<div class="mp-rank">${w.lo} than ${Math.round((1 - pctl) * 100)}% of districts</div>`;
+    const verb = pctl >= 0.5 ? w.hi : w.lo;
+    const p = Math.round((pctl >= 0.5 ? pctl : 1 - pctl) * 100);
+    // At the extremes "than 100% of districts" reads as a value, not a rank — and
+    // collides with the metric's own % — so spell it out as "every other district".
+    const tail = p >= 100 ? 'every other district' : `${p}% of districts`;
+    rank = `<div class="mp-rank">${verb} than ${tail}</div>`;
   }
   return `<div class="mp-wrap">${bar}<div class="mp-ends"><span>${m.f(m.r[0])}</span><span>${m.f(m.r[1])}</span></div>${rank}</div>`;
 }
