@@ -3,7 +3,7 @@
 ## Updates
 
 - [ ] Verify the v2.4.0 unified state→district map on a real browser (daily-district.com) — the headless preview can't tick rAF, so the zoom transition / force-sim spread / rAF-deferred rebuild weren't observable there. Tune transition timing if the state→district zoom feels off.
-- [ ] Position `go-badge-layer` wholly within `gameover-map` near the district boundary (currently can sit outside the visible map).
+- [x] Position `go-badge-layer` wholly within `gameover-map` near the district boundary (currently can sit outside the visible map). — v2.10.46: picks the district side with the most open room in the framed viewport and clamps the pill on-canvas.
 - [ ] Cleanup after the unified-map merge: remove the now-unused `#district-tiles` element from `buildGameSection`, and the dead `_drawGameOverMap` path (game-over renders only in the game-over modal now).
 
 ## Major upgrades

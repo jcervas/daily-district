@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.45';
+const VERSION_NUMBER = '2.10.46';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4406,34 +4406,77 @@ function buildGameoverMap(_retry = 0) {
     : d3.zoomIdentity;
 
   // ── Badge inside zoom group — pans/zooms with map, scale(1/k) keeps it constant size ─
-  // Badge is anchored at district right-edge in data (projection) space.
-  // TODO: position the go-badge-layer wholly WITHIN the gameover-map viewport, placed in
-  // open space near the district boundary (not always to the right) — e.g. pick the side
-  // with the most empty room between the district bbox and the map edges so the pill never
-  // clips off-canvas. Right edge is fine only when that's where the open space is.
+  // The pill is anchored to a district edge in data (projection viewBox) space, then drawn
+  // toward the side of the district with the most open room in the framed viewport — so it
+  // sits wholly inside the map instead of clipping off the right edge when the district
+  // fills the width or hugs an edge. A clamp keeps it on-canvas along the other axis.
   let badgeLayer = null;
   let badgeDataX = 0, badgeDataY = 0;
   if (answerF) {
     const [[dbx0, dby0], [dbx1, dby1]] = pathGen.bounds(answerF);
-    badgeDataX = dbx1;
-    badgeDataY = (dby0 + dby1) / 2;
+    const midX = (dbx0 + dbx1) / 2, midY = (dby0 + dby1) / 2;
 
-    // Badge local space: 1 unit = 1 screen pixel (scale(1/k) cancels zoom, /renderScale converts viewBox→screen)
+    // Badge local space: 1 unit = 1 viewBox unit (g scales by k, badge by 1/k → net 1),
+    // and 1 viewBox unit ≈ renderScale screen px — so /renderScale gives screen-px sizes.
     const svgBB = svg.node().getBoundingClientRect();
     const renderScale = svgBB.width > 0 ? Math.min(svgBB.width / W, svgBB.height / H) : 1;
     const pillPx = 30 / renderScale, pillWPx = (answerKey.length * 8 + 28) / renderScale, gapPx = 10 / renderScale;
     const fontPx = 13 / renderScale;
 
+    // District bbox in viewBox coords at the initial framing → room on each side.
+    const t = _goZoomInitial;
+    const sx0 = dbx0 * t.k + t.x, sx1 = dbx1 * t.k + t.x;
+    const sy0 = dby0 * t.k + t.y, sy1 = dby1 * t.k + t.y;
+    const room = { right: W - sx1, left: sx0, top: sy0, bottom: H - sy1 };
+    const needH = gapPx + pillWPx;   // horizontal footprint (left/right placement)
+    const needV = gapPx + pillPx;    // vertical footprint (top/bottom placement)
+
+    // Pick the side with the most room; sides that actually fit the pill win outright,
+    // with a slight bias toward left/right (the pill reads naturally beside the district).
+    let side = 'right', best = -Infinity;
+    for (const s of ['right', 'left', 'top', 'bottom']) {
+      const horiz = (s === 'right' || s === 'left');
+      const fits = room[s] >= (horiz ? needH : needV);
+      const score = room[s] + (fits ? 1e6 : 0) + (horiz ? 1 : 0);
+      if (score > best) { best = score; side = s; }
+    }
+
+    // Anchor (data) at the chosen edge midpoint; local offsets draw the pill into the room.
+    let rectX, rectY, textX = 0, textY = 0;
+    if (side === 'right') {
+      badgeDataX = dbx1; badgeDataY = midY;
+      rectX = gapPx; rectY = -pillPx / 2; textX = gapPx + pillWPx / 2;
+    } else if (side === 'left') {
+      badgeDataX = dbx0; badgeDataY = midY;
+      rectX = -(gapPx + pillWPx); rectY = -pillPx / 2; textX = -(gapPx + pillWPx / 2);
+    } else if (side === 'top') {
+      badgeDataX = midX; badgeDataY = dby0;
+      rectX = -pillWPx / 2; rectY = -(gapPx + pillPx); textY = -(gapPx + pillPx / 2);
+    } else { // bottom
+      badgeDataX = midX; badgeDataY = dby1;
+      rectX = -pillWPx / 2; rectY = gapPx; textY = gapPx + pillPx / 2;
+    }
+
+    // Clamp the anchor along the perpendicular axis so the pill stays within the viewport.
+    if (side === 'right' || side === 'left') {
+      let cy = badgeDataY * t.k + t.y;
+      cy = Math.max(pillPx / 2 + 2, Math.min(H - pillPx / 2 - 2, cy));
+      badgeDataY = (cy - t.y) / t.k;
+    } else {
+      let cx = badgeDataX * t.k + t.x;
+      cx = Math.max(pillWPx / 2 + 2, Math.min(W - pillWPx / 2 - 2, cx));
+      badgeDataX = (cx - t.x) / t.k;
+    }
+
     badgeLayer = g.append('g').attr('class', 'go-badge-layer');
-    // rect/text live in local space where 1 unit = 1 screen px (achieved via scale(1/k))
     badgeLayer.append('rect')
-      .attr('x', gapPx).attr('y', -pillPx / 2).attr('width', pillWPx).attr('height', pillPx)
+      .attr('x', rectX).attr('y', rectY).attr('width', pillWPx).attr('height', pillPx)
       .attr('rx', pillPx / 2)
       .attr('fill', 'rgba(196,18,48,0.92)').attr('stroke', '#fff')
       .attr('stroke-width', 2).style('vector-effect', 'non-scaling-stroke')
       .style('filter', 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))');
     badgeLayer.append('text')
-      .attr('x', gapPx + pillWPx / 2).attr('y', 0)
+      .attr('x', textX).attr('y', textY)
       .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
       .attr('font-size', `${fontPx}px`).attr('font-weight', '700').attr('fill', '#fff')
       .attr('letter-spacing', '0.5').attr('pointer-events', 'none').text(answerKey);
