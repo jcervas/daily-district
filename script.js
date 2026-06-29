@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.37';
+const VERSION_NUMBER = '2.10.38';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -941,11 +941,10 @@ async function startServerArchive(date, num, label) {
   // single frame can measure a 0-size container right after the rebuild, which makes
   // the projection fail to fit the screen.
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    initUSRefMap();
-    zoomUSRefMapToValid(false);
+    // initUSRefMap now builds across frames (loader globe keeps spinning); pull the loader
+    // only once its last stage finishes, plus one frame so the finished map paints first.
+    initUSRefMap(() => requestAnimationFrame(() => hideBuildLoader()));
     if (map) map.invalidateSize();
-    // One more frame so the freshly built map paints before we pull the loader away.
-    requestAnimationFrame(() => hideBuildLoader());
   }));
 
   renderDistrict(todayDistrict);
@@ -3227,8 +3226,8 @@ function ensureUSRefMap() {
   zoomUSRefMapToValid(false);
 }
 
-function initUSRefMap() {
-  if (usRefMap) return;
+function initUSRefMap(onDone) {
+  if (usRefMap) { if (onDone) onDone(); return; }
   const container = document.getElementById('us-ref-map');
 
   // Use actual container dimensions so the projection fills the container without letterboxing.
@@ -3368,20 +3367,28 @@ function initUSRefMap() {
   const tooltip = document.getElementById('us-ref-tooltip');
 
   // Use states already loaded from districts-core.topojson — no CDN fetch needed.
-  (function renderRefMap() {
-    const stateFeatures = Object.values(topoStates).filter(Boolean);
-    const geojson = { type: 'FeatureCollection', features: stateFeatures };
-    projection.fitSize([W, H], geojson);
-    usRefPathGen = pathGen; // save for district overlay
+  // The heavy drawing (≈50 state paths + 2 national meshes + callouts) is split into
+  // stages run one-per-animation-frame so a concurrent loader globe (canvas, rAF-driven)
+  // keeps painting between stages instead of freezing through one long synchronous block.
+  const stateFeatures = Object.values(topoStates).filter(Boolean);
+  const geojson = { type: 'FeatureCollection', features: stateFeatures };
+  projection.fitSize([W, H], geojson);
+  usRefPathGen = pathGen; // save for district overlay
 
-    // Single group for ALL content so zoom transforms everything
-    const g = svgSel.append('g');
-    usRefMapGroup = g.node();
+  // Single group for ALL content so zoom transforms everything. All sub-layers are
+  // created synchronously up front (cheap) so their z-order is fixed before the stages
+  // fill them: states → district context → district polys → tiles → answer → callouts.
+  const g = svgSel.append('g');
+  usRefMapGroup = g.node();
+  const layerBasemap   = g.append('g').attr('class', 'layer-basemap').style('pointer-events', 'none');
+  const layerStates    = g.append('g').attr('class', 'layer-states');
+  g.append('g').attr('class', 'layer-context');    // counties/roads/urban (district+gameover)
+  g.append('g').attr('class', 'layer-districts');  // guessed-state district polygons + border
+  g.append('g').attr('class', 'layer-tiles');      // force-sim circles (district phase)
+  g.append('g').attr('class', 'layer-answer');     // answer highlight + leader badge (gameover)
 
-    // Static inactive backdrop: every state painted the eliminated/inactive grey, drawn once
-    // and never interactive. The live state layer sits on top; out-of-play states fade to
-    // transparent to reveal this (a true dim) instead of being recoloured.
-    const layerBasemap = g.append('g').attr('class', 'layer-basemap').style('pointer-events', 'none');
+  // ── Stage 1: static inactive backdrop (every state in the eliminated/inactive grey) ──
+  const stageBasemap = () => {
     const baseFill = _basemapFill();
     stateFeatures.forEach(feature => {
       const abbr = feature.properties && feature.properties.state;
@@ -3393,12 +3400,10 @@ function initUSRefMap() {
         .attr('fill', baseFill)
         .attr('stroke', 'none');
     });
+  };
 
-    // State content (clickable state fills + the white border mesh) lives in its own
-    // layer so the whole state map can be shown/hidden as one unit when toggling between
-    // the state-pick and district phases (unified-map migration).
-    const layerStates = g.append('g').attr('class', 'layer-states');
-
+  // ── Stage 2: clickable state fills + interactivity ──
+  const stageStates = () => {
     stateFeatures.forEach(feature => {
       const abbr = feature.properties && feature.properties.state;
       if (!abbr || !stateDistrictMap[abbr]) return;
@@ -3447,39 +3452,32 @@ function initUSRefMap() {
           _applyStateStyle(pathEl, abbr);
         });
     });
+  };
 
-    // White internal borders
-    if (rawTopo && rawTopo.objects.states) {
-      layerStates.append('path')
-        .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a !== b))
-        .attr('d', pathGen)
-        .attr('fill', 'none')
-        .attr('stroke', '#ffffff')
-        .attr('stroke-width', 1)
-        .attr('vector-effect', 'non-scaling-stroke')
-        .attr('pointer-events', 'none');
+  // ── Stage 3: white internal borders + outer US boundary (the topojson meshes) ──
+  const stageBorders = () => {
+    if (!(rawTopo && rawTopo.objects.states)) return;
+    layerStates.append('path')
+      .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a !== b))
+      .attr('d', pathGen)
+      .attr('fill', 'none')
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 1)
+      .attr('vector-effect', 'non-scaling-stroke')
+      .attr('pointer-events', 'none');
 
-      // Outer US boundary
-      layerStates.append('path')
-        .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a === b))
-        .attr('d', pathGen)
-        .attr('fill', 'none')
-        .attr('stroke', '#adb5bd')
-        .attr('stroke-width', 0.75)
-        .attr('vector-effect', 'non-scaling-stroke')
-        .attr('pointer-events', 'none');
-    }
+    layerStates.append('path')
+      .datum(topojson.mesh(rawTopo, rawTopo.objects.states, (a, b) => a === b))
+      .attr('d', pathGen)
+      .attr('fill', 'none')
+      .attr('stroke', '#adb5bd')
+      .attr('stroke-width', 0.75)
+      .attr('vector-effect', 'non-scaling-stroke')
+      .attr('pointer-events', 'none');
+  };
 
-    // Single-SVG layer skeleton (unified-map migration, Stage 1). District + game-over
-    // content will be appended into these groups so the whole game lives in ONE zooming
-    // SVG. Created above the state fills/border and below the callouts so z-order is
-    // states → district context → district polys → tiles → answer → callouts.
-    g.append('g').attr('class', 'layer-context');    // counties/roads/urban (district+gameover)
-    g.append('g').attr('class', 'layer-districts');  // guessed-state district polygons + border
-    g.append('g').attr('class', 'layer-tiles');      // force-sim circles (district phase)
-    g.append('g').attr('class', 'layer-answer');     // answer highlight + leader badge (gameover)
-
-    // Callouts for small states — build abbr-keyed lookup from our state features
+  // ── Stage 4: callouts for small states, then fit + (restored) district overlay ──
+  const stageCallouts = () => {
     const fipsToFeature = {};
     stateFeatures.forEach(f => {
       const abbr = f.properties && f.properties.state;
@@ -3511,6 +3509,15 @@ function initUSRefMap() {
       });
       ro.observe(refEl);
     }
+  };
+
+  // Run the stages one per frame so the loader globe paints between them, then signal done.
+  const stages = [stageBasemap, stageStates, stageBorders, stageCallouts];
+  let si = 0;
+  (function runStage() {
+    if (si >= stages.length) { if (onDone) onDone(); return; }
+    try { stages[si++](); } catch (e) { reportClientError('usrefmap_stage', e); }
+    requestAnimationFrame(runStage);
   })();
 }
 
