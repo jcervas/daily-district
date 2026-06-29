@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.49';
+const VERSION_NUMBER = '2.10.50';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5035,8 +5035,13 @@ function showResult(won, autoOpen = true) {
   // The result modal is today-only — archive never opens it (archive ends on the
   // game-over screen with the archived district's profile instead).
   if (won) {
-    msg.innerHTML = guessCount === 1 ? 'Hole in one!' :
-                    guessCount <= 3  ? 'Impressive!' : 'Got it!';
+    // Pick a random celebratory line, tiered by how few guesses it took.
+    const praise = guessCount === 1
+      ? ['Hole in one!', 'Bullseye!', 'On the money!', 'Gold medal!', 'Bingo!', 'Nailed it!']
+      : guessCount <= 3
+        ? ['Impressive!', 'Amazing!', 'Awesome!', 'Fantastic!', '¡Fantástico!', 'Magnifique!']
+        : ['Got it!', 'Cool!', '¡Excelente!', '¡Bueno!'];
+    msg.innerHTML = praise[Math.floor(Math.random() * praise.length)];
     msg.className = 'won';
   } else {
     msg.innerHTML = 'Better luck tomorrow';
