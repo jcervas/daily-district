@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.31';
+const VERSION_NUMBER = '2.10.32';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -411,6 +411,7 @@ let _tileZoomInAnimating    = false;  // true during 700ms entry zoom-in so hand
 let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
+let _dailySnapshot      = null;   // daily game state captured when an archive launches, for no-reload return
 
 // ── Server-authoritative daily ────────────────────────────────────────────────
 // The daily puzzle's shape, clues, guess validation and once-per-day all come from
@@ -844,6 +845,20 @@ async function startServerArchive(date, num, label) {
   try { data = await window.DistrictBackend.archivePuzzle(date); }
   catch (err) { console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
 
+  // Snapshot the daily so we can return to it WITHOUT a reload. The resets below replace
+  // these globals with fresh objects (new arrays/Sets), so the snapshot keeps the daily's
+  // references intact and untouched by archive play. Capture once: an archive→archive jump
+  // must preserve the ORIGINAL daily, so only snapshot when leaving a non-archive game.
+  if (!isArchiveGame) {
+    _dailySnapshot = {
+      serverPuzzle, serverAnswer, serverState,
+      guessHistory, guessCount, elapsedSeconds,
+      gameOver, correctStateGuessed, currentMapStage, gamePhase,
+      eliminatedStates, districts, districtPoints, adjMap,
+      todayDistrict, lastGameWon, cluesRevealed,
+    };
+  }
+
   // Reset to a fresh, unofficial archive session.
   isArchiveGame      = true;
   serverArchive      = { date, puzzleNumber: data.puzzleNumber, answer: { districtId: data.districtId, state: data.state, census: data.census }, clues: data.clues || {} };
@@ -907,6 +922,54 @@ async function startServerArchive(date, num, label) {
   renderClues();
   renderGuessHistory();
   document.getElementById('guess-remaining').textContent = `${MAX_GUESSES} guesses`;
+}
+
+// Return from an archive to today's daily WITHOUT a reload, by restoring the snapshot
+// taken when the archive launched and rebuilding the daily game-over screen. If the
+// snapshot is missing for any reason, fall back to a reload (re-fetches today's state).
+// `openResult` lands on the daily result modal (the "Today's Results" path).
+function returnToTodayDaily(openResult = false) {
+  const s = _dailySnapshot;
+  if (!s) {
+    try { if (openResult) sessionStorage.setItem('dd_open_result', '1'); } catch (_) {}
+    location.reload();
+    return;
+  }
+  isArchiveGame      = false;
+  serverArchive      = null;
+  serverPuzzle       = s.serverPuzzle;
+  serverAnswer       = s.serverAnswer;
+  serverState        = s.serverState;
+  guessHistory       = s.guessHistory;
+  guessCount         = s.guessCount;
+  elapsedSeconds     = s.elapsedSeconds;
+  gameOver           = s.gameOver;
+  correctStateGuessed = s.correctStateGuessed;
+  currentMapStage    = s.currentMapStage;
+  gamePhase          = s.gamePhase;
+  eliminatedStates   = s.eliminatedStates;
+  districts          = s.districts;
+  districtPoints     = s.districtPoints;
+  adjMap             = s.adjMap;
+  todayDistrict      = s.todayDistrict;
+  lastGameWon        = s.lastGameWon;
+  cluesRevealed      = s.cluesRevealed;
+
+  // Hide + de-activate the archive badge (reset to its plain, non-clickable form).
+  const badge = document.getElementById('archive-badge');
+  if (badge) {
+    badge.classList.add('hidden');
+    badge.classList.remove('archive-badge-clickable');
+    badge.removeAttribute('role');
+    badge.removeAttribute('tabindex');
+    badge.removeAttribute('title');
+    badge.textContent = 'Archive · unofficial — not counted';
+  }
+
+  // Rebuild the daily game-over + result content, mirroring the completed-load path.
+  showResult(lastGameWon, false);
+  showGameoverModal();
+  if (openResult) openResultModal();
 }
 
 // On any guess error (network blip, or a 409 because the day was completed in
@@ -5119,15 +5182,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Game-over modal controls — delegated from document so they survive div recreation
   document.addEventListener('click', e => {
-    // Archive badge → leave the archive and return to today's daily. A reload is the
-    // robust path: the daily is already finished, so the app reloads into its done state.
+    // Archive badge → leave the archive and return to today's daily (no reload).
     if (e.target.closest('#archive-badge.archive-badge-clickable')) {
-      location.reload(); return;
+      returnToTodayDaily(false); return;
     }
     if (e.target.closest('#gameover-result-btn')) {
       // The result modal is today-only. From an archive game-over, "Today's Results"
-      // returns to the daily (reload) and opens its result modal on arrival.
-      if (isArchiveGame) { try { sessionStorage.setItem('dd_open_result', '1'); } catch (_) {} location.reload(); }
+      // returns to the daily (no reload) and opens its result modal on arrival.
+      if (isArchiveGame) returnToTodayDaily(true);
       else openResultModal();
       return;
     }
