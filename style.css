@@ -2095,12 +2095,6 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .archive-badge.hidden { display: none; }
-.archive-badge-clickable { cursor: pointer; transition: background 0.15s; }
-.archive-badge-clickable:hover { background: var(--text, #222); }
-.archive-badge-back {
-  margin-left: 6px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.4);
-  text-decoration: underline; text-underline-offset: 2px;
-}
 
 /* ===== Archive picker ===== */
 .archive-note { font-size: 0.85rem; color: var(--muted); margin: 0 0 12px; }

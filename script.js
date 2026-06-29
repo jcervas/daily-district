@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.54';
+const VERSION_NUMBER = '2.10.55';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -928,15 +928,7 @@ async function startServerArchive(date, num, label) {
   // Swap modals → game view.
   ['archive-modal', 'result-modal', 'welcome-modal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
   destroyGameoverDiv();
-  const archiveBadge = document.getElementById('archive-badge');
-  if (archiveBadge) {
-    archiveBadge.classList.remove('hidden');
-    archiveBadge.classList.add('archive-badge-clickable');
-    archiveBadge.setAttribute('role', 'button');
-    archiveBadge.setAttribute('tabindex', '0');
-    archiveBadge.title = "Return to today's district";
-    archiveBadge.innerHTML = `Archive`;
-  }
+  document.getElementById('archive-badge')?.classList.remove('hidden');
   document.getElementById('game-section')?.remove();
   buildGameSection();
 
@@ -995,16 +987,7 @@ function returnToTodayDaily(openResult = false) {
   lastGameWon        = s.lastGameWon;
   cluesRevealed      = s.cluesRevealed;
 
-  // Hide + de-activate the archive badge (reset to its plain, non-clickable form).
-  const badge = document.getElementById('archive-badge');
-  if (badge) {
-    badge.classList.add('hidden');
-    badge.classList.remove('archive-badge-clickable');
-    badge.removeAttribute('role');
-    badge.removeAttribute('tabindex');
-    badge.removeAttribute('title');
-    badge.textContent = 'Archive · unofficial — not counted';
-  }
+  document.getElementById('archive-badge')?.classList.add('hidden');
 
   // Rebuild the daily game-over + result content, mirroring the completed-load path.
   showResult(lastGameWon, false);
@@ -5401,10 +5384,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Game-over modal controls — delegated from document so they survive div recreation
   document.addEventListener('click', e => {
-    // Archive badge → leave the archive and return to today's daily (no reload).
-    if (e.target.closest('#archive-badge.archive-badge-clickable')) {
-      returnToTodayDaily(false); return;
-    }
     if (e.target.closest('#gameover-result-btn')) {
       // The result modal is today-only. From an archive game-over, "Today's Results"
       // returns to the daily (no reload) and opens its result modal on arrival.
