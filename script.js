@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.1';
+const VERSION_NUMBER = '2.11.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -379,6 +379,7 @@ let districtSavedTransform  = null;   // zoom transform preserved across rebuild
 let districtStateFitTransform = null; // full-state inner-point fit; used by fit-toggle second press
 let _districtProjection    = null;   // AlbersUSA projection from most recent district ctx build
 let _districtCssScale      = 1;      // cssScale from most recent district ctx build
+let _districtDensityScale  = 1;      // density factor (>1 shrinks tiles+collision for dense states)
 let _districtPathGen       = null;   // d3.geoPath from most recent district ctx build
 let _districtStateFeatures = null;   // all features for the current state
 let _districtW             = REF_VB_W; // viewBox width from most recent district ctx build
@@ -3772,8 +3773,8 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
 // district content lives in the ref map's SVG. `g` = the district render group, `k` =
 // the current zoom scale. Reads module render constants (cssScale=1, target=14px, W).
 function _applyTileZoomScaling(g, k) {
-  const targetCirclePx = 14, densityScale = 1, cssScale = _districtCssScale || 1, W = _districtW;
-  const rk = targetCirclePx / (k * cssScale);
+  const targetCirclePx = 14, densityScale = _districtDensityScale || 1, cssScale = _districtCssScale || 1, W = _districtW;
+  const rk = targetCirclePx / (k * cssScale * densityScale);
 
   // Gameplay circles: radius, stroke, text
   g.select('.dist-icons').selectAll('circle')
@@ -3782,7 +3783,7 @@ function _applyTileZoomScaling(g, k) {
   g.select('.dist-icons').selectAll('text').each(function() {
     if (this.parentNode && this.parentNode.querySelector('rect')) return; // skip badge text
     const baseSize = Math.min(this.textContent.length > 2 ? 8 : 9, targetCirclePx);
-    d3.select(this).attr('font-size', `${baseSize / (k * cssScale)}px`);
+    d3.select(this).attr('font-size', `${baseSize / (k * cssScale * densityScale)}px`);
   });
   g.select('.dist-connectors').selectAll('line').attr('stroke-width', 0.8 / k);
   g.select('.dist-connectors').attr('display', k > 1.5 ? 'none' : null);
@@ -3862,8 +3863,13 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const stateFeatures = districts.filter(f => f.properties.state === stateAbbr);
   if (!stateFeatures.length) return null;
 
-  // Density-aware circle sizing: dense states (TX, CA) get smaller circles.
-  const densityScale   = 1; // reserved; circles are always the same screen size
+  // Density-aware circle sizing: dense states (TX, CA) get smaller tiles AND a tighter
+  // collision radius so their many districts pack compactly near their true geographic
+  // positions instead of the force sim exploding them across the panel with long
+  // criss-crossing connectors. Below ~18 districts the original 14px tiles are unchanged;
+  // above that the factor grows with √(count) and is capped so labels stay legible.
+  const districtCount  = stateFeatures.length;
+  const densityScale   = districtCount > 18 ? Math.min(1.7, Math.sqrt(districtCount / 18)) : 1;
   const targetCirclePx = 14;
 
   // Hot/cold inference from guess history
@@ -3920,6 +3926,7 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const projection  = usRefProjection || d3.geoAlbersUsa().fitSize([W, H], allStatesFC);
   _districtProjection    = projection;  // stored for external zoom calls
   _districtCssScale      = cssScale;
+  _districtDensityScale  = densityScale;
   _districtStateFeatures = stateFeatures;
   const pathGen     = d3.geoPath().projection(projection);
   _districtPathGen       = pathGen;
@@ -4108,7 +4115,7 @@ function _drawGameplayTiles(ctx) {
   // zoomK is the scale that will actually be on screen — use it to size circles so they
   // render correctly before any subsequent zoom event fires.
   const zoomK = districtSavedTransform ? districtSavedTransform.k : stateFitTransform.k;
-  const R     = targetCirclePx / (zoomK * cssScale);
+  const R     = targetCirclePx / (zoomK * cssScale * densityScale);
 
   // Connector lines (drawn first so they appear behind circles)
   const lineG   = g.append('g').attr('class', 'dist-connectors');
@@ -4140,7 +4147,7 @@ function _drawGameplayTiles(ctx) {
       .attr('fill', fillColor).attr('stroke', dark ? '#222' : '#fff').attr('stroke-width', 1.5 / zoomK);
     grp.append('text')
       .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
-      .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale)}px`)
+      .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * densityScale)}px`)
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
     if (!disabled) {
