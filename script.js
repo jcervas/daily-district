@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.33';
+const VERSION_NUMBER = '2.10.34';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -866,6 +866,9 @@ function hideBuildLoader() { document.getElementById('build-loader')?.remove(); 
 // the board the same way as the daily, but with local validation (isArchiveGame).
 async function startServerArchive(date, num, label) {
   showBuildLoader();   // cover the fetch + heavy game/map build with the loader globe
+  // Yield two frames so the globe's canvas actually paints before the synchronous build
+  // below blocks the main thread — otherwise only the CSS "Loading..." text would show.
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   let data;
   try { data = await window.DistrictBackend.archivePuzzle(date); }
   catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
