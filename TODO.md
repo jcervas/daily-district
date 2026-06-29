@@ -12,7 +12,7 @@
 
 ## UI
 
-- [ ] When a user plays in hard mode, we should differentiate when they share. Eventually we will have a database with all this information and will need to record it there, too.
+- [~] When a user plays in hard mode, we should differentiate when they share. — v2.10.47: share text shows "🔒 Hard mode"; hard-mode state captured per-game (`gameHardMode`, locked at first guess). TODO (DB): persist `gameHardMode` on the result row once results land in the database.
 - [ ] clicking the timer should pop open a modal that has a recent history of the puzzle speeds. It can look alot like the "guesses" tab on the results modal. Colors and symbols can be used to differentiate those correct from those incorrect puzzles. clicking on it can open the "game over" screen with that map shown.
 
 ## Features

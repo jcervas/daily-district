@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.46';
+const VERSION_NUMBER = '2.10.47';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2604,6 +2604,8 @@ function districtDataFor(feature) {
 function startTimer() {
   if (timerRunning) return;
   timerRunning = true;
+  // Lock in how this game is being played the moment play begins.
+  gameHardMode = hardMode;
   document.getElementById('timer-display').classList.add('running');
   timerInterval = setInterval(() => {
     elapsedSeconds++;
@@ -2735,6 +2737,10 @@ function updateGuessCounter() {
 
 // ---- Hard mode ----
 let hardMode = localStorage.getItem('districtguess_hardMode') === '1';
+// Hard mode can be toggled mid-game, so the live flag isn't a faithful record of how a
+// finished game was played. Capture it once when play begins (first guess → startTimer)
+// so the share text — and, later, the results DB — reflect the actual game.
+let gameHardMode = hardMode;
 
 // ---- Confirm-selection mode ----
 let confirmInputMode   = localStorage.getItem('districtguess_confirmMode') === '1';
@@ -5060,7 +5066,9 @@ function buildShareText() {
   });
   const grid = usedSlots.join(' ');   // only the guesses made — no empty-slot padding
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
-  return `🗺️ Daily District — ${outcome}\n${grid}\nCan you identify it? https://daily-district.com/`;
+  // Differentiate a hard-mode game (shape only — no terrain/hints during play).
+  const hardTag = gameHardMode ? ' 🔒 Hard mode' : '';
+  return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }
 
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
