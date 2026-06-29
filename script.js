@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.28';
+const VERSION_NUMBER = '2.10.29';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1254,8 +1254,45 @@ function zoomToBBox([[x0, y0], [x1, y1]], W, H, { margin = 0.85, maxScale = Infi
     .translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
 }
 
+// Single cycling zoom button: each click jumps the map to the NEXT level and morphs
+// the icon to whatever the following click will do. The icon always previews the next
+// destination (district pin → state polygon → globe → …).
+const GO_ZOOM_LEVELS = [
+  { key: 'district', title: 'Zoom to district',
+    icon: '<path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>' },
+  { key: 'state', title: 'Zoom to state',
+    icon: '<polygon points="4 8 9 4 20 7 19 16 11 20 4 16"/>' },
+  { key: 'nation', title: 'Zoom to nation',
+    icon: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>' },
+];
+// Index of the level the button will go to on the NEXT click. Map opens at district(0),
+// so the first click should take the player to state(1).
+let _goZoomLevel = 1;
+
+function _goZoomTo(idx) {
+  const lvl = GO_ZOOM_LEVELS[idx];
+  if (lvl.key === 'district')   _goAnimateTo(_goZoomInitial || d3.zoomIdentity);
+  else if (lvl.key === 'state') _goAnimateTo(_goZoomState   || d3.zoomIdentity);
+  else                          _goAnimateTo(d3.zoomIdentity);
+}
+
+// Crossfade the cycle button's icon to the given level (fade/scale out, swap, fade in).
+function _setGoCycleIcon(idx) {
+  const btn = document.querySelector('#gameover-modal .mzb-go-cycle');
+  if (!btn) return;
+  const lvl = GO_ZOOM_LEVELS[idx];
+  btn.classList.add('swapping');
+  btn.setAttribute('title', lvl.title);
+  btn.setAttribute('aria-label', lvl.title);
+  setTimeout(() => {
+    const svg = btn.querySelector('.mzb-icon');
+    if (svg) svg.innerHTML = lvl.icon;
+    btn.classList.remove('swapping');
+  }, 160);
+}
+
 // Smoothly tween the game-over map's zoom transform to `target` (a d3 zoomIdentity-
-// derived transform). Shared by the district / state / nation zoom-level buttons.
+// derived transform). Shared by the district / state / nation zoom levels.
 function _goAnimateTo(target, dur = 700) {
   const svgSel = d3.select('#gameover-map svg');
   if (svgSel.empty() || !_goZoom || !target) return;
@@ -1529,9 +1566,7 @@ function buildGameoverDiv() {
           <div class="map-zoom-btns">
             <button class="mzb mzb-go" data-dir="in" aria-label="Zoom in">+</button>
             <button class="mzb mzb-go" data-dir="out" aria-label="Zoom out">−</button>
-            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-district" aria-label="Zoom to district" title="Zoom to district"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg></button>
-            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-state" aria-label="Zoom to state" title="Zoom to state"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polygon points="4 8 9 4 20 7 19 16 11 20 4 16"/></svg></button>
-            <button class="mzb mzb-go mzb-go-fit" data-dir="fit-nation" aria-label="Zoom to nation" title="Zoom to nation"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></button>
+            <button class="mzb mzb-go mzb-go-fit mzb-go-cycle" data-dir="fit-cycle" aria-label="Zoom to state" title="Zoom to state"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><polygon points="4 8 9 4 20 7 19 16 11 20 4 16"/></svg></button>
           </div>
         </div>
       </div>
@@ -4287,6 +4322,15 @@ function buildGameoverMap(_retry = 0) {
   svg.call(_goZoom.transform, _goZoomInitial);
   _updateGoLayers(_goZoomInitial.k);
   _updateBadge(_goZoomInitial.k);
+  // Opening at district view → the cycle button previews "state" as the next step.
+  _goZoomLevel = 1;
+  const cycleBtn = document.querySelector('#gameover-modal .mzb-go-cycle');
+  if (cycleBtn) {
+    const svgIcon = cycleBtn.querySelector('.mzb-icon');
+    if (svgIcon) svgIcon.innerHTML = GO_ZOOM_LEVELS[1].icon;
+    cycleBtn.setAttribute('title', GO_ZOOM_LEVELS[1].title);
+    cycleBtn.setAttribute('aria-label', GO_ZOOM_LEVELS[1].title);
+  }
 }
 
 async function showGameoverModal() {
@@ -5058,9 +5102,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const dir = btn.dataset.dir;
     if (dir === 'in')  svgSel.transition().duration(250).call(_goZoom.scaleBy, 1.6);
     else if (dir === 'out') svgSel.transition().duration(250).call(_goZoom.scaleBy, 1 / 1.6);
-    else if (dir === 'fit-district') _goAnimateTo(_goZoomInitial || d3.zoomIdentity);
-    else if (dir === 'fit-state')    _goAnimateTo(_goZoomState   || d3.zoomIdentity);
-    else if (dir === 'fit-nation')   _goAnimateTo(d3.zoomIdentity);
+    else if (dir === 'fit-cycle') {
+      _goZoomTo(_goZoomLevel);                       // jump to the previewed level
+      _goZoomLevel = (_goZoomLevel + 1) % GO_ZOOM_LEVELS.length;
+      _setGoCycleIcon(_goZoomLevel);                 // morph icon to the next destination
+    }
   });
 
   // Share — landscape image + text via Web Share API; falls back to Twitter/X intent

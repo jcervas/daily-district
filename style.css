@@ -1640,6 +1640,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 .mzb:hover { background: rgba(0,0,0,0.65); }
 .mzb-fit .mzb-icon { width: 14px; height: 14px; stroke-width: 2.5; }
 .mzb-go-fit .mzb-icon { width: 15px; height: 15px; stroke-width: 2; }
+/* Cycling zoom button: crossfade/scale the icon when it morphs to the next level. */
+.mzb-go-cycle .mzb-icon { transition: opacity 0.16s ease, transform 0.16s ease; }
+.mzb-go-cycle.swapping .mzb-icon { opacity: 0; transform: scale(0.5) rotate(-40deg); }
 
 /* Pulsing "View Results" arrow on game-over map */
 .gameover-results-arrow {
