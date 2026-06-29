@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.56';
+const VERSION_NUMBER = '2.10.57';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -385,6 +385,7 @@ let _districtW             = REF_VB_W; // viewBox width from most recent distric
 let _districtH             = REF_VB_H; // viewBox height from most recent district ctx build
 let _usRefW                = REF_VB_W; // viewBox width of the US reference map SVG
 let _usRefH                = REF_VB_H; // viewBox height of the US reference map SVG
+let _usRefRO               = null;   // ResizeObserver on #us-ref-map (rebuilds on size change)
 let districtSimulation     = null;   // active force simulation — updated on zoom for centroid pull
 let _gameStarted        = false;   // true after welcome is dismissed; guards clue/guess DOM rendering
 let guessCount          = 0;
@@ -3253,6 +3254,20 @@ function ensureUSRefMap() {
   zoomUSRefMapToValid(false);
 }
 
+// Tear down and rebuild the ref map at the container's CURRENT size — used when the panel
+// settles to a different size than it was built with (so the viewBox + projection match
+// the panel and the map fills it). initUSRefMap re-fits everything, restores the district
+// overlay (if a state is confirmed) and re-fits the zoom, so the game state is preserved.
+function rebuildUSRefMap() {
+  const el = document.getElementById('us-ref-map');
+  if (!el) return;
+  if (_usRefRO) { _usRefRO.disconnect(); _usRefRO = null; }
+  el.innerHTML = '';
+  usRefMap = null; usRefMapGroup = null; usRefLayers = {}; usRefCallouts = {};
+  usRefZoom = null; usRefSvgSel = null;
+  initUSRefMap();
+}
+
 function initUSRefMap(onDone) {
   if (usRefMap) { if (onDone) onDone(); return; }
   const container = document.getElementById('us-ref-map');
@@ -3522,19 +3537,26 @@ function initUSRefMap(onDone) {
       showDistrictD3Map(todayDistrict.properties.state, true);
     }
 
-    // Re-zoom once the container has real CSS dimensions (fixes mobile timing issue
-    // where getBBox() fires before layout settles, leaving the map too zoomed out)
+    // Keep the map fitted to the panel. The viewBox + projection are built from the
+    // container size at init; if the panel later settles to a different size (layout
+    // settling, rotation, window resize) the SVG would letterbox / not fill. Rebuild at
+    // the real size when it changes materially; otherwise just (re)fit the zoom (the
+    // original mobile timing fix for a map built before layout settled).
     const refEl = document.getElementById('us-ref-map');
     if (refEl && window.ResizeObserver) {
-      let fired = false;
-      const ro = new ResizeObserver(() => {
-        if (refEl.offsetWidth > 0 && refEl.offsetHeight > 0 && !fired) {
-          fired = true;
-          ro.disconnect();
+      if (_usRefRO) { _usRefRO.disconnect(); }
+      let settleT = null;
+      _usRefRO = new ResizeObserver(() => {
+        const cw = refEl.offsetWidth, ch = refEl.offsetHeight;
+        if (!cw || !ch) return;
+        if (Math.abs(cw - _usRefW) > 1 || Math.abs(ch - _usRefH) > 1) {
+          clearTimeout(settleT);
+          settleT = setTimeout(rebuildUSRefMap, 120);
+        } else {
           zoomUSRefMapToValid(false);
         }
       });
-      ro.observe(refEl);
+      _usRefRO.observe(refEl);
     }
   };
 
