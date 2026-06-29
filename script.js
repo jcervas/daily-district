@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.41';
+const VERSION_NUMBER = '2.10.43';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1722,6 +1722,7 @@ function fitGameoverCensus() {
   const wrap = document.getElementById('gameover-census');
   if (!wrap) return;
   if (wrap.classList.contains('expanded')) return;   // user chose full height — leave it
+  if (wrap.classList.contains('user-sized')) return; // user dragged a custom height — leave it
   const handle = wrap.querySelector('.gameover-census-handle');
   const bar    = wrap.querySelector('.gameover-census-titlebar');
   const body   = wrap.querySelector('.gameover-census-body');
@@ -1736,39 +1737,52 @@ function wireGameoverCensus() {
   if (!wrap) return;
   const sheet = wrap.querySelector('.district-profile');
   const open  = () => { wrap.classList.add('open'); fitGameoverCensus(); };
-  const close = () => { wrap.classList.remove('open'); wrap.classList.remove('expanded'); };
+  // Dismiss + drop any user-dragged height so the next open starts from the fitted default.
+  const close = () => {
+    wrap.classList.remove('open', 'expanded', 'user-sized');
+    if (sheet) { sheet.style.height = ''; sheet.style.maxHeight = ''; }
+  };
 
   wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
   wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
 
-  // Drag the grip handle: up → full height (below the header); down → shrink back
-  // to the default sheet, then dismiss. A tap toggles between the two heights.
-  let startY = null, dy = 0;
+  // Drag the grip handle / titlebar to RESIZE the sheet to any height (anchored at the
+  // bottom): drag up to grow, down to shrink. A tap (no real movement) toggles full /
+  // fitted height; dragging down past the minimum dismisses it.
+  const handleEl = wrap.querySelector('.gameover-census-handle');
+  const barEl    = wrap.querySelector('.gameover-census-titlebar');
+  let startY = null, dy = 0, startH = 0, minH = 0, maxH = 0;
   const onDown = (e) => {
     startY = e.clientY; dy = 0;
+    startH = sheet ? sheet.getBoundingClientRect().height : 0;
+    minH = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0);  // never below the title strip
+    maxH = wrap.clientHeight;                                           // never above the header
     if (sheet) sheet.style.transition = 'none';
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
   const onMove = (e) => {
     if (startY == null || !sheet) return;
     dy = e.clientY - startY;
-    // Live follow only for downward drag (upward is handled as a state change on release).
-    sheet.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    if (Math.abs(dy) < 3) return;                 // let a tap stay a tap
+    // Dragging up (dy < 0) grows the sheet; clamp to [title strip, below header].
+    const h = Math.max(minH, Math.min(maxH, startH - dy));
+    wrap.classList.add('user-sized');             // takes over from the .fits/.expanded presets
+    sheet.style.maxHeight = 'none';
+    sheet.style.height = `${h}px`;
   };
   const onUp = () => {
     if (startY == null) return;
-    if (sheet) { sheet.style.transition = ''; sheet.style.transform = ''; }
-    const expanded = wrap.classList.contains('expanded');
-    if (Math.abs(dy) < 6) {                 // tap → toggle full / default
+    if (sheet) sheet.style.transition = '';
+    const floor = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0);
+    if (Math.abs(dy) < 6) {                        // tap → toggle full / fitted, clear manual size
+      if (sheet) { sheet.style.height = ''; sheet.style.maxHeight = ''; }
+      wrap.classList.remove('user-sized');
       wrap.classList.toggle('expanded');
-    } else if (dy < -50) {                   // swipe up → full height
-      wrap.classList.add('expanded');
-    } else if (dy > 90) {                    // swipe down → shrink, then dismiss
-      if (expanded) wrap.classList.remove('expanded');
-      else close();
+    } else if (sheet && dy > 0 && sheet.getBoundingClientRect().height <= floor + 8) {
+      close();                                     // dragged down to the floor → dismiss
     }
     startY = null; dy = 0;
-    fitGameoverCensus();   // re-evaluate fit after collapsing out of the expanded state
+    fitGameoverCensus();   // re-evaluate fit if we cleared the manual size
   };
   // Drag from the grip handle and the titlebar. Ignore pointerdowns on the close
   // button so its click still fires (setPointerCapture would otherwise swallow it).
