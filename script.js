@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.2';
+const VERSION_NUMBER = '2.11.3';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3863,13 +3863,6 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const stateFeatures = districts.filter(f => f.properties.state === stateAbbr);
   if (!stateFeatures.length) return null;
 
-  // Density-aware circle sizing: dense states (TX, CA) get smaller tiles AND a tighter
-  // collision radius so their many districts pack compactly near their true geographic
-  // positions instead of the force sim exploding them across the panel with long
-  // criss-crossing connectors. Below ~18 districts the original 14px tiles are unchanged;
-  // above that the factor grows with √(count) and is capped so labels stay legible.
-  const districtCount  = stateFeatures.length;
-  const densityScale   = districtCount > 18 ? Math.min(1.7, Math.sqrt(districtCount / 18)) : 1;
   const targetCirclePx = 14;
 
   // Hot/cold inference from guess history
@@ -3906,6 +3899,16 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
   const wonDist     = guessHistory.find(g => g.phase === 'district' && g.correct);
   const wonDistPart = wonDist ? wonDist.text.split('-').slice(1).join('-') : null;
   const isAtLarge   = stateFeatures.length === 1;
+
+  // Density-aware circle sizing: dense states (TX, CA) get smaller tiles AND a tighter
+  // collision radius so their many districts pack compactly near their true geographic
+  // positions instead of the force sim exploding them across the panel with long
+  // criss-crossing connectors. Keyed to the number of tiles actually drawn (the remaining
+  // candidates), so as wrong/eliminated districts drop out the survivors grow back toward
+  // full size. Below ~18 tiles the original 14px circles are unchanged; above that the
+  // factor grows with √(count) and is capped so labels stay legible.
+  const tileCount    = possibleKeys.size;
+  const densityScale = tileCount > 18 ? Math.min(1.7, Math.sqrt(tileCount / 18)) : 1;
 
   // Share the ref map's EXACT coordinate system so the two maps register pixel-for-pixel:
   // same viewBox dimensions (W,H) and the same AlbersUSA projection instance. Without this
