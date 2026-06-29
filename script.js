@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.40';
+const VERSION_NUMBER = '2.10.41';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1688,7 +1688,7 @@ function buildGameoverDiv() {
       <!-- District Profile — open-by-default bottom sheet with a blurred backdrop.
            Dismiss by swiping the sheet down or tapping the chevron; reopen via the pill. -->
       <div id="gameover-census" class="gameover-census open" role="dialog" aria-label="District Profile">
-        <section class="gameover-census-sheet">
+        <section class="district-profile">
           <div class="gameover-census-handle"><span class="gameover-census-grip"></span></div>
           <div class="gameover-census-titlebar">
             <span class="gameover-census-title">District Profile</span>
@@ -1734,7 +1734,7 @@ function fitGameoverCensus() {
 function wireGameoverCensus() {
   const wrap = document.getElementById('gameover-census');
   if (!wrap) return;
-  const sheet = wrap.querySelector('.gameover-census-sheet');
+  const sheet = wrap.querySelector('.district-profile');
   const open  = () => { wrap.classList.add('open'); fitGameoverCensus(); };
   const close = () => { wrap.classList.remove('open'); wrap.classList.remove('expanded'); };
 

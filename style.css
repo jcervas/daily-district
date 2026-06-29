@@ -1190,19 +1190,19 @@ circle.tile-ripple {
 .census-card > .party-icon.party-lg { margin-top: auto; }
 /* Inside the frosted District Profile sheet, the cards are glassy too so the
    blurred map behind shows through them. */
-.gameover-census-sheet .census-card {
+.district-profile .census-card {
   background: rgba(255, 255, 255, 0.75);   /* more opaque than the 0.2 sheet so cards stand out */
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
-.gameover-census-sheet .result-answer { background: transparent; padding: 2px 0 14px; }
+.district-profile .result-answer { background: transparent; padding: 2px 0 14px; }
 /* The District Profile doesn't need the "Solved in X guesses" line. */
-.gameover-census-sheet .result-time-line { display: none; }
+.district-profile .result-time-line { display: none; }
 /* Dark theme: tint the glass dark so light text stays readable over the map. */
-body.dark-mode .gameover-census-sheet { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
-body.dark-mode .gameover-census-sheet .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+body.dark-mode .district-profile { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+body.dark-mode .district-profile .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 @media (prefers-color-scheme: dark) {
-  body:not(.light-mode) .gameover-census-sheet { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
-  body:not(.light-mode) .gameover-census-sheet .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+  body:not(.light-mode) .district-profile { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+  body:not(.light-mode) .district-profile .census-card { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 }
 .census-card .label {
   font-size: 0.72rem;
@@ -1818,7 +1818,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   pointer-events: none;          /* only the backdrop, sheet & reopen pill are interactive */
   overflow: hidden;
 }
-.gameover-census-sheet {
+.district-profile {
   position: absolute;
   /* Never wider than the game-over map behind it: the map fills `main`, which is
      capped at 900px (16px padding) — 1400px (20px padding) in landscape ≥600px.
@@ -1847,13 +1847,13 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   pointer-events: auto;
   touch-action: none;
 }
-.gameover-census.open .gameover-census-sheet { transform: translateY(0); }
+.gameover-census.open .district-profile { transform: translateY(0); }
 /* Content fits the available height → size the sheet to its content (show everything)
    instead of the reduced 66% default. JS toggles `.fits` from a measured comparison. */
-.gameover-census.fits .gameover-census-sheet { max-height: 100%; }
+.gameover-census.fits .district-profile { max-height: 100%; }
 /* Expanded: swipe the handle up (or tap it) to fill the area below the header —
    full height, but still capped to the map width (never over the menu/header). */
-.gameover-census.expanded .gameover-census-sheet {
+.gameover-census.expanded .district-profile {
   max-height: 100%;
 }
 
@@ -1923,7 +1923,7 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .gameover-census.open .gameover-census-reopen { opacity: 0; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gameover-census-sheet { transition: none; }
+  .district-profile { transition: none; }
 }
 
 .gameover-card-header {
@@ -2096,6 +2096,32 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .archive-item:hover { background: var(--surface-alt); border-color: var(--muted); }
 .archive-num { font-weight: 700; }
 .archive-date { color: var(--muted); font-size: 0.9rem; }
+
+/* Frosted-glass treatment matching the District Profile sheet (.district-profile):
+   a translucent + blurred container, with glassy list items so they stand out on it. */
+.modal-content.archive-modal-content {
+  background: rgba(255, 255, 255, 0.20);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 18px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.10);
+}
+.archive-modal-content .archive-item {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.archive-modal-content .archive-item:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--muted);
+}
+/* Dark theme: tint the glass dark so light text stays readable. */
+body.dark-mode .archive-modal-content { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+@media (prefers-color-scheme: dark) {
+  body:not(.light-mode) .archive-modal-content { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+  body:not(.light-mode) .archive-modal-content .archive-item { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
+}
 
 /* ===== Login modal ===== */
 /* Sits above the welcome splash (z-index 200) so the sign-in gate shows first. */
@@ -2793,7 +2819,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 @media (orientation: landscape) and (min-width: 600px) {
   main { max-width: 1400px; padding: 10px 20px; }
   /* Keep the District Profile sheet matched to the wider map at this breakpoint. */
-  .gameover-census-sheet { width: min(100% - 40px, 1360px); }
+  .district-profile { width: min(100% - 40px, 1360px); }
 }
 
 /* ============================================================
