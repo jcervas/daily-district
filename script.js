@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.50';
+const VERSION_NUMBER = '2.10.51';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5044,7 +5044,14 @@ function showResult(won, autoOpen = true) {
     msg.innerHTML = praise[Math.floor(Math.random() * praise.length)];
     msg.className = 'won';
   } else {
-    msg.innerHTML = 'Better luck tomorrow';
+    // Pick a random consolation line.
+    const consolation = [
+      'Better luck tomorrow!', 'Better luck next time!', 'Tough break!',
+      'Back to the drawing board!', 'Close call!', 'Game over!',
+      "You win some, you lose some.", 'Not this round!', 'Tough luck!', 'No dice!',
+      "We'll get 'em next time!", 'On to the next one!',
+    ];
+    msg.innerHTML = consolation[Math.floor(Math.random() * consolation.length)];
     msg.className = 'lost';
   }
 
