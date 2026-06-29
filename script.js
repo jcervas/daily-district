@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.38';
+const VERSION_NUMBER = '2.10.39';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -838,9 +838,24 @@ function injectArchiveShapes(data) {
   });
 }
 
-// Full-screen loader (same spinning tartan globe as the welcome screen) shown while a
-// heavy build runs with no other UI up — e.g. an archive fetch + map build. The globe
-// auto-cleans from globe.js's rAF loop once its canvas leaves the DOM (overlay removed).
+// Pure-CSS tiled globe loader markup (used everywhere EXCEPT the welcome screen, which
+// keeps the canvas TiledGlobe). 18×18 tiles; each tile's animation-delay is derived from
+// its distance to the top-right corner (+ jitter) so the fill sweeps across like a
+// forming globe — generated here so the stylesheet needs no 324 per-tile rules.
+function globeLoader(size = 96) {
+  let tiles = '';
+  for (let i = 0; i < 324; i++) {
+    const row = Math.floor(i / 18), col = i % 18;
+    const delay = -(0.05 * (row + (17 - col)) + Math.random() * 0.12);
+    tiles += `<i style="animation-delay:${delay.toFixed(3)}s"></i>`;
+  }
+  return `<span class="globe-loader" role="status" aria-label="Loading" style="--size:${size}px;">`
+    + `<span class="tiles">${tiles}</span><span class="shade"></span></span>`;
+}
+
+// Full-screen loader (the pure-CSS tiled globe) shown while a heavy build runs with no
+// other UI up — e.g. an archive fetch + map build. Pure CSS, so it keeps animating
+// through the synchronous build (no canvas/main-thread freeze).
 function showBuildLoader(text = 'Loading...') {
   if (document.getElementById('build-loader')) return;
   const ov = document.createElement('div');
@@ -848,27 +863,17 @@ function showBuildLoader(text = 'Loading...') {
   ov.className = 'build-loader';
   const letters = [...text].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
   ov.innerHTML = `<div class="welcome-loading-container">`
-    + `<span class="build-loader-globe"></span>`
+    + globeLoader(96)
     + `<div class="welcome-loading-text" aria-label="Loading">${letters}</div>`
     + `</div>`;
   document.body.appendChild(ov);
-  const host = ov.querySelector('.build-loader-globe');
-  if (window.TiledGlobe && host) {
-    try {
-      new window.TiledGlobe(host, { size: 96, origin: 'bottom-right', direction: 'ccw',
-        tiles: 100, tilt: 28, roll: 22, empty: 0.5, snap: 0.7, scatter: 0.18, gap: 0.16, mode: 'tartan' });
-    } catch (_) {}
-  }
 }
 function hideBuildLoader() { document.getElementById('build-loader')?.remove(); }
 
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
 async function startServerArchive(date, num, label) {
-  showBuildLoader();   // cover the fetch + heavy game/map build with the loader globe
-  // Yield two frames so the globe's canvas paints before the synchronous build below
-  // blocks the main thread — otherwise only the CSS "Loading..." text would show.
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  showBuildLoader();   // CSS loader animates through the whole fetch + build (no freeze)
   let data;
   try { data = await window.DistrictBackend.archivePuzzle(date); }
   catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
@@ -4997,10 +5002,10 @@ function buildShareText() {
 
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
 // Fills the All Time (global aggregate) and My Stats (personal) tab panes.
-// Small pure-CSS loading spinner (compositor-animated, so it keeps spinning even while
-// the main thread is busy — unlike the canvas globe). Reused across async panels.
+// Pure-CSS loading block: the tiled globe loader + a label. Compositor-animated, so it
+// keeps moving even while the main thread is busy. Reused across async panels.
 function loadingBlock(text = 'Loading…') {
-  return `<div class="lb-loading"><span class="spinner" aria-hidden="true"></span><span>${text}</span></div>`;
+  return `<div class="lb-loading">${globeLoader(52)}<span>${text}</span></div>`;
 }
 
 async function loadLeaderboardPanels() {
