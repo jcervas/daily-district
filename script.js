@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.5';
+const VERSION_NUMBER = '2.11.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3692,6 +3692,18 @@ function lockStateDropdown(stateAbbr, instant = false) {
   } else {
     requestAnimationFrame(() => zoomUSRefMapToValid(true));
   }
+
+  // Locking a state collapses the tall state-chip row, which grows the map container.
+  // The viewBox is baked from the container size at build time, so a now-taller container
+  // leaves the map letterboxed (empty strip below the map) until the *debounced*
+  // ResizeObserver gets around to rebuilding. Don't wait on it — once the layout (and the
+  // zoom animation) have settled, re-sync the viewBox immediately if the container resized.
+  setTimeout(() => {
+    const el = document.getElementById('us-ref-map');
+    if (el && (Math.abs(el.offsetWidth - _usRefW) > 1 || Math.abs(el.offsetHeight - _usRefH) > 1)) {
+      rebuildUSRefMap();
+    }
+  }, instant ? 60 : 780);
 }
 
 // Switch the SHARED map between the state-pick view and the district view. In the
