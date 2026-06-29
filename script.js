@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.0';
+const VERSION_NUMBER = '2.11.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4029,6 +4029,25 @@ function _drawGameplayTiles(ctx) {
   // Urban areas + roads — decorative geographic context, clipped to the active
   // state, always visible during gameplay (no zoom threshold). Drawn before the
   // county lines so the dashed county borders sit on top.
+  // Restrict the national roads/counties/urban datasets to features overlapping
+  // the active state's bbox before drawing. The clip-path masks the rest visually,
+  // but a path the renderer never sees is far cheaper than one clipped away — this
+  // cuts the in-play map from ~18k paths to a few hundred (mirrors the gameover path,
+  // which already filters via inBounds).
+  let inStateBounds = () => true;
+  if (stateOutline) {
+    try {
+      const [[sbx0, sby0], [sbx1, sby1]] = d3.geoBounds(stateOutline);
+      const sm = 0.1;
+      inStateBounds = f => {
+        try {
+          const [[fx0, fy0], [fx1, fy1]] = d3.geoBounds(f);
+          return fx1 >= sbx0 - sm && fx0 <= sbx1 + sm && fy1 >= sby0 - sm && fy0 <= sby1 + sm;
+        } catch { return false; }
+      };
+    } catch { /* keep pass-through */ }
+  }
+
   if (stateOutline && (topoUrban || topoRoads)) {
     const ctxClipId = `gameplay-context-clip-${stateAbbr}`;
     g.append('defs').append('clipPath').attr('id', ctxClipId)
@@ -4036,13 +4055,13 @@ function _drawGameplayTiles(ctx) {
     if (topoUrban) {
       g.append('g').attr('class', 'context-urban').attr('pointer-events', 'none')
         .attr('clip-path', `url(#${ctxClipId})`).attr('opacity', 1)
-        .selectAll('path').data(topoUrban.features).join('path').attr('d', pathGen)
+        .selectAll('path').data(topoUrban.features.filter(inStateBounds)).join('path').attr('d', pathGen)
         .attr('fill', dark ? 'rgba(255,255,255,0.07)' : 'rgba(80,80,140,0.12)').attr('stroke', 'none');
     }
     if (topoRoads) {
       g.append('g').attr('class', 'context-roads').attr('pointer-events', 'none')
         .attr('clip-path', `url(#${ctxClipId})`).attr('opacity', 1)
-        .selectAll('path').data(topoRoads.features).join('path').attr('d', pathGen)
+        .selectAll('path').data(topoRoads.features.filter(inStateBounds)).join('path').attr('d', pathGen)
         .attr('fill', 'none')
         .attr('stroke', dark ? 'rgba(255,255,255,0.18)' : 'rgba(60,60,100,0.22)')
         .attr('stroke-width', 0.5).attr('vector-effect', 'non-scaling-stroke');
@@ -4058,7 +4077,7 @@ function _drawGameplayTiles(ctx) {
       .append('path').attr('d', pathGen(stateOutline));
     g.append('g').attr('class', 'context-counties').attr('pointer-events', 'none')
       .attr('clip-path', `url(#${clipId})`).attr('opacity', 0.45)
-      .selectAll('path').data(topoCounties.features).join('path').attr('d', pathGen)
+      .selectAll('path').data(topoCounties.features.filter(inStateBounds)).join('path').attr('d', pathGen)
       .attr('fill', 'none')
       .attr('stroke', dark ? 'rgba(255,255,255,0.30)' : 'rgba(0,0,0,0.35)')
       .attr('stroke-width', 0.5).attr('stroke-dasharray', '2 3')
