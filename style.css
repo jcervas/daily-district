@@ -1396,6 +1396,20 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
      clips the lower part of the panel (e.g. the 5/6/X guess-distribution rows). */
 }
 .lb-empty { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 20px; }
+/* Pure-CSS loading block: a spinning ring + label. Compositor-animated, so it keeps
+   moving even while the main thread is busy building the panel it precedes. */
+.lb-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 28px 0; color: var(--muted); font-size: 0.9rem;
+}
+.spinner {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid var(--border, rgba(0,0,0,0.12));
+  border-top-color: var(--accent, #C41230);
+  animation: spinner-rot 0.8s linear infinite;
+}
+@keyframes spinner-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
 
 /* ---- Personal stats ---- */
 .personal-grid {

@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.34';
+const VERSION_NUMBER = '2.10.35';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4990,11 +4990,17 @@ function buildShareText() {
 
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
 // Fills the All Time (global aggregate) and My Stats (personal) tab panes.
+// Small pure-CSS loading spinner (compositor-animated, so it keeps spinning even while
+// the main thread is busy — unlike the canvas globe). Reused across async panels.
+function loadingBlock(text = 'Loading…') {
+  return `<div class="lb-loading"><span class="spinner" aria-hidden="true"></span><span>${text}</span></div>`;
+}
+
 async function loadLeaderboardPanels() {
   const alltimeEl  = document.getElementById('alltime-scores');
   const personalEl = document.getElementById('personal-stats');
   if (!alltimeEl || !personalEl) return;
-  alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Loading…</div>';
+  alltimeEl.innerHTML = personalEl.innerHTML = loadingBlock();
 
   if (!window.DistrictBackend) {
     alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Stats unavailable.</div>';
@@ -5179,7 +5185,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // `archive` endpoint. Past answers are public, so this is safe.
   async function openArchive() {
     const list = document.getElementById('archive-list');
-    list.innerHTML = '<div class="lb-empty">Loading…</div>';
+    list.innerHTML = loadingBlock();
     document.getElementById('result-modal')?.classList.add('hidden');
     document.getElementById('archive-modal').classList.remove('hidden');
     let resp;
