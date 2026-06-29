@@ -1688,6 +1688,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   transition: background 0.15s;
 }
 .mzb:hover { background: rgba(0,0,0,0.65); }
+/* Disabled (e.g. Fit when the view already frames the remaining candidates) */
+.mzb:disabled, .mzb.is-disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.mzb:disabled:hover, .mzb.is-disabled:hover { background: rgba(0,0,0,0.45); }
 .mzb-fit .mzb-icon { width: 14px; height: 14px; stroke-width: 2.5; }
 .mzb-go-fit .mzb-icon { width: 15px; height: 15px; stroke-width: 2; }
 /* Cycling zoom button: crossfade/scale the icon when it morphs to the next level. */

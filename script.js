@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.4';
+const VERSION_NUMBER = '2.11.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3348,27 +3348,16 @@ function initUSRefMap(onDone) {
         const tilesSvg = usRefSvgSel;   // single map: district zoom is the shared zoom
         if (!tilesSvg || tilesSvg.empty() || !districtZoomBehavior || !_districtProjection) return;
         if (!gameOver) {
-          const W = _districtW, H = _districtH;
-          const atActiveFit = btn.classList.contains('at-active-fit');
-          if (atActiveFit && districtStateFitTransform) {
-            // Second press: zoom out to full state geographic bbox
-            districtUserZoomed = false;
-            districtSavedTransform = districtStateFitTransform;
-            tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
-              .call(districtZoomBehavior.transform, districtStateFitTransform);
-            btn.classList.remove('at-active-fit');
-          } else {
-            // First press: zoom to the remaining eligible TILES (dist-icon positions).
-            districtUserZoomed = false;
-            const activeBBox = _districtTileBBox(getActiveDistrictKeys());
-            let t = activeBBox ? zoomToBBox(activeBBox, W, H, { margin: DISTRICT_ACTIVE_FIT_MARGIN }) : districtStateFitTransform;
-            if (t) {
-              tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
-                .call(districtZoomBehavior.transform, t);
-              districtSavedTransform = t;
-            }
-            btn.classList.add('at-active-fit');
-          }
+          // Single-purpose "fit to remaining candidates": always frame the eligible tiles.
+          // No toggle-out — the − button handles zooming out. If the view already matches
+          // the candidate fit there's nothing to do (the button is also disabled in that
+          // state via _refreshFitBtnState), so bail rather than nudge the zoom.
+          const t = _candidateFitTransform();
+          if (!t || _atCandidateFit(t)) return;
+          districtUserZoomed = false;
+          tilesSvg.transition().duration(500).ease(d3.easeCubicInOut)
+            .call(districtZoomBehavior.transform, t);
+          districtSavedTransform = t;
           return;
         }
         // Game-over: toggle between district view and national view
@@ -3784,6 +3773,35 @@ function _effDensity(k) {
   return Math.max(1, base / Math.max(1, k / fitK));
 }
 
+// The zoom transform that frames the remaining candidate tiles (district phase).
+function _candidateFitTransform() {
+  if (gameOver || !_districtProjection) return null;
+  const bbox = _districtTileBBox(getActiveDistrictKeys());
+  return bbox ? zoomToBBox(bbox, _districtW, _districtH, { margin: DISTRICT_ACTIVE_FIT_MARGIN })
+              : districtStateFitTransform;
+}
+
+// True when the current map zoom is already (within a hair of) the candidate fit, so
+// pressing Fit would do nothing visible.
+function _atCandidateFit(t) {
+  const svg = usRefSvgSel?.node();
+  if (!t || !svg) return false;
+  const cur = d3.zoomTransform(svg);
+  return Math.abs(cur.k - t.k) < 0.01 * t.k && Math.abs(cur.x - t.x) < 1.5 && Math.abs(cur.y - t.y) < 1.5;
+}
+
+// Grey out / enable the district-phase Fit button depending on whether a press would
+// change anything. Called on every zoom tick and after each tile rebuild.
+function _refreshFitBtnState() {
+  const btn = document.querySelector('.mzb-fit');
+  if (!btn) return;
+  if (gameOver || gamePhase === 'state') { btn.classList.remove('is-disabled'); btn.removeAttribute('disabled'); return; }
+  const t = _candidateFitTransform();
+  const off = !!t && _atCandidateFit(t);
+  btn.classList.toggle('is-disabled', off);
+  if (off) btn.setAttribute('disabled', ''); else btn.removeAttribute('disabled');
+}
+
 function _applyTileZoomScaling(g, k) {
   const targetCirclePx = 14, densityScale = _effDensity(k), cssScale = _districtCssScale || 1, W = _districtW;
   const rk = targetCirclePx / (k * cssScale * densityScale);
@@ -3854,6 +3872,8 @@ function _applyTileZoomScaling(g, k) {
     g.select('.context-urban').attr('opacity', fadeOpacity);
     g.select('.context-roads').attr('opacity', fadeOpacity);
   }
+
+  _refreshFitBtnState();   // a press is only useful when the view isn't already the candidate fit
 }
 
 function buildDistrictD3Map(stateAbbr, animateReveal = false, zoomIn = false) {
@@ -4198,6 +4218,7 @@ function _drawGameplayTiles(ctx) {
   districtSimulation.tick(Math.ceil(Math.log(districtSimulation.alphaMin() / districtSimulation.alpha()) / Math.log(1 - districtSimulation.alphaDecay())));
   applyIconPositions();
   districtSimulation._applyIconPositions = applyIconPositions;
+  _refreshFitBtnState();   // candidate set changed → re-evaluate whether Fit is actionable
 }
 
 // skipAnims: true when called from startGameOverTransition — animations are deferred
