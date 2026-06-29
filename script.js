@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.52';
+const VERSION_NUMBER = '2.10.53';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4556,7 +4556,7 @@ async function showGameoverModal() {
 
     // Top ribbon: "The answer was CA-31." / "You got it! CA-31."
     const ribbonEl = document.getElementById('gameover-ribbon-text');
-    if (ribbonEl) ribbonEl.textContent = won ? `You got it! ${answerKey}.` : `The answer was ${answerKey}.`;
+    if (ribbonEl) ribbonEl.textContent = won ? `Game over. You got it! ${answerKey}.` : `Game over. The answer was ${answerKey}.`;
 
     // Card header headline: "Answer was: CA-31 — District 31"
     const hl = document.getElementById('gameover-headline');
@@ -5467,6 +5467,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       container.appendChild(btnMap);
       container.appendChild(btnResult);
+
+      // Signed-in players who've finished today's puzzle can jump straight into the
+      // archive from the welcome screen.
+      if (!isAnonymousPlayer) {
+        const btnArchive = document.createElement('button');
+        btnArchive.className = 'welcome-action-btn secondary';
+        btnArchive.textContent = 'Play Archive';
+        btnArchive.addEventListener('click', () => {
+          welcomeModal.classList.add('hidden');
+          openArchive();
+        });
+        container.appendChild(btnArchive);
+      }
     } else {
       const inProgress = guessCount > 0 || correctStateGuessed;
       if (inProgress) {
