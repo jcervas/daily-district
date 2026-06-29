@@ -544,14 +544,20 @@ main:has(#already-played-banner:not(.hidden)) {
 
 /* ── Mobile hint bar ─────────────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Collapse/expand behaviour is universal (above); on mobile just tighten the
-     collapsed icon strip so the latest clue keeps as much width as possible. */
+  /* Collapse/expand behaviour is universal (above); on mobile tighten the collapsed
+     icon strip (it only shows a centered icon) so the latest clue keeps its full title
+     instead of ellipsis-truncating. */
   .hint-card {
-    flex: 0 0 30px;
-    min-width: 30px;
-    padding: 8px 6px;
+    flex: 0 0 26px;
+    min-width: 26px;
+    padding: 8px 3px;
   }
-  .hint-card.latest { flex: 1 1 0; min-width: 0; }
+  .hint-card.latest { flex: 1 1 0; min-width: 0; padding: 8px 10px; }
+}
+/* Very narrow phones: shrink the icon strip further so long clue titles still fit. */
+@media (max-width: 400px) {
+  .hint-card { flex: 0 0 22px; min-width: 22px; padding: 8px 2px; }
+  .hint-card.latest { flex: 1 1 0; min-width: 0; padding: 8px 8px; }
 }
 
 /* ---- Banner ---- */
