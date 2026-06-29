@@ -1783,10 +1783,28 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   background: var(--bg);
 }
 
-/* Top ribbon */
+/* Top ribbon — a full-width band across the game-over screen; its content (text + action
+   buttons) is held to a centered max-width so it lines up with the card/map below. */
 .gameover-ribbon {
   flex-shrink: 0;
-  margin-bottom: 10px;   /* sits at the top of #gameover-next, above the countdown text */
+  width: 100%;
+  display: block;        /* override .banner's flex — the inner row is the flex container */
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--banner-border);
+  border-radius: 0;
+  background: var(--banner-bg);
+}
+.gameover-ribbon-inner {
+  max-width: 868px;      /* matches the card/map width so text isn't full-bleed */
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 16px;
 }
 .gameover-ribbon-text {
   font-size: 0.95rem;

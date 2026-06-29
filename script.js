@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.10.48';
+const VERSION_NUMBER = '2.10.49';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -935,7 +935,7 @@ async function startServerArchive(date, num, label) {
     archiveBadge.setAttribute('role', 'button');
     archiveBadge.setAttribute('tabindex', '0');
     archiveBadge.title = "Return to today's district";
-    archiveBadge.innerHTML = `Archive · unofficial — not counted <span class="archive-badge-back">← Back to today</span>`;
+    archiveBadge.innerHTML = `Archive`;
   }
   document.getElementById('game-section')?.remove();
   buildGameSection();
@@ -1647,15 +1647,19 @@ function buildGameoverDiv() {
   el.id = 'gameover-modal';
   el.innerHTML = `
     <div class="gameover-modal-content">
+      <div class="gameover-ribbon banner">
+        <div class="gameover-ribbon-inner">
+          <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
+          <div class="banner-actions">
+            <button id="gameover-result-btn">View Results</button>
+            <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
+            <button id="gameover-post-btn" class="go-share-btn" aria-label="Share image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Post</button>
+            <button id="gameover-new-map-btn">Play Archive</button>
+          </div>
+        </div>
+      </div>
       <div class="gameover-card">
         <div id="gameover-next" class="gameover-next">
-          <div class="gameover-ribbon banner">
-            <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
-            <div class="banner-actions">
-              <button id="gameover-result-btn">View Results</button>
-              <button id="gameover-new-map-btn">Play Archive</button>
-            </div>
-          </div>
           <div class="gameover-card-header">
             <span id="gameover-headline" class="gameover-headline"></span>
             <div class="gameover-stats">
@@ -2351,7 +2355,7 @@ async function fetchAndRenderCensusPanel(districtData) {
   const popChange = (d.pop && d.pop2020) ? (d.pop - d.pop2020) / d.pop2020 * 100 : null;
   const popDelta  = (d.pop && d.pop2020) ? d.pop - d.pop2020 : null;
   const popDeltaStr = popDelta == null ? 'since the 2020 Census'
-    : `${popDelta >= 0 ? '+' : '−'}${Math.abs(popDelta) >= 1000 ? Math.round(Math.abs(popDelta) / 1000) + 'k' : Math.abs(popDelta)} since 2020`;
+    : `${popDelta >= 0 ? '+' : '−'}${Math.abs(popDelta) >= 1000 ? Math.round(Math.abs(popDelta) / 1000) + 'k' : Math.abs(popDelta)} persons since 2020`;
   const partyEmblem = rep ? partyIcon(rep.partyCode, true) : '';
   // Compactness explainer — two labeled graphics (Polsby–Popper + Reock) in columns,
   // each with its score and how it ranks among all districts.
@@ -2468,7 +2472,7 @@ async function fetchAndRenderCensusPanel(districtData) {
       <div class="census-card">
         <div class="label">Bachelor's Degree+</div>
         <div class="value">${eduPct}%</div>
-        <div class="sub">of adults 25+</div>
+        <div class="sub">of adults 25+ have a bachelor's degree or more education</div>
         ${pctBar(eduPct, 'edu', pct.edu)}
       </div>
       <div class="census-card">
@@ -4609,11 +4613,14 @@ async function showGameoverModal() {
     const main = document.querySelector('#gameover-next .gameover-next-main');
     if (main) {
       main.innerHTML = `<span class="gameover-next-title">Archive${num != null ? ` · No. ${num}` : ''}</span>` +
-        `<span class="gameover-next-sub">${dateStr ? dateStr + ' &middot; ' : ''}unofficial — not counted</span>`;
+        `<span class="gameover-next-sub">This district was played on ${dateStr ? dateStr + ' &middot; ' : ''}</span>`;
     }
     document.getElementById('gameover-next-cta')?.classList.add('hidden');
     const resBtn = document.getElementById('gameover-result-btn');
     if (resBtn) resBtn.textContent = "Today's Results";
+    // Archive is unofficial — hide Share/Post so a past puzzle isn't shared as today's daily.
+    document.getElementById('gameover-share-btn')?.classList.add('hidden');
+    document.getElementById('gameover-post-btn')?.classList.add('hidden');
   } else {
     // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
     // sign-in nudge (track stats / compare); signed-in players just see the countdown.
@@ -5072,6 +5079,42 @@ function buildShareText() {
   return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }
 
+// Share the result as text + a landscape map image via the Web Share API; falls back to
+// share-text-only, then to a Twitter/X intent. Shared by the result modal and the
+// game-over screen's Share button.
+async function shareResultText() {
+  const text = buildShareText();
+  if (navigator.canShare && todayDistrict && window.d3) {
+    try {
+      const blob = await _renderDistrictToBlob();
+      const file = new File([blob], 'daily-district.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
+    } catch (err) { if (err?.name === 'AbortError') return; }
+  }
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (err) { if (err?.name === 'AbortError') return; }
+  }
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
+}
+
+// Share a portrait 1080×1350 image (map + details) via Web Share; desktop falls back to a
+// download. Shared by the result modal and the game-over screen's Post button.
+async function shareResultImage() {
+  try {
+    const blob = await _renderShareBlob();
+    const fname = `daily-district-${todayDistrict?.properties['state-district'] || 'share'}.png`;
+    const file = new File([blob], fname, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (err) {
+    if (err?.name !== 'AbortError') console.warn('Share failed:', err);
+  }
+}
+
 // Loads the leaderboard panels inside the result modal's Leaderboard tab.
 // Fills the All Time (global aggregate) and My Stats (personal) tab panes.
 // Pure-CSS loading block: the tiled globe loader + a label. Compositor-animated, so it
@@ -5313,6 +5356,8 @@ document.addEventListener('DOMContentLoaded', () => {
       else openResultModal();
       return;
     }
+    if (e.target.closest('#gameover-share-btn')) { shareResultText(); return; }
+    if (e.target.closest('#gameover-post-btn'))  { shareResultImage(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
     // Clicking anywhere on the daily game-over screen (except zoom buttons and the
     // District Profile sheet) opens results. Disabled for archive — its result modal is
@@ -5335,47 +5380,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Share — landscape image + text via Web Share API; falls back to Twitter/X intent
-  document.getElementById('post-x-btn').addEventListener('click', async () => {
-    const text = buildShareText();
-    if (navigator.canShare && todayDistrict && window.d3) {
-      try {
-        const blob = await _renderDistrictToBlob();
-        const file = new File([blob], 'daily-district.png', { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text });
-          return;
-        }
-      } catch (err) { if (err?.name === 'AbortError') return; }
-    }
-    if (navigator.share) {
-      try { await navigator.share({ text }); return; } catch (err) {
-        if (err?.name === 'AbortError') return;
-      }
-    }
-    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
-  });
-
-  // Share — portrait 1080×1350, map + details panel
-  document.getElementById('share-btn').addEventListener('click', async () => {
-    try {
-      const blob = await _renderShareBlob();
-      const fname = `daily-district-${todayDistrict?.properties['state-district'] || 'share'}.png`;
-      const file = new File([blob], fname, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
-        return;
-      }
-      // Desktop fallback: download the image
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fname;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    } catch (err) {
-      if (err?.name !== 'AbortError') console.warn('Share failed:', err);
-    }
-  });
+  // Result-modal share buttons (shared logic with the game-over screen's Share/Post).
+  document.getElementById('post-x-btn').addEventListener('click', shareResultText);
+  document.getElementById('share-btn').addEventListener('click', shareResultImage);
 
   // Resize — keep Leaflet map tile grid current when container changes
   window.addEventListener('resize', () => {
