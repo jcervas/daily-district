@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.12';
+const VERSION_NUMBER = '2.11.13';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -548,7 +548,7 @@ async function initServer() {
   // 1. States-only topojson + district-names.json (no district geometry shipped).
   try {
     const [statesTopo, names] = await Promise.all([
-      fetch('./states.topojson').then(r => { if (!r.ok) throw new Error(`states ${r.status}`); return r.json(); }),
+      fetch('./states.topojson?v=2').then(r => { if (!r.ok) throw new Error(`states ${r.status}`); return r.json(); }),
       fetch('./district-names.json').then(r => { if (!r.ok) throw new Error(`names ${r.status}`); return r.json(); }),
     ]);
     rawTopo    = statesTopo;
@@ -3095,11 +3095,15 @@ function _setStatePickInteractive(on) {
   if (!layer.empty()) layer.style('pointer-events', on ? null : 'none');
 }
 
-// Inner point for a state — the geoCentroid of its LARGEST sub-polygon (same method used
-// for district inner points). The whole-feature centroid of a concave or multi-part state
-// (FL panhandle, MI's two peninsulas, HI's island chain) can fall outside the land; the
-// largest-part centroid stays on the mainland body.
+// Inner point [lon,lat] for a state. Prefers the interior point baked into the topojson at
+// build time (states.topojson `innerX/innerY`, from mapshaper's guaranteed-inside label
+// point — see build-server-assets.mjs). Falls back to the largest sub-polygon's centroid
+// for any feature without it (e.g. archive states injected from another source). The
+// whole-feature centroid of a concave / multi-part state (FL panhandle, MI's two
+// peninsulas, HI's island chain) can fall in the water, which is why we don't use it.
 function _stateInnerPoint(feat) {
+  const p = (feat && feat.properties) || {};
+  if (isFinite(p.innerX) && isFinite(p.innerY)) return [p.innerX, p.innerY];
   const geom = feat && feat.geometry;
   if (geom && geom.type === 'MultiPolygon') {
     const largest = geom.coordinates.reduce((best, poly) =>

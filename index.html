@@ -15,7 +15,7 @@
        district topojson (districts-core / districts-overlay / counties-lines) is
        NO LONGER fetched by the client and should be removed from the deploy as the
        final fingerprint-hardening step (it still carries district geometry). -->
-  <link rel="preload" href="states.topojson" as="fetch" />
+  <link rel="preload" href="states.topojson?v=2" as="fetch" />
   <link rel="preload" href="district-names.json" as="fetch" />
   <meta name="google-adsense-account" content="ca-pub-2164002681613672">
 </head>
@@ -543,6 +543,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=17" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.11.12" defer></script>
+<script src="script.js?v=2.11.13" defer></script>
 </body>
 </html>

@@ -22,9 +22,14 @@ import { fileURLToPath } from 'node:url';
 const DIR  = path.dirname(fileURLToPath(import.meta.url));
 const CORE = path.join(DIR, 'districts-core.topojson');
 
-// 1. states.topojson — states layer only, clean arcs.
+// 1. states.topojson — states layer only, clean arcs. Bake each state's interior point
+//    (innerX/innerY — mapshaper's guaranteed-inside label point) into the properties so
+//    the client can place the state-correct check on land without a runtime geometry pass.
+//    The whole-feature centroid lands in water for concave / multi-part states (FL, MI, HI).
 execSync(
-  `mapshaper -i ${JSON.stringify(CORE)} -target states -o ${JSON.stringify(path.join(DIR, 'states.topojson'))} format=topojson`,
+  `mapshaper -i ${JSON.stringify(CORE)} -target states ` +
+  `-each 'innerX=Math.round(this.innerX*1e5)/1e5, innerY=Math.round(this.innerY*1e5)/1e5' ` +
+  `-o ${JSON.stringify(path.join(DIR, 'states.topojson'))} format=topojson`,
   { stdio: 'inherit' }
 );
 
