@@ -2876,19 +2876,12 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   width: 100%;
   min-height: 120px;
   margin: 8px 0;
-  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
+  overflow: hidden;
 }
+.result-ad ins.adsbygoogle { width: 100%; }
 
 /* ---- Utilities ---- */
 .hidden { display: none !important; }

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=162" />
+  <link rel="stylesheet" href="style.css?v=163" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -18,6 +18,10 @@
   <link rel="preload" href="states.topojson?v=2" as="fetch" />
   <link rel="preload" href="district-names.json" as="fetch" />
   <meta name="google-adsense-account" content="ca-pub-2164002681613672">
+  <!-- Google AdSense loader (once, globally). Ad units are placed inline as <ins> and
+       push()'d from JS only when their container is actually visible. -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2164002681613672"
+          crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -506,8 +510,16 @@
             Play Archive
           </button>
         </div>
-        <!-- Ad slot for not-signed-in players (placeholder for now) -->
-        <div id="result-ad" class="result-ad hidden">Ad Placeholder</div>
+        <!-- Ad slot for not-signed-in players. push() happens in JS (_pushResultAd) once
+             the modal is visible, since AdSense permanently fails a slot pushed at 0 width. -->
+        <div id="result-ad" class="result-ad hidden">
+          <ins class="adsbygoogle"
+               style="display:block;width:100%"
+               data-ad-format="fluid"
+               data-ad-layout-key="-fb+5w+4e-db+86"
+               data-ad-client="ca-pub-2164002681613672"
+               data-ad-slot="9215455129"></ins>
+        </div>
         <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
            class="donate-btn result-donate-btn" target="_blank" rel="noopener">
           Donate to CMU
@@ -543,6 +555,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=17" defer></script>
 <script src="login.js?v=15" defer></script>
-<script src="script.js?v=2.11.13" defer></script>
+<script src="script.js?v=2.11.14" defer></script>
 </body>
 </html>

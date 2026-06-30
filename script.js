@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.13';
+const VERSION_NUMBER = '2.11.14';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -401,6 +401,7 @@ let gameOver            = false;
 let lastGameWon         = false;  // outcome of the most recently finished game (for confetti gating)
 let _resultConfettiFired = false; // confetti fires once per game, the first time results are viewed
 let _gameoverCelebrated = false; // district spark+firework celebration fires once, on first leaving the result modal
+let _resultAdPushed = false;     // AdSense slot is push()'d once, only after it's visible (0-width push fails permanently)
 let gamePhase            = 'state';  // 'state' | 'district' | 'gameover'
 let _districtBuiltState  = null;     // stateAbbr currently rendered in the tiles SVG
 let _districtSvgSel      = null;     // D3 selection of the tiles SVG (cached for zoom reuse)
@@ -5137,6 +5138,20 @@ function launchConfetti() {
 }
 
 
+// Activate the result-modal AdSense slot. Only fires for anonymous players and only once
+// the <ins> actually has width on screen — AdSense permanently marks a slot "done" (unfilled)
+// if push() runs while it's display:none / 0-width, so we retry until it's visible.
+function _pushResultAd(attempt = 0) {
+  if (_resultAdPushed || !isAnonymousPlayer) return;
+  const ins = document.querySelector('#result-ad ins.adsbygoogle');
+  if (!ins || ins.offsetWidth < 1) {
+    if (attempt < 12) setTimeout(() => _pushResultAd(attempt + 1), 200);
+    return;
+  }
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); _resultAdPushed = true; }
+  catch (e) { /* adsbygoogle.js blocked or not loaded — leave the slot empty */ }
+}
+
 // Opens the (already-populated) result modal and fires confetti once per game on a win.
 // Used by the "View Result" banner button and "Review Result" welcome-splash button —
 // the actual content is rendered ahead of time by showResult(won, false) in endGame().
@@ -5149,6 +5164,7 @@ function openResultModal() {
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
+  _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
   if (gameOver) {
     switchResultTab('result');
   } else {
@@ -5185,6 +5201,7 @@ function showResult(won, autoOpen = true) {
   if (autoOpen && !welcomeVisible) {
     modal.classList.remove('hidden');
     switchResultTab('result');
+    _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
     if (won && !_resultConfettiFired) {
       _resultConfettiFired = true;
       _launchConfettiAfterAnim();
