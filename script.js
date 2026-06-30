@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.14';
+const VERSION_NUMBER = '2.11.15';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -402,6 +402,7 @@ let lastGameWon         = false;  // outcome of the most recently finished game 
 let _resultConfettiFired = false; // confetti fires once per game, the first time results are viewed
 let _gameoverCelebrated = false; // district spark+firework celebration fires once, on first leaving the result modal
 let _resultAdPushed = false;     // AdSense slot is push()'d once, only after it's visible (0-width push fails permanently)
+let _sideAdsPushed  = false;     // desktop side rails push()'d once, only when wide enough to be displayed
 let gamePhase            = 'state';  // 'state' | 'district' | 'gameover'
 let _districtBuiltState  = null;     // stateAbbr currently rendered in the tiles SVG
 let _districtSvgSel      = null;     // D3 selection of the tiles SVG (cached for zoom reuse)
@@ -5152,6 +5153,18 @@ function _pushResultAd(attempt = 0) {
   catch (e) { /* adsbygoogle.js blocked or not loaded — leave the slot empty */ }
 }
 
+// Activate the desktop side-rail ad slots. Only pushes when the rails are actually shown
+// (wide desktop → non-zero width) and the placeholder slot id has been replaced with a real
+// one, since AdSense permanently fails a slot pushed at 0 width / with a bad slot.
+function _pushSideAds() {
+  if (_sideAdsPushed) return;
+  const rails = [...document.querySelectorAll('.side-ad ins.adsbygoogle')]
+    .filter(ins => /^\d+$/.test(ins.getAttribute('data-ad-slot') || ''));   // skip the REPLACE_… placeholder
+  if (!rails.length || !rails.every(ins => ins.offsetWidth > 0)) return;
+  try { rails.forEach(() => (window.adsbygoogle = window.adsbygoogle || []).push({})); _sideAdsPushed = true; }
+  catch (e) { /* adsbygoogle.js blocked or not loaded — leave the rails empty */ }
+}
+
 // Opens the (already-populated) result modal and fires confetti once per game on a win.
 // Used by the "View Result" banner button and "Review Result" welcome-splash button —
 // the actual content is rendered ahead of time by showResult(won, false) in endGame().
@@ -5637,7 +5650,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Resize — keep Leaflet map tile grid current when container changes
   window.addEventListener('resize', () => {
     if (map) map.invalidateSize();
+    _pushSideAds();   // a window widened into the rail breakpoint can now show + fill them
   });
+  // Wide desktops show the rails immediately — activate them once the layout settles.
+  requestAnimationFrame(_pushSideAds);
 
 
   // Leaderboard

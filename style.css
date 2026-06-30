@@ -2883,6 +2883,28 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 }
 .result-ad ins.adsbygoogle { width: 100%; }
 
+/* ---- Desktop side ad rails ---- */
+.side-ad {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;                 /* above the game, below the sticky header + modals */
+  width: 160px;
+  height: 600px;
+  max-height: calc(100dvh - var(--header-h) - 24px);
+  display: none;               /* shown only on wide desktop via the media query below */
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.side-ad-left  { left: 12px; }
+.side-ad-right { right: 12px; }
+/* Only when the viewport is wide enough to hold a 160px rail in each gutter beside the
+   1400px-max game column without overlap (~1400 + 2×(160 + margin)). */
+@media (min-width: 1760px) {
+  .side-ad { display: flex; }
+}
+
 /* ---- Utilities ---- */
 .hidden { display: none !important; }
 
