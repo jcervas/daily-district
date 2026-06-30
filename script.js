@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.10';
+const VERSION_NUMBER = '2.11.11';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -400,6 +400,7 @@ let timerRunning        = false;
 let gameOver            = false;
 let lastGameWon         = false;  // outcome of the most recently finished game (for confetti gating)
 let _resultConfettiFired = false; // confetti fires once per game, the first time results are viewed
+let _gameoverCelebrated = false; // district spark+firework celebration fires once, on first leaving the result modal
 let gamePhase            = 'state';  // 'state' | 'district' | 'gameover'
 let _districtBuiltState  = null;     // stateAbbr currently rendered in the tiles SVG
 let _districtSvgSel      = null;     // D3 selection of the tiles SVG (cached for zoom reuse)
@@ -4474,78 +4475,14 @@ function buildGameoverMap(_retry = 0) {
     .attr('stroke-width', 1).style('vector-effect', 'non-scaling-stroke');
 
   // ── Layer 7: Answer district highlight ──────────────────────────────────
+  // The spark trace + confetti firework no longer fire here during the reveal — both run
+  // together when the player leaves the result modal (revealGameoverFromResult →
+  // _celebrateGameoverDistrict). The path is drawn now so it's ready to trace later.
   if (answerF) {
     g.append('path').attr('class', 'go-answer-district').datum(answerF).attr('d', pathGen)
       .attr('fill', dark ? 'rgba(255,80,80,0.5)' : 'rgba(196,18,48,0.65)')
       .attr('stroke', '#C41230').attr('stroke-width', 2)
       .style('vector-effect', 'non-scaling-stroke');
-
-    // Spark trace — fires after the flash overlay fades (~900ms)
-    const sparkLayer = g.append('g').attr('class', 'go-spark-layer').attr('pointer-events', 'none');
-    const svgNode = svg.node();
-    setTimeout(() => {
-      sparkLayer.raise(); // above state border layer
-      const answerNode = container.querySelector('.go-answer-district');
-      if (!answerNode) return;
-      const len = answerNode.getTotalLength ? answerNode.getTotalLength() : 0;
-      if (!(len > 0)) return;
-
-      const wonGame = guessHistory.some(gh => gh.correct && gh.phase === 'district');
-      const glow1 = wonGame ? '#FDB515' : '#ff6060';
-      const glow2 = wonGame ? '#ffb020' : '#C41230';
-
-      // Only celebrate on a fresh win. When the game-over map is rebuilt on a
-      // page revisit (restored completed game), the welcome splash is up — firing
-      // the full-screen confetti over it is slow and distracting, so skip it.
-      const welcomeSplashUp = !document.getElementById('welcome-modal')?.classList.contains('hidden');
-      if (wonGame && !welcomeSplashUp) {
-        const svgRect = svgNode.getBoundingClientRect();
-        const { k, x: tx, y: ty } = d3.zoomTransform(svgNode);
-        const [dcx, dcy] = pathGen.centroid(answerF);
-        const renderScale = svgRect.width > 0 ? Math.min(svgRect.width / W, svgRect.height / H) : 1;
-        const xOff = (svgRect.width  - W * renderScale) / 2;
-        const yOff = (svgRect.height - H * renderScale) / 2;
-        const sx = svgRect.left + xOff + (tx + dcx * k) * renderScale;
-        const sy = svgRect.top  + yOff + (ty + dcy * k) * renderScale;
-        launchBoundaryConfetti([{ x: sx, y: sy }]);
-      }
-
-      function getK() { return d3.zoomTransform(svgNode).k || 1; }
-      const spark = sparkLayer.append('circle')
-        .attr('r', 4 / getK()).attr('pointer-events', 'none')
-        .attr('fill', wonGame ? '#fffbe8' : '#fff')
-        .style('filter', `drop-shadow(0 0 4px #fff) drop-shadow(0 0 10px ${glow1}) drop-shadow(0 0 16px ${glow2})`);
-      const p0 = answerNode.getPointAtLength(0);
-      spark.attr('cx', p0.x).attr('cy', p0.y);
-
-      // Embers are plain bright circles — no per-element drop-shadow filter, which
-      // forces an expensive GPU repaint every frame for each of the ~dozen embers
-      // alive at once. The lead spark keeps its glow; embers are too small to need it.
-      function emitEmber(x, y) {
-        const k = getK();
-        const ang = Math.random() * Math.PI * 2;
-        const d = (6 + Math.random() * 9) / k;
-        sparkLayer.append('circle')
-          .attr('cx', x).attr('cy', y).attr('r', (1.5 + Math.random() * 1.2) / k)
-          .attr('fill', Math.random() < 0.5 ? glow1 : glow2).attr('pointer-events', 'none')
-          .transition().duration(350 + Math.random() * 200).ease(d3.easeCubicOut)
-            .attr('cx', x + Math.cos(ang) * d).attr('cy', y + Math.sin(ang) * d)
-            .attr('r', 0).style('opacity', 0).remove();
-      }
-
-      const LAPS = 5, LAP_MS = 5000, t0 = performance.now();
-      let emberToggle = false;
-      (function frame(now) {
-        const elapsed = now - t0;
-        const pt = answerNode.getPointAtLength(((elapsed % LAP_MS) / LAP_MS) * len);
-        spark.attr('cx', pt.x).attr('cy', pt.y).attr('r', 4 / getK());
-        // Emit at most one ember every other frame (~30/s) instead of ~45% of frames.
-        emberToggle = !emberToggle;
-        if (emberToggle) emitEmber(pt.x, pt.y);
-        if (elapsed < LAPS * LAP_MS) requestAnimationFrame(frame);
-        else spark.transition().duration(300).attr('r', 0).style('opacity', 0).remove();
-      })(t0);
-    }, 300);
   }
 
   // ── Layer 8: State border (bold, on top of all fills) ──────────────────
@@ -5009,6 +4946,74 @@ function renderDistrictPreview(containerId = 'result-district-preview') {
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
 
   container.appendChild(svg.node());
+}
+
+// Spark that laps the answer-district boundary trailing embers. Runs on the live game-over
+// map (reads .go-answer-district from the DOM), so it works at the current zoom/pan.
+function _runGameoverSparkTrace() {
+  const container = document.getElementById('gameover-map');
+  if (!container) return;
+  const svgNode    = container.querySelector('svg');
+  const gNode      = container.querySelector('svg > g') || svgNode;
+  const answerNode = container.querySelector('.go-answer-district');
+  if (!svgNode || !gNode || !answerNode) return;
+  const len = answerNode.getTotalLength ? answerNode.getTotalLength() : 0;
+  if (!(len > 0)) return;
+
+  const wonGame = lastGameWon;
+  const glow1 = wonGame ? '#FDB515' : '#ff6060';
+  const glow2 = wonGame ? '#ffb020' : '#C41230';
+  const g = d3.select(gNode);
+  g.select('.go-spark-layer').remove();   // drop any prior trace before re-running
+  const sparkLayer = g.append('g').attr('class', 'go-spark-layer').attr('pointer-events', 'none');
+  sparkLayer.raise();
+
+  function getK() { return d3.zoomTransform(svgNode).k || 1; }
+  const spark = sparkLayer.append('circle')
+    .attr('r', 4 / getK()).attr('pointer-events', 'none')
+    .attr('fill', wonGame ? '#fffbe8' : '#fff')
+    .style('filter', `drop-shadow(0 0 4px #fff) drop-shadow(0 0 10px ${glow1}) drop-shadow(0 0 16px ${glow2})`);
+  const p0 = answerNode.getPointAtLength(0);
+  spark.attr('cx', p0.x).attr('cy', p0.y);
+
+  // Embers are plain bright circles — no per-element drop-shadow filter, which forces an
+  // expensive GPU repaint every frame for each of the ~dozen embers alive at once.
+  function emitEmber(x, y) {
+    const k = getK();
+    const ang = Math.random() * Math.PI * 2;
+    const d = (6 + Math.random() * 9) / k;
+    sparkLayer.append('circle')
+      .attr('cx', x).attr('cy', y).attr('r', (1.5 + Math.random() * 1.2) / k)
+      .attr('fill', Math.random() < 0.5 ? glow1 : glow2).attr('pointer-events', 'none')
+      .transition().duration(350 + Math.random() * 200).ease(d3.easeCubicOut)
+        .attr('cx', x + Math.cos(ang) * d).attr('cy', y + Math.sin(ang) * d)
+        .attr('r', 0).style('opacity', 0).remove();
+  }
+
+  const LAPS = 5, LAP_MS = 5000, t0 = performance.now();
+  let emberToggle = false;
+  (function frame(now) {
+    const elapsed = now - t0;
+    const pt = answerNode.getPointAtLength(((elapsed % LAP_MS) / LAP_MS) * len);
+    spark.attr('cx', pt.x).attr('cy', pt.y).attr('r', 4 / getK());
+    emberToggle = !emberToggle;
+    if (emberToggle) emitEmber(pt.x, pt.y);
+    if (elapsed < LAPS * LAP_MS) requestAnimationFrame(frame);
+    else spark.transition().duration(300).attr('r', 0).style('opacity', 0).remove();
+  })(t0);
+}
+
+// The full district celebration: the boundary spark trace, tied together with the confetti
+// firework bursting from the district's on-screen center (win only). Fired when the player
+// returns to the map from the result modal.
+function _celebrateGameoverDistrict() {
+  _runGameoverSparkTrace();
+  if (!lastGameWon) return;
+  const node = document.querySelector('#gameover-map .go-answer-district');
+  if (!node) return;
+  const r = node.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  launchBoundaryConfetti([{ x: r.left + r.width / 2, y: r.top + r.height / 2 }]);
 }
 
 // Burst confetti outward from a set of screen-coordinate {x,y} origin points.
@@ -5783,6 +5788,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const revealGameoverFromResult = () => {
     document.getElementById('gameover-modal')?.classList.remove('hidden');
     document.getElementById('gameover-census')?.classList.add('open');
+    // District celebration: the boundary spark trace + (on a win) the confetti firework,
+    // fired together once the player returns to the map from the result modal. rAF so the
+    // game-over modal has laid out before we read the district path's screen position.
+    if (!_gameoverCelebrated) {
+      _gameoverCelebrated = true;
+      requestAnimationFrame(_celebrateGameoverDistrict);
+    }
   };
 
   // Modal close buttons
