@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.20';
+const VERSION_NUMBER = '2.11.21';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3795,8 +3795,9 @@ function showDistrictD3Map(stateAbbr, instant = false, animateReveal = false) {
   document.querySelector('.mzb-fit')?.classList.remove('at-active-fit');
   const labelEl = document.getElementById('ref-label');
 
-  // Hide state chips
-  document.getElementById('state-chips-section').classList.add('hidden');
+  // Hide state chips (the section may be absent in some game-over rebuilds — guard it so
+  // the reveal doesn't abort midway).
+  document.getElementById('state-chips-section')?.classList.add('hidden');
 
   // Update label
   const count = (stateDistrictMap[stateAbbr] || []).length;
@@ -4726,8 +4727,9 @@ async function showGameoverModal() {
     document.getElementById('gameover-next-cta')?.classList.add('hidden');
     const resBtn = document.getElementById('gameover-result-btn');
     if (resBtn) resBtn.textContent = "Today's Results";
-    // Archive is unofficial — hide Share so a past puzzle isn't shared as today's daily.
-    document.getElementById('gameover-share-btn')?.classList.add('hidden');
+    // Keep Share visible in archive too — the share text names the specific puzzle
+    // ("Daily District No. N"), so it doesn't read as today's daily (see buildShareText).
+    document.getElementById('gameover-share-btn')?.classList.remove('hidden');
   } else {
     // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
     // sign-in nudge (track stats / compare); signed-in players just see the countdown.
@@ -5291,7 +5293,11 @@ function buildShareText() {
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
   // Differentiate a hard-mode game (shape only — no terrain/hints during play).
   const hardTag = gameHardMode ? ' 🔒 Hard mode' : '';
-  return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
+  // Archive replays name the specific past puzzle so the share doesn't read as today's daily.
+  const title = (isArchiveGame && serverArchive?.puzzleNumber != null)
+    ? `Daily District No. ${serverArchive.puzzleNumber}`
+    : 'Daily District';
+  return `🗺️ ${title} — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }
 
 // Share the result as text + a landscape map image via the Web Share API; falls back to
