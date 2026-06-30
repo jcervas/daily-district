@@ -2890,9 +2890,11 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   transform: translateY(-50%);
   z-index: 40;                 /* above the game, below the sticky header + modals */
   width: 160px;
-  /* Auto height: the responsive unit sizes to its served ad; the placeholder gives it a
-     600px box while unfilled. translateY(-50%) keeps it centered at whatever height. */
+  /* Height tracks the served ad, but min-height keeps a 600px box (so the placeholder
+     still shows if the ad collapses/hasn't filled). translateY(-50%) centers it. */
   height: auto;
+  min-height: 600px;
+  max-height: calc(100dvh - var(--header-h) - 24px);
   display: none;               /* shown only on wide desktop via the media query below */
   overflow: hidden;
 }
@@ -2904,9 +2906,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 /* Placeholder: a dashed "AD" box that reserves the rail space while no real ad has filled
    (new units serve blank for a while). It hides itself the moment AdSense reports a fill. */
 .side-ad-ph {
-  width: 160px;
-  height: 600px;
-  max-height: calc(100dvh - var(--header-h) - 24px);
+  position: absolute;          /* overlay the ad's box rather than stacking below it (which
+                                  would push the placeholder into the bottom half) */
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
