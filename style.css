@@ -2890,7 +2890,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   transform: translateY(-50%);
   z-index: 40;                 /* above the game, below the sticky header + modals */
   width: 160px;
-  height: 600px;
+  /* Auto height: the in-feed (fluid) unit sizes to its content; translateY(-50%) keeps it
+     centered at whatever height it renders. Capped to the viewport so it never overflows. */
+  height: auto;
   max-height: calc(100dvh - var(--header-h) - 24px);
   display: none;               /* shown only on wide desktop via the media query below */
   align-items: center;
