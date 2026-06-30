@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.8';
+const VERSION_NUMBER = '2.11.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3310,6 +3310,25 @@ function rebuildUSRefMap() {
   initUSRefMap();
 }
 
+// Cheap, flash-free response to a container SIZE change (mobile browser-chrome show/hide,
+// rotation, panel reflow). A full rebuildUSRefMap() tears the SVG down and re-runs the
+// staged render, which momentarily paints the all-red state basemap at the wrong
+// projection and resets the zoom — visible as a jarring "reset" on mobile. Instead, just
+// retarget the viewBox to the new size and re-fit the current view: the projection's path
+// `d` coords are unchanged, and the zoom transform re-frames them into the new viewport.
+function resyncUSRefViewBox() {
+  const el = document.getElementById('us-ref-map');
+  if (!el || !usRefSvgSel) return;
+  const W = el.offsetWidth, H = el.offsetHeight;
+  if (!W || !H) return;
+  if (Math.abs(W - _usRefW) > 1 || Math.abs(H - _usRefH) > 1) {
+    _usRefW = W; _usRefH = H;
+    _districtW = W; _districtH = H;
+    usRefSvgSel.attr('viewBox', `0 0 ${W} ${H}`);
+  }
+  zoomUSRefMapToValid(false);
+}
+
 function initUSRefMap(onDone) {
   if (usRefMap) { if (onDone) onDone(); return; }
   const container = document.getElementById('us-ref-map');
@@ -3575,12 +3594,9 @@ function initUSRefMap(onDone) {
       _usRefRO = new ResizeObserver(() => {
         const cw = refEl.offsetWidth, ch = refEl.offsetHeight;
         if (!cw || !ch) return;
-        if (Math.abs(cw - _usRefW) > 1 || Math.abs(ch - _usRefH) > 1) {
-          clearTimeout(settleT);
-          settleT = setTimeout(rebuildUSRefMap, 120);
-        } else {
-          zoomUSRefMapToValid(false);
-        }
+        // Flash-free: retarget the viewBox + re-fit rather than tearing the SVG down.
+        clearTimeout(settleT);
+        settleT = setTimeout(resyncUSRefViewBox, 120);
       });
       _usRefRO.observe(refEl);
     }
@@ -3729,18 +3745,6 @@ function lockStateDropdown(stateAbbr, instant = false) {
   } else {
     requestAnimationFrame(() => zoomUSRefMapToValid(true));
   }
-
-  // Locking a state collapses the tall state-chip row, which grows the map container.
-  // The viewBox is baked from the container size at build time, so a now-taller container
-  // leaves the map letterboxed (empty strip below the map) until the *debounced*
-  // ResizeObserver gets around to rebuilding. Don't wait on it — once the layout (and the
-  // zoom animation) have settled, re-sync the viewBox immediately if the container resized.
-  setTimeout(() => {
-    const el = document.getElementById('us-ref-map');
-    if (el && (Math.abs(el.offsetWidth - _usRefW) > 1 || Math.abs(el.offsetHeight - _usRefH) > 1)) {
-      rebuildUSRefMap();
-    }
-  }, instant ? 60 : 780);
 }
 
 // Switch the SHARED map between the state-pick view and the district view. In the
@@ -4248,7 +4252,10 @@ function _drawGameplayTiles(ctx) {
     grp.append('circle').attr('r', R)
       .attr('fill', fillColor).attr('stroke', dark ? '#222' : '#fff').attr('stroke-width', 1.5 / zoomK);
     grp.append('text')
-      .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+      // Vertical centering via dy=0.35em on the default (alphabetic) baseline — Safari
+      // renders `dominant-baseline: central` slightly high, leaving the number off-center
+      // in the tile. dy is in em, so it stays centered as the font-size scales with zoom.
+      .attr('text-anchor', 'middle').attr('dy', '0.35em')
       .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * effDensity)}px`)
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
