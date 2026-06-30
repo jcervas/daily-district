@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.7';
+const VERSION_NUMBER = '2.11.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3372,17 +3372,12 @@ function initUSRefMap(onDone) {
 
       if (dir === 'fit') {
         if (tilesHidden) {
-          const atActiveFit = btn.classList.contains('at-active-fit');
-          if (atActiveFit && _usRefFullFitTransform) {
-            // Second press: zoom out to full-US (all 435 inner points)
-            usRefSvgSel?.transition().duration(500).ease(d3.easeCubicInOut)
-              .call(usRefZoom.transform, _usRefFullFitTransform);
-            btn.classList.remove('at-active-fit');
-          } else {
-            // First press: zoom to remaining valid states (inner points)
-            zoomUSRefMapToValid(true);
-            btn.classList.add('at-active-fit');
-          }
+          // Single-purpose "fit to remaining valid states" — matches the district-phase
+          // Fit. No toggle-out to the national view; the − button handles zooming out, and
+          // the button disables (via _refreshFitBtnState) once the view already frames them.
+          const t = _validStatesFitTransform();
+          if (!t || _atCandidateFit(t)) return;
+          zoomUSRefMapToValid(true);
           return;
         }
         const tilesSvg = usRefSvgSel;   // single map: district zoom is the shared zoom
@@ -3680,6 +3675,8 @@ function updateUSRefMap() {
   for (const abbr of Object.keys(usRefCallouts)) {
     _applyCalloutStyle(abbr);
   }
+  // Eliminating states changes the valid-states fit, so re-evaluate the Fit button.
+  _refreshFitBtnState();
 }
 
 function renderStateChips() {
@@ -3833,6 +3830,22 @@ function _candidateFitTransform() {
               : districtStateFitTransform;
 }
 
+// The zoom transform that frames the remaining valid STATES (state-pick phase). The
+// state-phase analog of _candidateFitTransform — must match the math in zoomUSRefMapToValid.
+function _validStatesFitTransform() {
+  if (gameOver || !usRefPathGen || !usRefProjection) return null;
+  const feats = [...getValidStates()].map(a => topoStates[a]).filter(Boolean);
+  if (!feats.length) return null;
+  const bbox = usRefPathGen.bounds({ type: 'FeatureCollection', features: feats });
+  return zoomToBBox(bbox, _usRefW, _usRefH, { margin: 0.9 });
+}
+
+// The fit transform for the current phase (candidates in district phase, valid states in
+// the state-pick phase).
+function _phaseFitTransform() {
+  return gamePhase === 'state' ? _validStatesFitTransform() : _candidateFitTransform();
+}
+
 // True when the current map zoom is already (within a hair of) the candidate fit, so
 // pressing Fit would do nothing visible.
 function _atCandidateFit(t) {
@@ -3847,8 +3860,8 @@ function _atCandidateFit(t) {
 function _refreshFitBtnState() {
   const btn = document.querySelector('.mzb-fit');
   if (!btn) return;
-  if (gameOver || gamePhase === 'state') { btn.classList.remove('is-disabled'); btn.removeAttribute('disabled'); return; }
-  const t = _candidateFitTransform();
+  if (gameOver) { btn.classList.remove('is-disabled'); btn.removeAttribute('disabled'); return; }
+  const t = _phaseFitTransform();
   const off = !!t && _atCandidateFit(t);
   btn.classList.toggle('is-disabled', off);
   if (off) btn.setAttribute('disabled', ''); else btn.removeAttribute('disabled');
