@@ -1847,6 +1847,7 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   padding: 0;
   border: none;
   border-bottom: 1px solid var(--banner-border);
+  border-top: 1px solid var(--banner-border);
   border-radius: 0;
   background: var(--banner-bg);
 }

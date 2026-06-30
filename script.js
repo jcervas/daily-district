@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.19';
+const VERSION_NUMBER = '2.11.20';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4274,10 +4274,11 @@ function _drawGameplayTiles(ctx) {
     grp.append('circle').attr('r', R)
       .attr('fill', fillColor).attr('stroke', dark ? '#222' : '#fff').attr('stroke-width', 1.5 / zoomK);
     grp.append('text')
-      // Vertical centering via dy=0.35em on the default (alphabetic) baseline — Safari
-      // renders `dominant-baseline: central` slightly high, leaving the number off-center
-      // in the tile. dy is in em, so it stays centered as the font-size scales with zoom.
-      .attr('text-anchor', 'middle').attr('dy', '0.35em')
+      // Center the number with the browser-native baseline (well-supported across all
+      // current browsers, and consistent with the callout/badge labels). It scales cleanly
+      // as the font-size changes with zoom. The older dy="0.35em" hack mis-centered the
+      // label in Safari (which appears to mishandle a sub-pixel em dy under heavy zoom).
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
       .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * effDensity)}px`)
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
