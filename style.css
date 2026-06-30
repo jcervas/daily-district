@@ -449,6 +449,9 @@ main:has(#already-played-banner:not(.hidden)) {
   display: flex;
   flex-direction: column;
   gap: 0;
+  /* Reserve the hint-row height up front (cards = 52px + 8px hint-bar padding) so the
+     panel doesn't resize once the hint-bar fills in / the first clue reveals. */
+  min-height: 60px;
 }
 
 #hint-bar {
@@ -479,7 +482,10 @@ main:has(#already-played-banner:not(.hidden)) {
 .hint-card {
   flex: 0 0 44px;
   min-width: 44px;
-  min-height: 40px;
+  /* Match the revealed (label+value) card height so locked cards reserve the same space.
+     Otherwise the row is short while every card is locked, then jumps taller the moment
+     the first clue reveals (after the first guess), shifting #map-panel down. */
+  min-height: 52px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   padding: 8px 10px;
@@ -2400,6 +2406,15 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 
 
 /* ---- Welcome / splash modal ---- */
+/* Frosted glass behind the splash so the game (visible around the centered card on
+   desktop) is blurred and obscured rather than just dimmed. On mobile the splash content
+   already fills the viewport, so this only softens the thin header strip — no harm. */
+#welcome-modal {
+  background: rgba(18, 18, 24, 0.42);
+  backdrop-filter: blur(12px) saturate(118%);
+  -webkit-backdrop-filter: blur(12px) saturate(118%);
+}
+
 .welcome-modal-content {
   max-width: 480px;
   width: 92vw;
@@ -2947,7 +2962,8 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 
   #game-controls {
     grid-area: controls;
-    min-height: 0;
+    /* Reserve the hint-row height (cards 52 + hint-bar padding 8 + this padding 4). */
+    min-height: 64px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -2981,7 +2997,9 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 0;
+    /* Keep the locked/revealed heights matched on mobile too (see base rule) so the
+       hint row doesn't grow when the first clue reveals. */
+    min-height: 52px;
     padding: 5px 6px;
     gap: 2px;
     width: 38px;
