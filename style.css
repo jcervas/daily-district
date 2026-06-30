@@ -1898,11 +1898,12 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   left: 0; right: 0; bottom: 0;
   width: min(100% - 32px, 868px);
   margin-inline: auto;
-  /* Open to ~66% so the result banner ("View Result") + headline/stats stay exposed
-     above the sheet — makes it clear there are more pages behind the District Profile.
+  /* Cap at half the viewport so the upper map — and the district spark/firework that
+     plays when returning from the result modal — stays visible above the sheet. Also
+     keeps the result banner + headline exposed, signalling more pages behind the sheet.
      The wrapper is pointer-events:none with no backdrop, so that exposed strip is
      still directly clickable. */
-  max-height: 66%;
+  max-height: 50vh;
   display: flex;
   flex-direction: column;
   /* Frosted glass (css.glass recipe) — translucent + blurred so the map behind
@@ -1921,8 +1922,9 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
 }
 .gameover-census.open .district-profile { transform: translateY(0); }
 /* Content fits the available height → size the sheet to its content (show everything)
-   instead of the reduced 66% default. JS toggles `.fits` from a measured comparison. */
-.gameover-census.fits .district-profile { max-height: 100%; }
+   instead of the reduced default. Still capped at 50vh so it can't grow over the
+   firework; taller content scrolls. JS toggles `.fits` from a measured comparison. */
+.gameover-census.fits .district-profile { max-height: 50vh; }
 /* Expanded: swipe the handle up (or tap it) to fill the area below the header —
    full height, but still capped to the map width (never over the menu/header). */
 .gameover-census.expanded .district-profile {

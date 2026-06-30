@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.11';
+const VERSION_NUMBER = '2.11.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3095,8 +3095,23 @@ function _setStatePickInteractive(on) {
   if (!layer.empty()) layer.style('pointer-events', on ? null : 'none');
 }
 
+// Inner point for a state — the geoCentroid of its LARGEST sub-polygon (same method used
+// for district inner points). The whole-feature centroid of a concave or multi-part state
+// (FL panhandle, MI's two peninsulas, HI's island chain) can fall outside the land; the
+// largest-part centroid stays on the mainland body.
+function _stateInnerPoint(feat) {
+  const geom = feat && feat.geometry;
+  if (geom && geom.type === 'MultiPolygon') {
+    const largest = geom.coordinates.reduce((best, poly) =>
+      d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: poly } })
+        > d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: best } }) ? poly : best);
+    return d3.geoCentroid({ type: 'Feature', geometry: { type: 'Polygon', coordinates: largest } });
+  }
+  return d3.geoCentroid(feat);
+}
+
 // Stamp the guess-history check icon (checkCircle) on a correctly-guessed state, sized to
-// fit inside the state's bbox with padding and centred on its centroid. Shown briefly
+// fit inside the state's bbox with padding and centred on its inner point. Shown briefly
 // before the zoom into the district phase.
 function _showStateCheck(abbr) {
   _hideStateCheck();
@@ -3104,7 +3119,7 @@ function _showStateCheck(abbr) {
   const feat = topoStates[abbr];
   if (!feat) return;
   const b = usRefPathGen.bounds(feat);
-  const c = usRefProjection(d3.geoCentroid(feat));
+  const c = usRefProjection(_stateInnerPoint(feat));
   if (!b || !isFinite(b[0][0]) || !c || !isFinite(c[0])) return;
   const w = b[1][0] - b[0][0], h = b[1][1] - b[0][1];
   // Fit to ~55% of the state's smaller dimension → padding remains inside the state.
