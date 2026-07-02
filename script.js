@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.25';
+const VERSION_NUMBER = '2.11.26';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5512,11 +5512,29 @@ async function init() {
 // actually counts (otherwise they'd be signed in with empty stats and still see the "sign
 // in to save" nudge). Then re-align device stats with the account and drop the nudges.
 // (Anonymous→sign-in *before* guessing re-inits via the once-listener in init().)
+//
+// Mid-game sign-in (guesses made, game NOT over) is a separate case: the local anonymous
+// session doesn't belong to this account, so it can't just keep running unrecorded. Check
+// whether the account already has its OWN server-side progress for today (e.g. played
+// earlier on another device); if not, carry the anonymous guesses forward onto it (same
+// binding used for finished games). Either way, reload so the board rebuilds from
+// initServer() against the now-authoritative account state, rather than trying to hand-patch
+// the in-place D3/game state (which is where subtle bugs would creep in).
 window.addEventListener('district-auth', async () => {
   const wasAnon = isAnonymousPlayer;
   isAnonymousPlayer = false;
-  if (wasAnon && gameOver && !isArchiveGame) {
-    await bindAnonymousGameToAccount();   // replay the finished game to the new account
+
+  if (wasAnon && !isArchiveGame && Array.isArray(guessHistory) && guessHistory.length > 0) {
+    if (gameOver) {
+      await bindAnonymousGameToAccount();   // replay the finished game to the new account
+    } else {
+      let accountResult = null;
+      try { accountResult = (await window.DistrictBackend.today())?.result ?? null; }
+      catch (e) { /* network hiccup — fall through; safest is to still attempt the bind */ }
+      if (!accountResult) await bindAnonymousGameToAccount();
+      window.location.reload();
+      return;
+    }
   }
   await hydratePersonalStatsFromServer(); // now includes the just-bound game
   refreshSignedInUI();                     // hide the sign-in nudges, show personal stats
