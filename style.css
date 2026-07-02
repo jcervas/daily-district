@@ -1503,8 +1503,8 @@ body.dark-mode .globe-loader .shade { display: block; }
 /* ---- Personal stats ---- */
 .personal-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
   margin-bottom: 18px;
   width: 100%;   /* fill the pane so cards are the same size on every tab */
 }
@@ -1513,21 +1513,17 @@ body.dark-mode .globe-loader .shade { display: block; }
 #result-personal-stats,
 #result-stats,
 #personal-stats { width: 100%; }
-/* Single-line stats: value + label on one row (no card chrome) so the block stays
-   compact on mobile instead of each stat taking two lines. */
+/* Four compact stats across one row (no card chrome): value stacked over its label,
+   so the whole block is a single short band instead of tall two-line cards. */
 .stat-card {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6px;
-  padding: 3px 0;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border);
+  text-align: center;
+  padding: 2px 0;
 }
 .stat-card .stat-val {
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--accent);
+  line-height: 1.15;
 }
 .stat-card .stat-label {
   font-size: 0.68rem;
@@ -3182,7 +3178,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   /* Modals */
   .modal-content { padding: 18px; }
   .census-grid { grid-template-columns: 1fr 1fr; }
-  .personal-grid { grid-template-columns: 1fr 1fr; }
+  /* .personal-grid keeps its 4-across layout on mobile (compact single band) */
 
   /* Welcome + Result modals take full viewport on mobile, minus the header
      strip so the menu bar (leaderboard / settings / account) stays reachable. */

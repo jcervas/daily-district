@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.22';
+const VERSION_NUMBER = '2.11.24';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -645,8 +645,17 @@ async function initServer() {
 // Fetch + inject the guessed state's district shapes (gated server-side). Populates
 // `districts`, `adjMap`, `districtPoints` for that one state so the existing
 // district-phase map/tiles work. The answer among them is still unknown to the client.
+let _stateShapesInflight = null;   // { state, promise } — dedupes the prefetch vs the awaited call
 async function loadServerStateShapes(state) {
   if (districts.some(f => f.properties.state === state)) return;
+  // The correct-guess handler prefetches during the 650ms celebration hold; when
+  // enterServerDistrictPhase awaits shortly after, reuse that in-flight request.
+  if (_stateShapesInflight?.state === state) return _stateShapesInflight.promise;
+  const promise = _loadServerStateShapesInner(state);
+  _stateShapesInflight = { state, promise };
+  try { return await promise; } finally { _stateShapesInflight = null; }
+}
+async function _loadServerStateShapesInner(state) {
   const data = await window.DistrictBackend.stateShapes(state);
   (data.districts || []).forEach(d => {
     const feat = { type: 'Feature', geometry: d.geometry, properties: { state: d.state, 'state-district': d.districtId } };
@@ -1066,6 +1075,10 @@ async function submitStateGuessServer(abbr) {
     if (pressedEl) pressedEl.attr('fill', '#FDB515').attr('fill-opacity', 1).raise();
     _showStateCheck(abbr);
     _guessLocked = false;
+    // Prefetch the state's district shapes NOW so the ~1s Edge Function round-trip runs
+    // DURING the celebration hold instead of after it (enterServerDistrictPhase awaits the
+    // same in-flight promise), roughly halving the pause before the district phase.
+    loadServerStateShapes(resp.state || abbr).catch(() => {});
     setTimeout(() => {
       _hideStateCheck();
       processStateGuessServer(abbr, resp);
@@ -4226,8 +4239,16 @@ function _drawGameplayTiles(ctx) {
       .attr('stroke-width', 2).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
   }
 
-  // Build node data — only possible-answer districts get a tile
-  const nodes = stateFeatures.filter(f => possibleKeys.has(f.properties['state-district'])).map(f => {
+  // Build node data — possible-answer districts get a live tile, PLUS any
+  // hot/cold-guessed district (even though guessing it removed it from possibleKeys)
+  // so the hot/cold styling below (dimmed fill, disabled click) actually has a tile to
+  // apply to. Without this, every wrong guess just vanished from the board instead of
+  // staying visible as a "warm"/"cold" marker.
+  const nodes = stateFeatures.filter(f => {
+    const sdKey = f.properties['state-district'];
+    const dist  = sdKey?.split('-').slice(1).join('-') || '00';
+    return possibleKeys.has(sdKey) || hotKeys.has(dist) || coldKeys.has(dist);
+  }).map(f => {
     const sdKey = f.properties['state-district'];
     const dist  = sdKey?.split('-').slice(1).join('-') || '00';
     const label = isAtLarge ? 'AL' : String(parseInt(dist, 10));
