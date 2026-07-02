@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.24';
+const VERSION_NUMBER = '2.11.25';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4025,13 +4025,14 @@ function _buildDistrictCtx(stateAbbr, tilesEl) {
       for (const nbr of (adjMap.get(key) || [])) possibleKeys.delete(nbr);
     }
   }
+  // Only DIRECTLY-guessed hot/cold districts keep a marker tile (dimmed) once they drop
+  // out of possibleKeys — districts eliminated purely by inference (a cold guess's
+  // neighbors, or the non-neighbors pruned by a hot guess) should actually disappear from
+  // the board. Previously coldKeys included every non-possible district (the complement of
+  // possibleKeys minus hotGuessKeys), which — combined with the node filter below — meant
+  // literally every district always got a tile and nothing was ever visually eliminated.
   const hotKeys  = hotGuessKeys;
-  const coldKeys = new Set(
-    stateFeatures.map(f => f.properties['state-district'])
-      .filter(k => !possibleKeys.has(k))
-      .map(k => k.split('-').slice(1).join('-'))
-      .filter(d => !hotGuessKeys.has(d))
-  );
+  const coldKeys = coldGuessKeys;
 
   const wonDist     = guessHistory.find(g => g.phase === 'district' && g.correct);
   const wonDistPart = wonDist ? wonDist.text.split('-').slice(1).join('-') : null;
