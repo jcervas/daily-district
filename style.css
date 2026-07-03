@@ -1285,6 +1285,7 @@ body.dark-mode .district-profile .census-card { background: rgba(44, 44, 50, 0.6
    (same color/weight/size) but keep an underline so it reads as clickable. */
 .census-card.census-rep .value a {
   color: inherit;
+  font-weight: 600;
   text-decoration: none;
   background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
   padding-bottom: 0.0625em;
@@ -1468,6 +1469,7 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
    accent-red link treatment used elsewhere (census-card links) instead of browser blue. */
 #donate-modal p a {
   color: var(--accent);
+  font-weight: 600;
   text-decoration: none;
   background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
   padding-bottom: 0.0625em;
