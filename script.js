@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.47';
+const VERSION_NUMBER = '2.11.49';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1653,6 +1653,10 @@ function refreshSignedInUI() {
   if (personalStats) personalStats.classList.toggle('hidden', isAnonymousPlayer);
   const nextCta = document.getElementById('gameover-next-cta');
   if (nextCta) nextCta.classList.toggle('hidden', !isAnonymousPlayer);
+  // Ad slot: shown only to not-signed-in players. Previously only showResult() toggled
+  // this, which doesn't run just from opening the modal — same stale-visibility gap as
+  // anonCta/personalStats before this function ran there too.
+  document.getElementById('result-ad')?.classList.toggle('hidden', !isAnonymousPlayer);
   renderInlinePersonalStats();
 }
 

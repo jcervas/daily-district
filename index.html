@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=177" />
+  <link rel="stylesheet" href="style.css?v=178" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -524,65 +524,75 @@
         </div>
       </div>
 
-      <div id="result-section" class="result-tab-pane active">
-        <div id="result-stats"></div>
-        <div id="result-message"></div>
-        <div id="result-personal-stats"></div>
-        <!-- Shown only for anonymous players: invite them to sign in to save + compare. -->
-        <div id="result-anon-cta" class="result-anon-cta hidden">
-          <div class="result-anon-cta-text">
-            <strong>Want to save your stats?</strong>
-            <span>Sign in to track your streak and compare with other players.</span>
+      <!-- Wraps every tab-pane + the shared footer as ONE flex column, so the footer
+           (ad/donate/feedback) shows under whichever tab is active without needing its own
+           grid-area in the mobile-landscape layout below (which only names one "content"
+           cell) — from the grid's perspective this wrapper IS the content cell. -->
+      <div class="result-tabs-content">
+        <div id="result-section" class="result-tab-pane active">
+          <div id="result-stats"></div>
+          <div id="result-message"></div>
+          <div id="result-personal-stats"></div>
+          <!-- Shown only for anonymous players: invite them to sign in to save + compare. -->
+          <div id="result-anon-cta" class="result-anon-cta hidden">
+            <div class="result-anon-cta-text">
+              <strong>Want to save your stats?</strong>
+              <span>Sign in to track your streak and compare with other players.</span>
+            </div>
+            <button id="result-anon-signin-btn" class="result-anon-cta-btn">Sign in / Sign up</button>
           </div>
-          <button id="result-anon-signin-btn" class="result-anon-cta-btn">Sign in / Sign up</button>
+          <div class="result-action-row">
+            <button id="post-x-btn" class="post-x-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Share
+            </button>
+            <button id="share-btn" class="post-x-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              Post
+            </button>
+            <button id="play-again-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              Play Archive
+            </button>
+          </div>
         </div>
-        <div class="result-action-row">
-          <button id="post-x-btn" class="post-x-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            Share
-          </button>
-          <button id="share-btn" class="post-x-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-            Post
-          </button>
-          <button id="play-again-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-            Play Archive
-          </button>
+
+        <div id="today-everyone-section" class="result-tab-pane">
+          <div id="today-everyone-scores" class="scores-list"><div class="lb-loading"><span>Loading…</span></div></div>
         </div>
-        <!-- Ad slot for not-signed-in players. push() happens in JS (_pushResultAd) once
-             the modal is visible, since AdSense permanently fails a slot pushed at 0 width. -->
-        <div id="result-ad" class="result-ad hidden">
-          <ins class="adsbygoogle"
-               style="display:block;width:100%"
-               data-ad-format="fluid"
-               data-ad-layout-key="-fb+5w+4e-db+86"
-               data-ad-client="ca-pub-2164002681613672"
-               data-ad-slot="9215455129"></ins>
+
+        <div id="guesses-section" class="result-tab-pane">
+          <div id="guesses-header"></div>
+          <div id="guess-history"></div>
+          <div id="guess-remaining"></div>
         </div>
-        <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
-           class="donate-btn result-donate-btn" target="_blank" rel="noopener">
-          Donate to CMU
-        </a>
-        <button id="result-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
-      </div>
 
-      <div id="today-everyone-section" class="result-tab-pane">
-        <div id="today-everyone-scores" class="scores-list"><div class="lb-loading"><span>Loading…</span></div></div>
-      </div>
+        <div id="alltime-section" class="result-tab-pane">
+          <div id="alltime-scores" class="scores-list"><div class="lb-loading"><span>Loading…</span></div></div>
+        </div>
 
-      <div id="guesses-section" class="result-tab-pane">
-        <div id="guesses-header"></div>
-        <div id="guess-history"></div>
-        <div id="guess-remaining"></div>
-      </div>
+        <div id="mystats-section" class="result-tab-pane">
+          <div id="personal-stats"></div>
+        </div>
 
-      <div id="alltime-section" class="result-tab-pane">
-        <div id="alltime-scores" class="scores-list"><div class="lb-loading"><span>Loading…</span></div></div>
-      </div>
-
-      <div id="mystats-section" class="result-tab-pane">
-        <div id="personal-stats"></div>
+        <!-- Shared footer — shown under every tab, not just "Me". Ad slot for not-signed-in
+             players only; push() happens in JS (_pushResultAd) once the modal is visible,
+             since AdSense permanently fails a slot pushed at 0 width. -->
+        <div class="result-modal-footer">
+          <div id="result-ad" class="result-ad hidden">
+            <ins class="adsbygoogle"
+                 style="display:block;width:100%"
+                 data-ad-format="fluid"
+                 data-ad-layout-key="-fb+5w+4e-db+86"
+                 data-ad-client="ca-pub-2164002681613672"
+                 data-ad-slot="9215455129"></ins>
+          </div>
+          <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
+             class="donate-btn result-donate-btn" target="_blank" rel="noopener">
+            Donate to CMU
+          </a>
+          <button id="result-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
+        </div>
       </div>
     </div>
   </div>
@@ -599,6 +609,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=17" defer></script>
 <script src="login.js?v=16" defer></script>
-<script src="script.js?v=2.11.47" defer></script>
+<script src="script.js?v=2.11.49" defer></script>
 </body>
 </html>
