@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.31';
+const VERSION_NUMBER = '2.11.32';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5829,7 +5829,11 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(HOW_TO_SEEN_KEY, '1');
   });
 
-  // About / Donate — header button opens the modal instead of navigating straight out
+  // About / Donate — header button opens the modal instead of navigating straight out.
+  // The tiled globe (same pure-CSS spinner used for loading states) is dropped in once as
+  // a purely decorative header graphic — it's not tied to any actual loading here.
+  const donateGlobe = document.getElementById('donate-modal-globe');
+  if (donateGlobe) donateGlobe.innerHTML = globeLoader(72);
   document.getElementById('donate-btn')?.addEventListener('click', () => {
     document.getElementById('donate-modal')?.classList.remove('hidden');
   });
