@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.54';
+const VERSION_NUMBER = '2.11.55';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5139,72 +5139,12 @@ function _runGameoverSparkTrace() {
   })(t0);
 }
 
-// The full district celebration: the boundary spark trace, tied together with the confetti
-// firework bursting from the district's on-screen center (win only). Fired when the player
-// returns to the map from the result modal.
+// The district celebration: the boundary spark trace. Fired when the player returns to
+// the map from the result modal. (The confetti firework used to burst from the district's
+// on-screen center here too, but its full-viewport canvas sat on top of the District
+// Profile sheet that opens at the same moment, hiding it — suppressed entirely.)
 function _celebrateGameoverDistrict() {
   _runGameoverSparkTrace();
-  if (!lastGameWon) return;
-  const node = document.querySelector('#gameover-map .go-answer-district');
-  if (!node) return;
-  const r = node.getBoundingClientRect();
-  if (!r.width || !r.height) return;
-  launchBoundaryConfetti([{ x: r.left + r.width / 2, y: r.top + r.height / 2 }]);
-}
-
-// Burst confetti outward from a set of screen-coordinate {x,y} origin points.
-function launchBoundaryConfetti(origins) {
-  const isMobile = navigator.maxTouchPoints > 0;
-  const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;will-change:transform;transform:translateZ(0)';
-  document.body.appendChild(canvas);
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext('2d');
-  const COLORS = ['#C41230','#ffffff','#ffb020','#ff7700','#fffbe8','#FDB515'];
-  const perOrigin = isMobile ? 40 : 80;
-  const particles = [];
-  for (const o of origins) {
-    const count = perOrigin + Math.floor(Math.random() * (isMobile ? 10 : 20));
-    for (let i = 0; i < count; i++) {
-      const ang = Math.random() * Math.PI * 2;
-      const spd = 4 + Math.random() * 10;
-      particles.push({
-        x: o.x, y: o.y,
-        w: 5 + Math.random() * 6, h: 2.5 + Math.random() * 3.5,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd - 4,
-        angle: Math.random() * Math.PI * 2,
-        spin: (Math.random() - 0.5) * 0.25,
-      });
-    }
-  }
-  // Sort by color so fillStyle switches are minimised across the draw loop.
-  particles.sort((a, b) => (a.color < b.color ? -1 : a.color > b.color ? 1 : 0));
-  let frame, start;
-  function tick(ts) {
-    if (!start) start = ts;
-    const elapsed = ts - start;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // All particles share the same opacity at any instant — set it once per frame.
-    const alpha = elapsed < 2200 ? 1 : Math.max(0, 1 - (elapsed - 2200) / 1200);
-    ctx.globalAlpha = alpha;
-    let lastColor = null;
-    for (const p of particles) {
-      p.x += p.vx; p.y += p.vy; p.vy += 0.10;
-      p.angle += p.spin;
-      if (p.color !== lastColor) { ctx.fillStyle = p.color; lastColor = p.color; }
-      // setTransform replaces save/translate/rotate/restore (4 calls → 1).
-      const cos = Math.cos(p.angle), sin = Math.sin(p.angle);
-      ctx.setTransform(cos, sin, -sin, cos, p.x, p.y);
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-    }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (alpha > 0) frame = requestAnimationFrame(tick);
-    else { cancelAnimationFrame(frame); canvas.remove(); }
-  }
-  frame = requestAnimationFrame(tick);
 }
 
 function launchConfetti() {
