@@ -146,6 +146,12 @@
     $('account-signout').addEventListener('click', async () => {
       closeMenu();
       try { await B.signOut(); } catch (_) {}
+      // Clear the device-local mirror of the account's lifetime stats (written by
+      // hydratePersonalStatsFromServer while signed in) — it's account-scoped data that
+      // shouldn't outlive the session. Otherwise the next anonymous session on this device
+      // can render the PREVIOUS account's numbers if any code path shows the personal-stats
+      // panel before a fresh game/result overwrites it.
+      try { localStorage.removeItem('districtguess_stats'); } catch (_) {}
       // Game state is server-authoritative per account. Reload so init() re-fetches
       // the now-anonymous state and rebuilds the welcome splash — otherwise the
       // previous account's gameOver state lingers and the splash wrongly keeps its

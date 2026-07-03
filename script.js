@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.44';
+const VERSION_NUMBER = '2.11.45';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5289,6 +5289,12 @@ function openResultModal() {
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
   _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
+  // Ensure the anon-CTA/personal-stats visibility matches the CURRENT sign-in state every
+  // time the modal opens — the static HTML ships with them backwards for an anonymous
+  // session (personal-stats visible, anon-cta hidden), and nothing else corrects that
+  // until a game actually ends. Without this, a fresh anonymous session (e.g. right after
+  // signing out) that opens results before finishing a game shows the wrong widget.
+  refreshSignedInUI();
   if (gameOver) {
     switchResultTab('result');
   } else {
