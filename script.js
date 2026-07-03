@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.32';
+const VERSION_NUMBER = '2.11.33';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -854,24 +854,50 @@ function injectArchiveShapes(data) {
 }
 
 // Pure-CSS tiled globe loader markup (used everywhere EXCEPT the welcome screen, which
-// keeps the canvas TiledGlobe). 18×18 tiles; each tile's animation-delay is derived from
-// its distance to the top-right corner (+ jitter) so the fill sweeps across like a
-// forming globe — generated here so the stylesheet needs no 324 per-tile rules.
+// keeps the canvas TiledGlobe). Pointy-top hexagons laid out by hand (CSS Grid can't do
+// the offset-row hex tiling), positioned in percentage units so they scale with --size.
+// Each tile's animation-delay is derived from its distance to the top-right corner
+// (+ jitter) so the fill sweeps across like a forming globe. A second hex layer (same
+// positions) sits on top as the "shade": a grayscale vignette — tiles near the rim get
+// more opacity than tiles near the center — replacing the old smooth radial-gradient
+// shade with texture that matches the tile grid.
 // Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~20% of tiles take a
 // random thread colour, the rest stay Carnegie red — the flecks that read as tartan.
 const GLOBE_THREADS = ['#dc506e', '#c41230', '#a00a28', '#820519', '#f0788c'];
 const GLOBE_THREAD_PROB = 0.2;
 function globeLoader(size = 96) {
-  let tiles = '';
-  for (let i = 0; i < 324; i++) {
-    const row = Math.floor(i / 18), col = i % 18;
-    const delay = -(0.05 * (row + (17 - col)) + Math.random() * 0.12);
-    const thread = Math.random() < GLOBE_THREAD_PROB
-      ? `;background:${GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0]}` : '';
-    tiles += `<i style="animation-delay:${delay.toFixed(3)}s${thread}"></i>`;
+  const cols = 12;                          // hex centers per row
+  const spacingX = 100 / cols;              // % between hex centers, same row
+  const r = spacingX / Math.sqrt(3);        // hex circumradius, in %
+  const hexW = Math.sqrt(3) * r;            // full hex width  (≈ spacingX)
+  const hexH = 2 * r;                       // full hex height
+  const spacingY = 1.5 * r;                 // % between rows (pointy-top overlap)
+
+  let tiles = '', shade = '', rowIdx = 0;
+  for (let y = -20; y <= 120; y += spacingY, rowIdx++) {
+    const xOff = (rowIdx % 2) ? spacingX / 2 : 0;
+    for (let x = -20 - spacingX; x <= 120 + spacingX; x += spacingX) {
+      const cx = x + xOff;
+      // Fill sweep: tiles closer to the top-right corner start further into their
+      // (negative-delayed) animation cycle, same diagonal-wipe effect as before.
+      const u = cx / 100, v = y / 100;
+      const sweep = (1 - u) + v;
+      const delay = -(0.55 * sweep + Math.random() * 0.12);
+      const thread = Math.random() < GLOBE_THREAD_PROB
+        ? `;background:${GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0]}` : '';
+      const pos = `left:${cx.toFixed(2)}%;top:${y.toFixed(2)}%;width:${hexW.toFixed(3)}%;height:${hexH.toFixed(3)}%;`;
+      tiles += `<i style="${pos}animation-delay:${delay.toFixed(3)}s${thread}"></i>`;
+
+      // Shade: opacity ramps from 0 near the globe's center to ~0.55 at the rim —
+      // a vignette built from the same hex cells instead of a smooth gradient.
+      const dx = cx - 50, dy = y - 50;
+      const dist = Math.hypot(dx, dy) / 60;
+      const op = Math.max(0, Math.min(1, (dist - 0.25) / 0.55)) * 0.55;
+      if (op > 0.01) shade += `<i style="${pos}opacity:${op.toFixed(3)}"></i>`;
+    }
   }
   return `<span class="globe-loader" role="status" aria-label="Loading" style="--size:${size}px;">`
-    + `<span class="tiles">${tiles}</span><span class="shade"></span></span>`;
+    + `<span class="tiles">${tiles}</span><span class="shade">${shade}</span></span>`;
 }
 
 // Full-screen loader (the pure-CSS tiled globe) shown while a heavy build runs with no
@@ -5830,10 +5856,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // About / Donate — header button opens the modal instead of navigating straight out.
-  // The tiled globe (same pure-CSS spinner used for loading states) is dropped in once as
-  // a purely decorative header graphic — it's not tied to any actual loading here.
-  const donateGlobe = document.getElementById('donate-modal-globe');
-  if (donateGlobe) donateGlobe.innerHTML = globeLoader(72);
+  // The decorative header graphic is the canvas TiledGlobe (data-globe span in the HTML,
+  // auto-instantiated by globe.js on DOMContentLoaded) — same one used on the welcome screen.
   document.getElementById('donate-btn')?.addEventListener('click', () => {
     document.getElementById('donate-modal')?.classList.remove('hidden');
   });
