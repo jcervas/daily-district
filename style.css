@@ -2129,7 +2129,7 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 .login-modal-content { position: relative; }
 
 /* ===== Account menu (initials avatar + dropdown) ===== */
-.account-wrap { position: relative; display: inline-flex; }
+.account-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; }
 .account-btn {
   width: 34px; height: 34px; border-radius: 50%;
   flex: 0 0 auto; min-width: 34px; min-height: 34px;  /* match .btn-icon, never shrink */
