@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.36';
+const VERSION_NUMBER = '2.11.37';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -853,15 +853,18 @@ function injectArchiveShapes(data) {
   });
 }
 
-// Pure-CSS tiled globe loader markup (used everywhere EXCEPT the welcome screen, which
-// keeps the canvas TiledGlobe). Pointy-top hexagons laid out by hand (CSS Grid can't do
-// the offset-row hex tiling), positioned in percentage units so they scale with --size.
-// Each tile's animation-delay is derived from its distance to the top-right corner
-// (+ jitter) so the fill sweeps across like a forming globe. A second hex layer (same
-// positions) sits on top as the "shade": a grayscale vignette — tiles near the rim get
-// more opacity than tiles near the center — replacing the old smooth radial-gradient
-// shade with texture that matches the tile grid.
-// Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~20% of tiles take a
+// Pure-CSS (well, inline-SVG) tiled globe loader markup (used everywhere EXCEPT the
+// welcome screen, which keeps the canvas TiledGlobe). Pointy-top hexagons laid out by
+// hand (CSS Grid can't do the offset-row hex tiling) as SVG <polygon>s in a 0-100
+// viewBox, so each tile can carry a real stroke — a clip-path <div> can only fake an
+// outline via drop-shadow, which gets painted over by whichever neighbor tile happens to
+// be later in DOM order, leaving the outline patchy/invisible. A polygon's stroke is part
+// of its own paint, so it's never occluded by a sibling. Each tile's animation-delay is
+// derived from its distance to the top-right corner (+ jitter) so the fill sweeps across
+// like a forming globe. A second hex layer (same positions) sits on top as the "shade": a
+// grayscale vignette — tiles near the rim get more opacity than tiles near the center —
+// replacing the old smooth radial-gradient shade with texture that matches the tile grid.
+// Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~16% of tiles take a
 // random thread colour, the rest stay Carnegie red — the flecks that read as tartan.
 // Deeper maroon variants only — the two pale/pink shades that used to be in here (#dc506e,
 // #f0788c) stood out too much against the darker Carnegie red field instead of reading as
@@ -871,36 +874,46 @@ const GLOBE_THREAD_PROB = 0.16;
 function globeLoader(size = 96) {
   const cols = 21;                          // hex centers per row (~3x the tile count of cols=12)
   const spacingX = 100 / cols;              // % between hex centers, same row
-  const r = spacingX / Math.sqrt(3);        // hex circumradius, in %
-  const hexW = Math.sqrt(3) * r;            // full hex width  (≈ spacingX)
-  const hexH = 2 * r;                       // full hex height
+  const r = spacingX / Math.sqrt(3);        // hex circumradius, in viewBox units
+  const rDraw = r * 0.86;                   // shrink so adjacent hexes leave a visible gap
   const spacingY = 1.5 * r;                 // % between rows (pointy-top overlap)
+
+  const hexPoints = (cx, cy) => {
+    let pts = '';
+    for (let i = 0; i < 6; i++) {
+      const ang = (-90 + i * 60) * Math.PI / 180;
+      pts += `${(cx + rDraw * Math.cos(ang)).toFixed(2)},${(cy + rDraw * Math.sin(ang)).toFixed(2)} `;
+    }
+    return pts.trim();
+  };
 
   let tiles = '', shade = '', rowIdx = 0;
   for (let y = -20; y <= 120; y += spacingY, rowIdx++) {
     const xOff = (rowIdx % 2) ? spacingX / 2 : 0;
     for (let x = -20 - spacingX; x <= 120 + spacingX; x += spacingX) {
       const cx = x + xOff;
+      const pts = hexPoints(cx, y);
       // Fill sweep: tiles closer to the top-right corner start further into their
       // (negative-delayed) animation cycle, same diagonal-wipe effect as before.
       const u = cx / 100, v = y / 100;
       const sweep = (1 - u) + v;
       const delay = -(0.55 * sweep + Math.random() * 0.12);
-      const thread = Math.random() < GLOBE_THREAD_PROB
-        ? `;background:${GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0]}` : '';
-      const pos = `left:${cx.toFixed(2)}%;top:${y.toFixed(2)}%;width:${hexW.toFixed(3)}%;height:${hexH.toFixed(3)}%;`;
-      tiles += `<i style="${pos}animation-delay:${delay.toFixed(3)}s${thread}"></i>`;
+      const fill = Math.random() < GLOBE_THREAD_PROB
+        ? GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0] : 'var(--red)';
+      tiles += `<polygon points="${pts}" style="fill:${fill};animation-delay:${delay.toFixed(3)}s"/>`;
 
       // Shade: opacity ramps from 0 near the globe's center to ~0.55 at the rim —
       // a vignette built from the same hex cells instead of a smooth gradient.
       const dx = cx - 50, dy = y - 50;
       const dist = Math.hypot(dx, dy) / 60;
       const op = Math.max(0, Math.min(1, (dist - 0.25) / 0.55)) * 0.55;
-      if (op > 0.01) shade += `<i style="${pos}opacity:${op.toFixed(3)}"></i>`;
+      if (op > 0.01) shade += `<polygon points="${pts}" style="opacity:${op.toFixed(3)}"/>`;
     }
   }
   return `<span class="globe-loader" role="status" aria-label="Loading" style="--size:${size}px;">`
-    + `<span class="tiles">${tiles}</span><span class="shade">${shade}</span></span>`;
+    + `<svg class="tiles" viewBox="0 0 100 100" preserveAspectRatio="none">${tiles}</svg>`
+    + `<svg class="shade" viewBox="0 0 100 100" preserveAspectRatio="none">${shade}</svg>`
+    + `</span>`;
 }
 
 // Full-screen loader (the pure-CSS tiled globe) shown while a heavy build runs with no
