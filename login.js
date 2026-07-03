@@ -181,9 +181,22 @@
     // The splash is the always-present fallback, so the login form is dismissable.
     const modal = $('login-modal');
     const err = $('login-error');
-    const showGate = () => modal.classList.remove('hidden');
+    // Remember the last email that successfully signed in, so returning players don't
+    // have to retype it (the password field is still left for the browser's own
+    // autocomplete/password-manager to fill).
+    const LAST_EMAIL_KEY = 'dd_last_email';
+    const showGate = () => {
+      modal.classList.remove('hidden');
+      const last = localStorage.getItem(LAST_EMAIL_KEY);
+      const emailInput = $('login-email');
+      if (last && !emailInput.value) {
+        emailInput.value = last;
+        $('login-password').focus();
+      }
+    };
     const hideGate = () => modal.classList.add('hidden');
     const fail = (e) => { err.textContent = (e && e.message) || 'Something went wrong'; };
+    const rememberEmail = (email) => { try { localStorage.setItem(LAST_EMAIL_KEY, email); } catch (_) {} };
 
     modal.querySelectorAll('.login-provider-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -194,9 +207,11 @@
     $('login-email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       err.textContent = '';
+      const email = $('login-email').value.trim();
       try {
-        const { error } = await B.signInWithEmail($('login-email').value.trim(), $('login-password').value);
+        const { error } = await B.signInWithEmail(email, $('login-password').value);
         if (error) throw error;
+        rememberEmail(email);
       } catch (ex) { fail(ex); }
     });
     $('login-signup').addEventListener('click', async () => {
@@ -207,6 +222,7 @@
       try {
         const { data, error } = await B.signUpWithEmail(email, pw);
         if (error) throw error;
+        rememberEmail(email);
         // With email confirmation enforced, signUp returns a user but NO session
         // until the link is clicked. (If confirmation is off, a session comes back
         // and onAuthChange signs them straight in.)
