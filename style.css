@@ -902,13 +902,11 @@ circle.tile-ripple {
 .result-tabs-content {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 .result-tab-pane.active {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3144,8 +3142,8 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   .result-modal-tabs    { grid-area: tabs; padding: 8px 12px 0; }
   /* The wrapper (not the pane) owns the "content" grid cell now, since the shared footer
      is a sibling of the panes inside it — the pane itself just scrolls within that cell. */
-  .result-tabs-content { grid-area: content; min-height: 0; }
-  .result-tab-pane.active { overflow-y: auto; padding: 10px 14px; }
+  .result-tabs-content { grid-area: content; min-height: 0; overflow-y: auto; }
+  .result-tab-pane.active { padding: 10px 14px; }
   .result-modal-footer { padding: 0 14px 12px; }
 }
 
