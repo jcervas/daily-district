@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.40';
+const VERSION_NUMBER = '2.11.41';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -165,6 +165,17 @@ const ICON_PATHS = {
 function svgIcon(name, cls = 'icon') {
   const inner = ICON_PATHS[name] || '';
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
+// Free clue (district area in sq mi), visible before any guess. The live daily gets this
+// from the `today` edge function's `freeClue` field (computed server-side from
+// puzzles.census, since the answer is still secret at that point). Archive puzzles get
+// their full census object unconditionally (past days aren't secret), so this mirrors
+// that same server-side logic client-side rather than adding a redundant round-trip.
+function freeClueFromCensus(census) {
+  const area = Math.round(Number(census && census.area_sqmi));
+  if (!Number.isFinite(area) || area <= 0) return null;
+  return { icon: 'ruler', label: 'District area', value: `${area.toLocaleString('en-US')} sq mi` };
 }
 
 // State boundary SVG cache
@@ -958,7 +969,7 @@ async function startServerArchive(date, num, label) {
   // Reset to a fresh, unofficial archive session.
   isArchiveGame      = true;
   serverArchive      = { date, puzzleNumber: data.puzzleNumber, answer: { districtId: data.districtId, state: data.state, census: data.census }, clues: data.clues || {} };
-  serverPuzzle       = { clues: [], cluesTotal: MAX_GUESSES };
+  serverPuzzle       = { clues: [], cluesTotal: MAX_GUESSES, freeClue: freeClueFromCensus(data.census) };
   serverAnswer       = serverArchive.answer;   // drives the game-over census panel
   serverState        = null;
   guessHistory       = [];
