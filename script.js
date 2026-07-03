@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.26';
+const VERSION_NUMBER = '2.11.27';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5827,6 +5827,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('how-to-got-it').addEventListener('click', () => {
     howToModal.classList.add('hidden');
     localStorage.setItem(HOW_TO_SEEN_KEY, '1');
+  });
+
+  // About / Donate — header button opens the modal instead of navigating straight out
+  document.getElementById('donate-btn')?.addEventListener('click', () => {
+    document.getElementById('donate-modal')?.classList.remove('hidden');
   });
   }); // end _initPromise.then
 

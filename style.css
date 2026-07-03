@@ -1436,6 +1436,10 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   flex-shrink: 0;
 }
 .got-it-btn:hover { background: var(--cmu-red-dark); }
+/* Donate modal's single footer CTA — .how-to-footer's space-between only makes sense
+   with two children, so center the lone button here instead. */
+#donate-modal .how-to-footer { justify-content: center; }
+.donate-modal-cta { text-decoration: none; text-align: center; }
 
 /* ---- Leaderboard ---- */
 .scores-list {
