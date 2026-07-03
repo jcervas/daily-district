@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.45';
+const VERSION_NUMBER = '2.11.46';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5476,9 +5476,14 @@ async function loadLeaderboardPanels() {
     // All stats come from the database — nothing local.
     const lb = await window.DistrictBackend.leaderboard();
     alltimeEl.innerHTML = renderAggregatePanel(lb.allTime, 'No games recorded yet.');
-    personalEl.innerHTML = (lb.user && lb.user.played > 0)
-      ? renderUserStats(lb.user)
-      : '<div class="lb-empty">Sign in and play to track your personal stats.</div>';
+    // lb.user is null specifically when signed OUT (vs. signed in with 0 games played) —
+    // show the same "sign in to save your stats" widget used on the Today's District "Me"
+    // tab, rather than a plain empty-state sentence, for a signed-out player here too.
+    personalEl.innerHTML = !lb.user
+      ? anonStatsCtaMarkup()
+      : lb.user.played > 0
+        ? renderUserStats(lb.user)
+        : '<div class="lb-empty">Play today’s puzzle to start tracking your stats.</div>';
     if (todayEl) todayEl.innerHTML = renderAggregatePanel(lb.today, 'No one has finished today’s puzzle yet.');
   } catch (e) {
     alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Couldn’t load stats.</div>';
@@ -5503,6 +5508,21 @@ function renderDistBars(dist, highlightKey) {
       </div>
     </div>`;
   }).join('');
+}
+
+// "Sign in to save your stats" widget — shown on any "Me" tab for a signed-out player
+// (Today's District's #result-anon-cta is the static original; this is the same markup for
+// dynamically-rendered panels like Lifetime's "Me" tab). The button has no id since this can
+// render more than once; a delegated click listener (by class) opens the login modal.
+function anonStatsCtaMarkup() {
+  return `
+    <div class="result-anon-cta">
+      <div class="result-anon-cta-text">
+        <strong>Want to save your stats?</strong>
+        <span>Sign in to track your streak and compare with other players.</span>
+      </div>
+      <button class="result-anon-cta-btn">Sign in / Sign up</button>
+    </div>`;
 }
 
 // Today / All Time — aggregate across ALL players.
@@ -5801,8 +5821,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('show-results-btn')?.addEventListener('click', openResultModal);
 
   // Anonymous results CTA → open the login modal (login.js wires the form/providers).
-  document.getElementById('result-anon-signin-btn')?.addEventListener('click', () => {
-    document.getElementById('login-modal')?.classList.remove('hidden');
+  // Delegated by class rather than the static button's id, since anonStatsCtaMarkup()
+  // renders the same widget (button with no id) into dynamically-built panels too — e.g.
+  // the Lifetime Statistics "Me" tab.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.result-anon-cta-btn')) {
+      document.getElementById('login-modal')?.classList.remove('hidden');
+    }
   });
 
   // Result modal tabs
