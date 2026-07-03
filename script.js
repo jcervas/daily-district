@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.37';
+const VERSION_NUMBER = '2.11.38';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5703,13 +5703,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (e.target.closest('#gameover-share-btn')) { shareResultText(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
-    // Clicking anywhere on the daily game-over screen (except zoom buttons and the
-    // District Profile sheet) opens results. Disabled for archive — its result modal is
-    // today-only, so a stray click shouldn't yank the player out of the archive.
-    if (!isArchiveGame && e.target.closest('#gameover-modal')
-        && !e.target.closest('.mzb-go') && !e.target.closest('#gameover-census')) {
-      openResultModal(); return;
-    }
     const btn = e.target.closest('#gameover-modal .mzb-go');
     if (!btn || !_goZoom) return;
     const svgSel = d3.select('#gameover-map svg');
