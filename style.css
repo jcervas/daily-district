@@ -1503,7 +1503,13 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   background: var(--red); opacity: 0;
   animation: gl-fill 2.6s linear infinite;
   will-change: opacity, transform;
+  /* Hex outline: drop-shadow traces the clip-path silhouette (a real border isn't
+     possible on a clipped shape) and fades with the tile's own opacity automatically.
+     White in light mode (reads as grout against a light backdrop), black in dark mode. */
+  filter: drop-shadow(0 0 0.5px #fff);
 }
+body.dark-mode .globe-loader .tiles i { filter: drop-shadow(0 0 0.5px #000); }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .tiles i { filter: drop-shadow(0 0 0.5px #000); } }
 /* Grayscale hex-tile vignette (replaces the old smooth radial-gradient shade): each
    shade tile's opacity is set inline by globeLoader() from its distance to the globe's
    center, so the rim reads darker/lighter than the middle using the same hex texture as

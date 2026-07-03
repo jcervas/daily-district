@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.35';
+const VERSION_NUMBER = '2.11.36';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -863,8 +863,11 @@ function injectArchiveShapes(data) {
 // shade with texture that matches the tile grid.
 // Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~20% of tiles take a
 // random thread colour, the rest stay Carnegie red — the flecks that read as tartan.
-const GLOBE_THREADS = ['#dc506e', '#c41230', '#a00a28', '#820519', '#f0788c'];
-const GLOBE_THREAD_PROB = 0.2;
+// Deeper maroon variants only — the two pale/pink shades that used to be in here (#dc506e,
+// #f0788c) stood out too much against the darker Carnegie red field instead of reading as
+// subtle tartan texture.
+const GLOBE_THREADS = ['#c41230', '#a00a28', '#820519', '#6e0415'];
+const GLOBE_THREAD_PROB = 0.16;
 function globeLoader(size = 96) {
   const cols = 21;                          // hex centers per row (~3x the tile count of cols=12)
   const spacingX = 100 / cols;              // % between hex centers, same row
