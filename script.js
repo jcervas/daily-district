@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.34';
+const VERSION_NUMBER = '2.11.35';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -866,7 +866,7 @@ function injectArchiveShapes(data) {
 const GLOBE_THREADS = ['#dc506e', '#c41230', '#a00a28', '#820519', '#f0788c'];
 const GLOBE_THREAD_PROB = 0.2;
 function globeLoader(size = 96) {
-  const cols = 12;                          // hex centers per row
+  const cols = 21;                          // hex centers per row (~3x the tile count of cols=12)
   const spacingX = 100 / cols;              // % between hex centers, same row
   const r = spacingX / Math.sqrt(3);        // hex circumradius, in %
   const hexW = Math.sqrt(3) * r;            // full hex width  (≈ spacingX)
