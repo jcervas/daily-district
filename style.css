@@ -2552,15 +2552,21 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   gap: 3px;
   margin-bottom: 0;
 }
+/* min-height (not just font-size) so these reserve their line's space even before JS
+   fills them in (date-line: inline script right after parse; puzzle-num: after the
+   `today` fetch resolves) — otherwise the empty div collapses to 0 height and everything
+   below it (editor credit, donate button) jumps up then back down as they populate. */
 .welcome-date-line {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
+  min-height: 1.2em;
 }
 .welcome-puzzle-num {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--muted);
+  min-height: 1.2em;
 }
 .welcome-editor {
   font-size: 0.8rem;
