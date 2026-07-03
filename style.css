@@ -1440,6 +1440,15 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
    with two children, so center the lone button here instead. */
 #donate-modal .how-to-footer { justify-content: center; }
 .donate-modal-cta { text-decoration: none; text-align: center; }
+/* Inline text links in the modal body (e.g. the sponsorship mailto) — match the app's
+   accent-red link treatment used elsewhere (census-card links) instead of browser blue. */
+#donate-modal p a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+#donate-modal p a:hover { text-decoration-thickness: 2px; }
 
 /* ---- Leaderboard ---- */
 .scores-list {
