@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.51';
+const VERSION_NUMBER = '2.11.52';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -466,6 +466,17 @@ function reportClientError(where, err) {
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => reportClientError('window_error', e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportClientError('unhandled_rejection', e.reason));
+}
+
+// Which buttons players actually use (batched client-side, see DistrictBackend.
+// reportControl) — one delegated listener instead of instrumenting every handler.
+// Only named, purposeful controls (id or data-track) are captured; nothing free-text.
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('button[id], [role="button"][id], [data-track]');
+    if (!el) return;
+    window.DistrictBackend?.reportControl?.(el.dataset.track || el.id);
+  }, { capture: true, passive: true });
 }
 
 // The player's current game settings (theme, hard mode, confirm-selection). Logged
