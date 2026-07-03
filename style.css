@@ -1285,11 +1285,15 @@ body.dark-mode .district-profile .census-card { background: rgba(44, 44, 50, 0.6
    (same color/weight/size) but keep an underline so it reads as clickable. */
 .census-card.census-rep .value a {
   color: inherit;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
+  padding-bottom: 0.0625em;
+  transition: background-size .4s ease, color .4s ease;
 }
-.census-card.census-rep .value a:hover { text-decoration-thickness: 2px; }
+.census-card.census-rep .value a:hover {
+  color: inherit;
+  background-size: 100% 0.0625em;
+}
 
 /* ── District Profile mini-graphics ───────────────────────────────────────── */
 /* Percentile bar: where this district ranks among all 435 (tick = its position). */
@@ -1464,11 +1468,15 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
    accent-red link treatment used elsewhere (census-card links) instead of browser blue. */
 #donate-modal p a {
   color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
+  padding-bottom: 0.0625em;
+  transition: background-size .4s ease, color .4s ease;
 }
-#donate-modal p a:hover { text-decoration-thickness: 2px; }
+#donate-modal p a:hover {
+  color: var(--accent);
+  background-size: 100% 0.0625em;
+}
 
 /* ---- Leaderboard ---- */
 .scores-list {
