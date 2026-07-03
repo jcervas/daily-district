@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.38';
+const VERSION_NUMBER = '2.11.39';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2138,7 +2138,7 @@ function renderInlinePersonalStats() {
 function switchResultTab(tab) {
   document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.result-tab-btn').forEach(b => b.classList.remove('active'));
-  const paneId = { result: 'result-section', guesses: 'guesses-section', alltime: 'alltime-section', mystats: 'mystats-section' }[tab] || 'result-section';
+  const paneId = { result: 'result-section', guesses: 'guesses-section', alltime: 'alltime-section', mystats: 'mystats-section', 'today-everyone': 'today-everyone-section' }[tab] || 'result-section';
   const pane = document.getElementById(paneId);
   const btn  = document.querySelector(`.result-tab-btn[data-rtab="${tab}"]`);
   if (pane) pane.classList.add('active');
@@ -2147,7 +2147,7 @@ function switchResultTab(tab) {
     renderTabHeader('guesses-header');
     renderGuessHistory();
   }
-  if (tab === 'alltime' || tab === 'mystats') loadLeaderboardPanels();
+  if (tab === 'alltime' || tab === 'mystats' || tab === 'today-everyone') loadLeaderboardPanels();
 }
 
 // ── District Profile mini-graphics ─────────────────────────────────────────
@@ -5411,11 +5411,14 @@ function loadingBlock(text = 'Loading…') {
 async function loadLeaderboardPanels() {
   const alltimeEl  = document.getElementById('alltime-scores');
   const personalEl = document.getElementById('personal-stats');
+  const todayEl    = document.getElementById('today-everyone-scores');
   if (!alltimeEl || !personalEl) return;
   alltimeEl.innerHTML = personalEl.innerHTML = loadingBlock();
+  if (todayEl) todayEl.innerHTML = loadingBlock();
 
   if (!window.DistrictBackend) {
     alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Stats unavailable.</div>';
+    if (todayEl) todayEl.innerHTML = '<div class="lb-empty">Stats unavailable.</div>';
     return;
   }
 
@@ -5426,8 +5429,10 @@ async function loadLeaderboardPanels() {
     personalEl.innerHTML = (lb.user && lb.user.played > 0)
       ? renderUserStats(lb.user)
       : '<div class="lb-empty">Sign in and play to track your personal stats.</div>';
+    if (todayEl) todayEl.innerHTML = renderAggregatePanel(lb.today, 'No one has finished today’s puzzle yet.');
   } catch (e) {
     alltimeEl.innerHTML = personalEl.innerHTML = '<div class="lb-empty">Couldn’t load stats.</div>';
+    if (todayEl) todayEl.innerHTML = '<div class="lb-empty">Couldn’t load stats.</div>';
   }
 }
 
