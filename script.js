@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.43';
+const VERSION_NUMBER = '2.11.44';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2640,19 +2640,21 @@ function renderClues() {
   updateHardModeLock();
 }
 
-// Lock the Hard Mode toggle while a game is actually in progress — otherwise switching it
-// off mid-game instantly reveals every hint/terrain layer that mode was withholding (the
-// gameHardMode latch only stops the SHARE text from misrepresenting it after the fact; it
-// doesn't undo the reveal). Changes only take effect for the next game once this one ends.
+// Turning Hard Mode OFF mid-game is harmless — it just reveals whatever hint/terrain this
+// guess count would already show in normal mode, nothing the player hasn't earned. Turning
+// it ON mid-game is blocked: by then the player has already seen clues/terrain hard mode is
+// meant to withhold from the start, so switching to it now wouldn't actually hide anything
+// they don't already know — only lock the OFF→ON direction, mid-game.
 function updateHardModeLock() {
   const toggle = document.getElementById('settings-hard-toggle');
   const desc   = document.getElementById('settings-hard-desc');
   if (!toggle) return;
   const inProgress = Array.isArray(guessHistory) && guessHistory.length > 0 && !gameOver;
-  toggle.disabled = inProgress;
-  toggle.closest('.settings-toggle-wrap')?.classList.toggle('disabled', inProgress);
-  if (desc) desc.textContent = inProgress
-    ? 'Locked until this game ends — no hints revealed, 6 guesses, shape only'
+  const lockOn = inProgress && !hardMode;
+  toggle.disabled = lockOn;
+  toggle.closest('.settings-toggle-wrap')?.classList.toggle('disabled', lockOn);
+  if (desc) desc.textContent = lockOn
+    ? 'Can’t turn on mid-game — you’ve already seen this game’s clues'
     : 'No hints revealed — 6 guesses, shape only';
 }
 
