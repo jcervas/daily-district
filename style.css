@@ -2460,10 +2460,16 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 
 
 /* ---- Welcome / splash modal ---- */
-/* Frosted glass behind the splash so the game (visible around the centered card on
-   desktop) is blurred and obscured rather than just dimmed. On mobile the splash content
-   already fills the viewport, so this only softens the thin header strip — no harm. */
+/* Solid backdrop (matches the splash card's own page background) while the game behind
+   it is still loading — there's nothing meaningful back there yet, so a blurred/dimmed
+   peek just reads as a flash of broken UI. Once the map is actually built (loader
+   dropped, .bg-ready added by buildWelcomeButtons()), cross-fade to frosted glass so the
+   game is visible-but-blurred around the centered card on desktop. */
 #welcome-modal {
+  background: var(--bg);
+  transition: background-color .5s ease, backdrop-filter .5s ease;
+}
+#welcome-modal.bg-ready {
   background: rgba(18, 18, 24, 0.42);
   backdrop-filter: blur(12px) saturate(118%);
   -webkit-backdrop-filter: blur(12px) saturate(118%);
@@ -2564,7 +2570,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .welcome-action-btn {
   width: 60%;
   min-width: 160px;
-  max-width: 240px;
+  max-width: 200px;
   padding: 14px 0;
   font-size: 1rem;
   font-weight: 800;

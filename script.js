@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.53';
+const VERSION_NUMBER = '2.11.54';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5931,7 +5931,12 @@ document.addEventListener('DOMContentLoaded', () => {
   _initPromise.then(() => {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     try { ensureUSRefMap(); } catch (e) { reportClientError('init_refmap', e); }
-    requestAnimationFrame(() => buildWelcomeButtons());
+    requestAnimationFrame(() => {
+      buildWelcomeButtons();
+      // Game behind the splash is actually ready now — safe to reveal it through a
+      // frosted-glass backdrop instead of the solid loading-state background.
+      welcomeModal.classList.add('bg-ready');
+    });
   }));
 
   // How to play — auto-show on first visit (after welcome buttons ready)
