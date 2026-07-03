@@ -1439,6 +1439,7 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 /* Donate modal's single footer CTA — .how-to-footer's space-between only makes sense
    with two children, so center the lone button here instead. */
 #donate-modal .how-to-footer { justify-content: center; }
+#donate-modal p + p { margin-top: 14px; }
 .donate-modal-cta { text-decoration: none; text-align: center; }
 /* Decorative header graphic — the tiled globe spinner, purely for visual interest here
    (not tied to any loading state). */
@@ -2671,6 +2672,7 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 .settings-divider { height: 1px; background: var(--border); margin: 0 20px; }
 /* Toggle switch */
 .settings-toggle-wrap { position: relative; cursor: pointer; }
+.settings-toggle-wrap.disabled { cursor: not-allowed; opacity: 0.5; }
 .settings-toggle-input { position: absolute; opacity: 0; width: 0; height: 0; }
 .settings-toggle-track {
   display: block;

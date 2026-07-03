@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.42';
+const VERSION_NUMBER = '2.11.43';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2637,6 +2637,23 @@ function renderClues() {
   updateUSRefMap();   // keep D3 map in sync
   renderHintBar();
   // hints-clues-list is populated lazily when the hints modal opens — not stored in DOM at rest
+  updateHardModeLock();
+}
+
+// Lock the Hard Mode toggle while a game is actually in progress — otherwise switching it
+// off mid-game instantly reveals every hint/terrain layer that mode was withholding (the
+// gameHardMode latch only stops the SHARE text from misrepresenting it after the fact; it
+// doesn't undo the reveal). Changes only take effect for the next game once this one ends.
+function updateHardModeLock() {
+  const toggle = document.getElementById('settings-hard-toggle');
+  const desc   = document.getElementById('settings-hard-desc');
+  if (!toggle) return;
+  const inProgress = Array.isArray(guessHistory) && guessHistory.length > 0 && !gameOver;
+  toggle.disabled = inProgress;
+  toggle.closest('.settings-toggle-wrap')?.classList.toggle('disabled', inProgress);
+  if (desc) desc.textContent = inProgress
+    ? 'Locked until this game ends — no hints revealed, 6 guesses, shape only'
+    : 'No hints revealed — 6 guesses, shape only';
 }
 
 function renderHintsModal() {
@@ -5566,7 +5583,11 @@ async function init() {
   isAnonymousPlayer = !user;
   if (isAnonymousPlayer) {
     window.addEventListener('district-auth', () => {
-      if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) init();
+      // Reload rather than calling init() again in-place: initServer() wires up a lot of
+      // DOM/map/event-listener state that isn't safe to run twice on the same page load —
+      // a second in-place init() left the map genuinely broken (state clicks stopped
+      // working) after a sign-in that landed here. A reload always starts clean.
+      if (isAnonymousPlayer && guessHistory.length === 0 && !gameOver) window.location.reload();
     }, { once: true });
   } else {
     // Already signed in on load: align the device-local stats with the account's server
@@ -5912,6 +5933,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settings-btn').addEventListener('click', () => {
     dismissSettingsHint();
     updateThemeToggle();
+    updateHardModeLock();
     settingsModal.classList.remove('hidden');
   });
   document.getElementById('settings-close').addEventListener('click', () => {
