@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.41';
+const VERSION_NUMBER = '2.11.42';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -167,11 +167,13 @@ function svgIcon(name, cls = 'icon') {
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
 
-// Free clue (district area in sq mi), visible before any guess. The live daily gets this
-// from the `today` edge function's `freeClue` field (computed server-side from
-// puzzles.census, since the answer is still secret at that point). Archive puzzles get
-// their full census object unconditionally (past days aren't secret), so this mirrors
-// that same server-side logic client-side rather than adding a redundant round-trip.
+// Free clue (district area in sq mi), occupying slot 0 of the fixed MAX_GUESSES-card hint
+// bar (see clientRevealClues) — revealed before any guess, without growing a 7th slot. The
+// live daily gets this folded server-side into `clues[0]` (the `today`/`guess` edge
+// functions compute it from puzzles.census, since the answer is still secret at that
+// point). Archive puzzles get their full census object unconditionally (past days aren't
+// secret), so this mirrors that same server-side logic client-side via clientRevealClues
+// rather than adding a redundant round-trip.
 function freeClueFromCensus(census) {
   const area = Math.round(Number(census && census.area_sqmi));
   if (!Number.isFinite(area) || area <= 0) return null;
@@ -792,17 +794,21 @@ async function restoreServerGame(result, answer) {
 // Reveal clues the same way the server does (phase-local), but client-side for the
 // archive replay (no /guess round-trip — we have the answer). Mirrors revealClues()
 // in the `guess`/`today` edge functions; keep them in sync.
-// Mirror of revealClues() in the today/guess edge functions: a fixed 6-slot hint
-// bar. One reveal per guess — state clues while the state is unsolved, district
-// clues once it's solved. Total is always MAX_GUESSES. Returns { unlocked, total }.
-function clientRevealClues(clues, history, completed) {
+// Mirror of revealClues() in the today/guess edge functions: a fixed MAX_GUESSES-card
+// hint bar. All hidden at the start except slot 0, which is the always-on free clue
+// (when present) — the guess-earned deck then only fills the remaining MAX_GUESSES-1
+// slots, so total card count always matches MAX_GUESSES rather than growing a 7th
+// slot. One reveal per guess — state clues while the state is unsolved, district clues
+// once it's solved. Returns { unlocked, total }.
+function clientRevealClues(clues, history, completed, freeClue) {
   const cl = clues || {};
   const stateDeck    = Array.isArray(cl) ? cl : (Array.isArray(cl.state) ? cl.state : []);
   const districtDeck = Array.isArray(cl) ? [] : (Array.isArray(cl.district) ? cl.district : []);
   const stateSolved  = history.some(g => g.phase === 'state' && g.correct);
   const wrongState   = history.filter(g => g.phase === 'state' && !g.correct).length;
 
-  const nReveal = completed ? MAX_GUESSES : Math.min(history.length, MAX_GUESSES);
+  const realSlots = freeClue ? MAX_GUESSES - 1 : MAX_GUESSES;
+  const nReveal = completed ? realSlots : Math.min(history.length, realSlots);
 
   let unlocked;
   if (!stateSolved) {
@@ -812,6 +818,7 @@ function clientRevealClues(clues, history, completed) {
     const nDistrict = Math.max(0, Math.min(nReveal - nState, districtDeck.length));
     unlocked = [...stateDeck.slice(0, nState), ...districtDeck.slice(0, nDistrict)];
   }
+  if (freeClue) unlocked = [freeClue, ...unlocked];
   return { unlocked, total: MAX_GUESSES };
 }
 
@@ -833,7 +840,7 @@ function archiveLocalGuess(phase, value) {
   const guesses   = hist.filter(g => !(g.phase === 'state' && g.correct)).length;
   const won       = phase === 'district' && correct;
   const completed = won || guesses >= MAX_GUESSES;
-  const { unlocked, total: cluesTotal } = clientRevealClues(serverArchive.clues, hist, completed);
+  const { unlocked, total: cluesTotal } = clientRevealClues(serverArchive.clues, hist, completed, freeClueFromCensus(ans.census));
   return {
     correct, adjacent, phase, guesses, guessesLeft: MAX_GUESSES - guesses,
     completed, won,
@@ -969,7 +976,10 @@ async function startServerArchive(date, num, label) {
   // Reset to a fresh, unofficial archive session.
   isArchiveGame      = true;
   serverArchive      = { date, puzzleNumber: data.puzzleNumber, answer: { districtId: data.districtId, state: data.state, census: data.census }, clues: data.clues || {} };
-  serverPuzzle       = { clues: [], cluesTotal: MAX_GUESSES, freeClue: freeClueFromCensus(data.census) };
+  {
+    const { unlocked, total } = clientRevealClues(data.clues || {}, [], false, freeClueFromCensus(data.census));
+    serverPuzzle = { clues: unlocked, cluesTotal: total };
+  }
   serverAnswer       = serverArchive.answer;   // drives the game-over census panel
   serverState        = null;
   guessHistory       = [];
@@ -2580,26 +2590,12 @@ function renderHintBar() {
 
   bar.innerHTML = '';
 
-  // Free clue: visible from the very start, before any guess — currently just the
-  // district's area in sq mi. Doesn't count against cluesTotal/the 6 guess-earned
-  // slots; a raw area figure alone doesn't identify the district, same as the shape
-  // itself being visible unredacted from the start.
-  if (serverPuzzle && serverPuzzle.freeClue) {
-    const fc = serverPuzzle.freeClue;
-    const card = document.createElement('div');
-    card.className = 'hint-card revealed free-clue';
-    card.setAttribute('role', 'listitem');
-    card.innerHTML = `
-      <div class="hint-card-header">
-        <span class="hint-card-icon">${svgIcon(fc.icon, 'clue-icon-svg')}</span>
-        <span class="hint-card-label">${fc.label}</span>
-      </div>
-      <div class="hint-card-val"><span>${fc.value}</span></div>`;
-    bar.appendChild(card);
-  }
-
   // Server mode: clues are pre-computed {icon,label,value}; `serverPuzzle.clues`
-  // holds the unlocked-so-far set, `cluesTotal` the full count (rest are locked).
+  // holds the unlocked-so-far set, `cluesTotal` the full count (rest are locked). Slot 0
+  // is the always-on free clue (district area, revealed before any guess) when present —
+  // folded into this same array/count server-side (see revealClues in the today/guess
+  // edge functions) so the bar's total card count always matches MAX_GUESSES rather than
+  // growing a 7th slot.
   if (serverPuzzle) {
     const unlocked = serverPuzzle.clues || [];
     const total    = serverPuzzle.cluesTotal || unlocked.length;
@@ -2648,19 +2644,6 @@ function renderHintsModal() {
   const list = document.getElementById('hints-clues-list');
   if (!list) return;
   list.innerHTML = '';
-
-  if (serverPuzzle && serverPuzzle.freeClue) {
-    const fc = serverPuzzle.freeClue;
-    const div = document.createElement('div');
-    div.className = 'clue-item revealed free-clue';
-    div.innerHTML = `
-      <span class="clue-icon">${svgIcon(fc.icon, 'clue-icon-svg')}</span>
-      <span class="clue-text">
-        <span class="clue-label">${fc.label}</span>
-        <span class="clue-val">${fc.value}</span>
-      </span>`;
-    list.appendChild(div);
-  }
 
   if (serverPuzzle) {
     const unlocked = serverPuzzle.clues || [];
