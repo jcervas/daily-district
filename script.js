@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.11.39';
+const VERSION_NUMBER = '2.11.40';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2569,6 +2569,24 @@ function renderHintBar() {
 
   bar.innerHTML = '';
 
+  // Free clue: visible from the very start, before any guess — currently just the
+  // district's area in sq mi. Doesn't count against cluesTotal/the 6 guess-earned
+  // slots; a raw area figure alone doesn't identify the district, same as the shape
+  // itself being visible unredacted from the start.
+  if (serverPuzzle && serverPuzzle.freeClue) {
+    const fc = serverPuzzle.freeClue;
+    const card = document.createElement('div');
+    card.className = 'hint-card revealed free-clue';
+    card.setAttribute('role', 'listitem');
+    card.innerHTML = `
+      <div class="hint-card-header">
+        <span class="hint-card-icon">${svgIcon(fc.icon, 'clue-icon-svg')}</span>
+        <span class="hint-card-label">${fc.label}</span>
+      </div>
+      <div class="hint-card-val"><span>${fc.value}</span></div>`;
+    bar.appendChild(card);
+  }
+
   // Server mode: clues are pre-computed {icon,label,value}; `serverPuzzle.clues`
   // holds the unlocked-so-far set, `cluesTotal` the full count (rest are locked).
   if (serverPuzzle) {
@@ -2619,6 +2637,19 @@ function renderHintsModal() {
   const list = document.getElementById('hints-clues-list');
   if (!list) return;
   list.innerHTML = '';
+
+  if (serverPuzzle && serverPuzzle.freeClue) {
+    const fc = serverPuzzle.freeClue;
+    const div = document.createElement('div');
+    div.className = 'clue-item revealed free-clue';
+    div.innerHTML = `
+      <span class="clue-icon">${svgIcon(fc.icon, 'clue-icon-svg')}</span>
+      <span class="clue-text">
+        <span class="clue-label">${fc.label}</span>
+        <span class="clue-val">${fc.value}</span>
+      </span>`;
+    list.appendChild(div);
+  }
 
   if (serverPuzzle) {
     const unlocked = serverPuzzle.clues || [];
