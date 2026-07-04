@@ -28,6 +28,9 @@
   .swatches{ display:flex; gap:7px; flex-wrap:wrap; }
   .swatches button{ width:24px; height:24px; padding:0; border-radius:50%; border:1px solid var(--steel); cursor:pointer; }
   .swatches button[aria-pressed=true]{ outline:2px solid #000; outline-offset:2px; }
+  .swatch-none{ background:
+    linear-gradient(45deg, transparent 46%, #e33 48%, #e33 52%, transparent 54%),
+    repeating-conic-gradient(#fff 0% 25%, #eee 0% 50%) 0 0/8px 8px; }
   .thread-swatches button{ border-radius:7px; width:auto; height:24px; padding:0 8px; font-size:11px; color:#fff;
     display:flex; align-items:center; justify-content:center; opacity:.45; }
   .thread-swatches button[aria-pressed=true]{ opacity:1; outline:2px solid #000; outline-offset:1px; }
@@ -117,22 +120,24 @@
           </div></div>
         <div class="ctrl"><label>Background shade — light bg</label>
           <div class="swatches" id="shadeLightSwatches">
+            <button data-c="none" aria-pressed="false" class="swatch-none" title="None (transparent — shade layer off)">∅</button>
             <button data-c="#cccccc" aria-pressed="true"  style="background:#cccccc" title="Default gray"></button>
             <button data-c="#b9bcc4" aria-pressed="false" style="background:#b9bcc4" title="Cool gray"></button>
             <button data-c="#d8cfc2" aria-pressed="false" style="background:#d8cfc2" title="Warm gray"></button>
             <button data-c="#c9d6dd" aria-pressed="false" style="background:#c9d6dd" title="Steel blue"></button>
             <button data-c="#000000" aria-pressed="false" style="background:#000000" title="Black"></button>
           </div>
-          <input type="text" id="shadeLightCustom" placeholder="#hex" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
+          <input type="text" id="shadeLightCustom" placeholder="#hex or none" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
         <div class="ctrl"><label>Background shade — dark bg</label>
           <div class="swatches" id="shadeDarkSwatches">
+            <button data-c="none" aria-pressed="false" class="swatch-none" title="None (transparent — shade layer off)">∅</button>
             <button data-c="#1a1a1a" aria-pressed="true"  style="background:#1a1a1a" title="Default gray"></button>
             <button data-c="#0d0f14" aria-pressed="false" style="background:#0d0f14" title="Cool black"></button>
             <button data-c="#1f1815" aria-pressed="false" style="background:#1f1815" title="Warm black"></button>
             <button data-c="#12181c" aria-pressed="false" style="background:#12181c" title="Steel blue"></button>
             <button data-c="#ffffff" aria-pressed="false" style="background:#ffffff" title="White"></button>
           </div>
-          <input type="text" id="shadeDarkCustom" placeholder="#hex" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
+          <input type="text" id="shadeDarkCustom" placeholder="#hex or none" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
       </div>
 
       <div class="stage" id="stage">
@@ -299,7 +304,7 @@ function globeLoader(size = 96) {
   });
   document.getElementById('shadeLightCustom').addEventListener('input', (e) => {
     const v = e.target.value.trim();
-    if (!/^#[0-9a-fA-F]{3,8}$/.test(v)) return;
+    if (!/^(#[0-9a-fA-F]{3,8}|none)$/i.test(v)) return;
     document.querySelectorAll('#shadeLightSwatches button').forEach(x => x.setAttribute('aria-pressed', 'false'));
     shadeLight = v;
     apply();
@@ -314,7 +319,7 @@ function globeLoader(size = 96) {
   });
   document.getElementById('shadeDarkCustom').addEventListener('input', (e) => {
     const v = e.target.value.trim();
-    if (!/^#[0-9a-fA-F]{3,8}$/.test(v)) return;
+    if (!/^(#[0-9a-fA-F]{3,8}|none)$/i.test(v)) return;
     document.querySelectorAll('#shadeDarkSwatches button').forEach(x => x.setAttribute('aria-pressed', 'false'));
     shadeDark = v;
     apply();
