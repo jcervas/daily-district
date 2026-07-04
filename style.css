@@ -1523,30 +1523,22 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 }
 .globe-loader .tiles polygon {
   fill: var(--red); opacity: 0;
-  stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke;
   animation: gl-fill 2.6s linear infinite;
   transform-box: fill-box; transform-origin: center;
   will-change: opacity, transform;
 }
-/* Hex outline: a real SVG stroke, painted as part of each polygon's own fill — unlike a
-   drop-shadow on a clipped div, it can't be covered by a neighboring tile. White in light
-   mode (reads as grout against a light backdrop), black in dark mode. */
-body.dark-mode .globe-loader .tiles polygon { stroke: #000; }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .tiles polygon { stroke: #000; } }
 /* Grayscale hex-tile vignette (replaces the old smooth radial-gradient shade): each
    shade tile's opacity is set inline by globeLoader() from its distance to the globe's
    center, so the rim reads darker/lighter than the middle using the same hex texture as
    the main tiles rather than a flat gradient. Light gray in light mode, dark gray in
-   dark mode (matches the app's light/dark theming convention used elsewhere). */
+   dark mode (matches the app's light/dark theming convention used elsewhere).
+   Neither layer uses a stroke — the tile gap (rDraw shrink in globeLoader()) is what
+   separates hexes, so both layers read the same gap size without one needing a
+   same-color stroke to match the other. */
 .globe-loader svg.shade { pointer-events: none; }
-/* Same-color stroke (not a visible border — just matches the tile layer's own stroke
-   width) so the shade hexes read the same size/gap as the tiles above them. Without it,
-   the tiles' white/black outline eats into their gap while the shade's true unfilled gap
-   shows through bare, making the background grid look noticeably more open than the
-   foreground one. */
-.globe-loader .shade polygon { fill: #ccc; stroke: #ccc; stroke-width: 1; vector-effect: non-scaling-stroke; }
-body.dark-mode .globe-loader .shade polygon { fill: #1a1a1a; stroke: #1a1a1a; }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: #1a1a1a; stroke: #1a1a1a; } }
+.globe-loader .shade polygon { fill: #ccc; }
+body.dark-mode .globe-loader .shade polygon { fill: #1a1a1a; }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: #1a1a1a; } }
 @keyframes gl-fill {
   0%   { opacity: 0; transform: scale(.55); }
   7%   { opacity: 1; transform: scale(1); }

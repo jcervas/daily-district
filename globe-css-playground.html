@@ -60,18 +60,15 @@
   }
   .globe-loader .tiles polygon {
     fill: var(--red); opacity: 0;
-    stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke;
     animation: gl-fill var(--gl-duration, 2.6s) linear infinite;
     transform-box: fill-box; transform-origin: center;
     will-change: opacity, transform;
   }
-  .dark-mode .globe-loader .tiles polygon { stroke: #000; }
+  /* Neither layer uses a stroke — the tile gap (rDraw shrink) already separates hexes,
+     so tiles and shade read the same gap size without needing a matching stroke. */
   .globe-loader svg.shade { pointer-events: none; }
-  /* Same-color stroke (not a visible border) so the shade hexes match the tiles'
-     apparent size/gap — the tiles layer's white/black stroke eats into its own gap,
-     while the shade layer (no stroke) showed its true, larger, unfilled gap. */
-  .globe-loader .shade polygon { fill: var(--shade-light, #ccc); stroke: var(--shade-light, #ccc); stroke-width: 1; vector-effect: non-scaling-stroke; }
-  .dark-mode .globe-loader .shade polygon { fill: var(--shade-dark, #1a1a1a); stroke: var(--shade-dark, #1a1a1a); }
+  .globe-loader .shade polygon { fill: var(--shade-light, #ccc); }
+  .dark-mode .globe-loader .shade polygon { fill: var(--shade-dark, #1a1a1a); }
   @keyframes gl-fill {
     0%   { opacity: 0; transform: scale(.55); }
     7%   { opacity: 1; transform: scale(1); }
@@ -256,9 +253,9 @@ function buildGlobeSVG(opts) {
   animation: gl-fill ${opts.duration}s linear infinite;
 }
 .globe-loader { --roll: ${opts.roll}deg; }
-.globe-loader .shade polygon { fill: ${shadeLight}; stroke: ${shadeLight}; stroke-width: 1; vector-effect: non-scaling-stroke; }
-body.dark-mode .globe-loader .shade polygon { fill: ${shadeDark}; stroke: ${shadeDark}; }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: ${shadeDark}; stroke: ${shadeDark}; } }
+.globe-loader .shade polygon { fill: ${shadeLight}; }
+body.dark-mode .globe-loader .shade polygon { fill: ${shadeDark}; }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: ${shadeDark}; } }
 
 // script.js
 const GLOBE_THREADS = ${threadsLit};
