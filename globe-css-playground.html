@@ -67,8 +67,8 @@
   }
   .dark-mode .globe-loader .tiles polygon { stroke: #000; }
   .globe-loader svg.shade { pointer-events: none; }
-  .globe-loader .shade polygon { fill: #ccc; }
-  .dark-mode .globe-loader .shade polygon { fill: #1a1a1a; }
+  .globe-loader .shade polygon { fill: var(--shade-light, #ccc); }
+  .dark-mode .globe-loader .shade polygon { fill: var(--shade-dark, #1a1a1a); }
   @keyframes gl-fill {
     0%   { opacity: 0; transform: scale(.55); }
     7%   { opacity: 1; transform: scale(1); }
@@ -115,6 +115,24 @@
             <button data-c="#f0788c" aria-pressed="false" style="background:#f0788c">Aa</button>
             <button data-c="#FDB515" aria-pressed="false" style="background:#FDB515">Aa</button>
           </div></div>
+        <div class="ctrl"><label>Background shade — light bg</label>
+          <div class="swatches" id="shadeLightSwatches">
+            <button data-c="#cccccc" aria-pressed="true"  style="background:#cccccc" title="Default gray"></button>
+            <button data-c="#b9bcc4" aria-pressed="false" style="background:#b9bcc4" title="Cool gray"></button>
+            <button data-c="#d8cfc2" aria-pressed="false" style="background:#d8cfc2" title="Warm gray"></button>
+            <button data-c="#c9d6dd" aria-pressed="false" style="background:#c9d6dd" title="Steel blue"></button>
+            <button data-c="#000000" aria-pressed="false" style="background:#000000" title="Black"></button>
+          </div>
+          <input type="text" id="shadeLightCustom" placeholder="#hex" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
+        <div class="ctrl"><label>Background shade — dark bg</label>
+          <div class="swatches" id="shadeDarkSwatches">
+            <button data-c="#1a1a1a" aria-pressed="true"  style="background:#1a1a1a" title="Default gray"></button>
+            <button data-c="#0d0f14" aria-pressed="false" style="background:#0d0f14" title="Cool black"></button>
+            <button data-c="#1f1815" aria-pressed="false" style="background:#1f1815" title="Warm black"></button>
+            <button data-c="#12181c" aria-pressed="false" style="background:#12181c" title="Steel blue"></button>
+            <button data-c="#ffffff" aria-pressed="false" style="background:#ffffff" title="White"></button>
+          </div>
+          <input type="text" id="shadeDarkCustom" placeholder="#hex" style="margin-top:6px;padding:4px 6px;border:1px solid var(--steel);border-radius:6px;font:inherit;color:#000;width:100%"></div>
       </div>
 
       <div class="stage" id="stage">
@@ -187,6 +205,8 @@ function buildGlobeSVG(opts) {
 
   let baseColor = '#C41230';
   let threads = ['#c41230', '#a00a28', '#820519', '#6e0415'];
+  let shadeLight = '#cccccc';
+  let shadeDark = '#1a1a1a';
 
   function currentOpts(){
     return {
@@ -205,10 +225,14 @@ function buildGlobeSVG(opts) {
     const opts = currentOpts();
     host.innerHTML = buildGlobeSVG(opts);
     host.style.setProperty('--red', baseColor);
-    // --red is read from .globe-loader itself (inline style sets --size/--gl-duration only),
-    // so set it on the generated span directly.
+    // --red/--shade-* are read from .globe-loader itself (inline style sets
+    // --size/--gl-duration only), so set them on the generated span directly.
     const span = host.querySelector('.globe-loader');
-    if (span) span.style.setProperty('--red', baseColor);
+    if (span) {
+      span.style.setProperty('--red', baseColor);
+      span.style.setProperty('--shade-light', shadeLight);
+      span.style.setProperty('--shade-dark', shadeDark);
+    }
   }
 
   function updateLabels(){
@@ -229,6 +253,9 @@ function buildGlobeSVG(opts) {
   animation: gl-fill ${opts.duration}s linear infinite;
 }
 .globe-loader { --roll: ${opts.roll}deg; }
+.globe-loader .shade polygon { fill: ${shadeLight}; }
+body.dark-mode .globe-loader .shade polygon { fill: ${shadeDark}; }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: ${shadeDark}; } }
 
 // script.js
 const GLOBE_THREADS = ${threadsLit};
@@ -260,6 +287,36 @@ function globeLoader(size = 96) {
     const on = b.getAttribute('aria-pressed') === 'true';
     b.setAttribute('aria-pressed', String(!on));
     threads = [...document.querySelectorAll('#threadSwatches button[aria-pressed="true"]')].map(x => x.dataset.c);
+    apply();
+  });
+
+  document.getElementById('shadeLightSwatches').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    document.querySelectorAll('#shadeLightSwatches button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    shadeLight = b.dataset.c;
+    document.getElementById('shadeLightCustom').value = '';
+    apply();
+  });
+  document.getElementById('shadeLightCustom').addEventListener('input', (e) => {
+    const v = e.target.value.trim();
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(v)) return;
+    document.querySelectorAll('#shadeLightSwatches button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+    shadeLight = v;
+    apply();
+  });
+
+  document.getElementById('shadeDarkSwatches').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    document.querySelectorAll('#shadeDarkSwatches button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    shadeDark = b.dataset.c;
+    document.getElementById('shadeDarkCustom').value = '';
+    apply();
+  });
+  document.getElementById('shadeDarkCustom').addEventListener('input', (e) => {
+    const v = e.target.value.trim();
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(v)) return;
+    document.querySelectorAll('#shadeDarkSwatches button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+    shadeDark = v;
     apply();
   });
 
