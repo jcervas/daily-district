@@ -2342,6 +2342,22 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 .login-divider::before, .login-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border, #e3e3e3);
 }
+/* Sign-in in progress: the clicked button (submit or an OAuth provider) shows a spinner
+   in place of its label, every other login action is hidden entirely (not just disabled)
+   so there's nothing left to double-click while the network round-trip is in flight. */
+.login-btn-spinner {
+  display: inline-block;
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  vertical-align: -3px;
+  margin-right: 8px;
+  animation: login-spin 0.7s linear infinite;
+}
+.login-provider-btn .login-btn-spinner { border-color: var(--border); border-top-color: var(--text); }
+@keyframes login-spin { to { transform: rotate(360deg); } }
+.login-action-hidden { display: none !important; }
 .login-email-form { display: flex; flex-direction: column; gap: 8px; }
 .login-email-form input {
   font: inherit;

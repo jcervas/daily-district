@@ -198,21 +198,56 @@
     const fail = (e) => { err.textContent = (e && e.message) || 'Something went wrong'; };
     const rememberEmail = (email) => { try { localStorage.setItem(LAST_EMAIL_KEY, email); } catch (_) {} };
 
+    // While a sign-in request is in flight, every login action was staying fully visible
+    // and clickable — nothing showed the network round-trip was happening, and a second
+    // click could double-submit. Swap the clicked button's own label for a spinner and
+    // hide every other action outright (not just disable — the report was specifically
+    // that they "remain") until the request settles (success navigates away via
+    // district-auth's reload, so this only needs to reverse itself on failure).
+    function loginActionButtons() {
+      return [
+        $('login-signin'), $('login-signup'), $('login-forgot-password'),
+        ...modal.querySelectorAll('.login-provider-btn'),
+      ].filter(Boolean);
+    }
+    function setLoginBusy(busy, activeBtn) {
+      loginActionButtons().forEach((btn) => {
+        if (btn === activeBtn) {
+          if (busy) {
+            btn.dataset.loginLabel = btn.innerHTML;
+            btn.innerHTML = '<span class="login-btn-spinner"></span>Signing in…';
+          } else if (btn.dataset.loginLabel != null) {
+            btn.innerHTML = btn.dataset.loginLabel;
+            delete btn.dataset.loginLabel;
+          }
+          btn.disabled = busy;
+        } else {
+          btn.classList.toggle('login-action-hidden', busy);
+        }
+      });
+      modal.querySelectorAll('.login-divider').forEach((el) => el.classList.toggle('login-action-hidden', busy));
+    }
+
     modal.querySelectorAll('.login-provider-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         err.textContent = '';
-        try { await B.signInWithOAuth(btn.dataset.provider); } catch (e) { fail(e); }
+        setLoginBusy(true, btn);
+        try { await B.signInWithOAuth(btn.dataset.provider); }
+        catch (e) { fail(e); setLoginBusy(false, btn); }
       });
     });
     $('login-email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       err.textContent = '';
       const email = $('login-email').value.trim();
+      const submitBtn = $('login-signin');
+      setLoginBusy(true, submitBtn);
       try {
         const { error } = await B.signInWithEmail(email, $('login-password').value);
         if (error) throw error;
         rememberEmail(email);
       } catch (ex) { fail(ex); }
+      finally { setLoginBusy(false, submitBtn); }
     });
     $('login-signup').addEventListener('click', async () => {
       err.textContent = '';
