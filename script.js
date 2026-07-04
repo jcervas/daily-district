@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.7';
+const VERSION_NUMBER = '2.12.8';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -714,6 +714,20 @@ async function enterServerDistrictPhase(state, instant = false) {
 // stored guess history; fetches state shapes if a state was solved or the game is done.
 async function restoreServerGame(result, answer) {
   _gameStarted   = true;
+  // Give the still-spinning welcome loader globe a couple of frames to actually paint
+  // before the heavy synchronous US-ref-map build below blocks the main thread — same
+  // reasoning as the fresh-game path (see the _initPromise.then() block), which defers
+  // ensureUSRefMap() the same way. Without this yield, a returning player (this path)
+  // sees the globe freeze on its very first frame instead of animating at all.
+  // Timeout-guarded: rAF never fires for a backgrounded/hidden tab, and this restore is
+  // otherwise load-bearing (it's what actually shows the player's game), so it must not
+  // hang forever waiting for frames that may never come.
+  await new Promise((resolve) => {
+    let framesLeft = 2;
+    const timer = setTimeout(resolve, 500);
+    const tick = () => { if (--framesLeft > 0) requestAnimationFrame(tick); else { clearTimeout(timer); resolve(); } };
+    requestAnimationFrame(tick);
+  });
   // Restoring an in-progress/finished game renders state eliminations onto the US
   // reference map, so it must exist before we proceed (the loader-window build was
   // deferred). Idempotent — no-op if already built.
