@@ -1523,7 +1523,7 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 }
 .globe-loader .tiles polygon {
   fill: var(--red); opacity: 0;
-  animation: gl-fill 3.7s linear infinite;
+  animation: gl-fill 3.5s linear infinite;
   transform-box: fill-box; transform-origin: center;
   will-change: opacity, transform;
 }
