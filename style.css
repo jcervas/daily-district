@@ -1911,6 +1911,16 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   min-width: 0;
   flex: 1;
 }
+/* On narrow screens the text has enough content to want more than the shrunk sliver
+   flex-wrap otherwise leaves it (both items fit on one "row" by squeezing the text down
+   to a tall narrow column instead of actually wrapping, since text can keep shrinking
+   via word-wrap without ever exceeding the container). Force a clean stack instead:
+   the ribbon text full-width on its own line, the action buttons in a row below it. */
+@media (max-width: 480px) {
+  .gameover-ribbon-inner { flex-direction: column; align-items: stretch; }
+  .gameover-ribbon-text { flex: 1 1 auto; }
+  .banner-actions { justify-content: flex-start; }
+}
 
 /* White card below ribbon */
 .gameover-card {
