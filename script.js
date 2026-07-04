@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.5';
+const VERSION_NUMBER = '2.12.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5229,8 +5229,6 @@ function openResultModal() {
   document.querySelector('.gameover-results-arrow')?.remove();
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
-  const backBtn = document.getElementById('result-back-btn');
-  if (backBtn) backBtn.textContent = 'Back to district →';
   modal.classList.remove('hidden');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
