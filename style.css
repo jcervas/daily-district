@@ -1539,9 +1539,14 @@ body.dark-mode .globe-loader .tiles polygon { stroke: #000; }
    the main tiles rather than a flat gradient. Light gray in light mode, dark gray in
    dark mode (matches the app's light/dark theming convention used elsewhere). */
 .globe-loader svg.shade { pointer-events: none; }
-.globe-loader .shade polygon { fill: #ccc; }
-body.dark-mode .globe-loader .shade polygon { fill: #1a1a1a; }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: #1a1a1a; } }
+/* Same-color stroke (not a visible border — just matches the tile layer's own stroke
+   width) so the shade hexes read the same size/gap as the tiles above them. Without it,
+   the tiles' white/black outline eats into their gap while the shade's true unfilled gap
+   shows through bare, making the background grid look noticeably more open than the
+   foreground one. */
+.globe-loader .shade polygon { fill: #ccc; stroke: #ccc; stroke-width: 1; vector-effect: non-scaling-stroke; }
+body.dark-mode .globe-loader .shade polygon { fill: #1a1a1a; stroke: #1a1a1a; }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: #1a1a1a; stroke: #1a1a1a; } }
 @keyframes gl-fill {
   0%   { opacity: 0; transform: scale(.55); }
   7%   { opacity: 1; transform: scale(1); }
