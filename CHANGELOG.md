@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.13.0 — Opt-in daily reminder push notifications
+
+- Players can now opt into a daily push notification when the new puzzle goes live. Prompted after the 1st completed game, and again before the 3rd if not yet decided; manageable anytime via Settings → Daily Reminder.
+- Added a service worker (`sw.js`) + web app manifest so the site is installable — required for Web Push on iOS Safari, which only allows it once added to the Home Screen. The opt-in prompt shows Add-to-Home-Screen instructions on iOS instead of the permission dialog when not yet installed.
+- New `push_subscriptions` table (RLS: owner-only) and `send-daily-push` Edge Function, invoked once daily by a pg_cron + pg_net job.
+
 ## v2.10.23 — "District plan last redrawn" card
 
 - New District Profile card showing the year the district's congressional map was last redrawn (per state), sourced from the latest DRA block-assignment plan year — `build_plan_year.py` / `make plan-year`. Shows "post-2020 Census redistricting" for 2022, "mid-decade redraw" for 2024/2026, and "At-large" for single-district states.

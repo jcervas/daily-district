@@ -221,6 +221,83 @@
     return data; // { deleted: true }
   }
 
+  // ── Web Push (opt-in daily reminder) ────────────────────────────────────────
+  // Public key only — safe to ship in client code, it identifies the sender to the
+  // push service. The matching private key lives only in the send-daily-push
+  // Edge Function's secrets.
+  const VAPID_PUBLIC_KEY = 'BNHpLXIynZUcUr0yNIt-o8JbS1VPtoe9kayzW5TnHboUTXwJ_HGj-c0I0WJXMm_ezrkvtAQ8Kb3A9hWBnfIYce4';
+
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+  // iOS Safari only allows Web Push once the site is installed to the Home Screen
+  // (standalone display mode) — both checks are used to decide which opt-in panel to show.
+  function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; }
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  }
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const output = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+  let _swRegistration = null;
+  async function registerServiceWorker() {
+    if (!pushSupported()) return null;
+    if (_swRegistration) return _swRegistration;
+    try {
+      _swRegistration = await navigator.serviceWorker.register('sw.js');
+      return _swRegistration;
+    } catch (_) { return null; }
+  }
+  async function getPushSubscription() {
+    if (!pushSupported()) return null;
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return null;
+    return reg.pushManager.getSubscription();
+  }
+  // Registers the service worker (if needed), requests Notification permission,
+  // subscribes to the push service, and upserts the subscription server-side.
+  // Throws 'permission_denied' if the player declines the browser prompt.
+  async function subscribePush() {
+    if (!pushSupported()) throw new Error('unsupported');
+    const { data: { user } } = await client().auth.getUser();
+    if (!user) throw new Error('not signed in');
+    const reg = await registerServiceWorker();
+    if (!reg) throw new Error('sw_registration_failed');
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') throw new Error('permission_denied');
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const subJson = sub.toJSON();
+    const { error } = await client().from('push_subscriptions').upsert({
+      user_id: user.id,
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth,
+      user_agent: navigator.userAgent.slice(0, 500),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,endpoint' });
+    if (error) throw error;
+    return sub;
+  }
+  async function unsubscribePush() {
+    const sub = await getPushSubscription();
+    if (!sub) return;
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    const { data: { user } } = await client().auth.getUser();
+    if (user) await client().from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', endpoint);
+  }
+
   window.DistrictBackend = {
     ENABLED,
     SUPABASE_URL,
@@ -229,6 +306,7 @@
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
     logTelemetry, getProfile, updateProfile, deleteAccount,
+    pushSupported, isIOS, isStandalone, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
   };
 
   // Best-effort session telemetry on load (no PII). Runs for everyone.

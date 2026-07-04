@@ -10,11 +10,13 @@ const HOW_TO_SEEN_KEY      = STORAGE_PREFIX + 'howToSeen';
 const WELCOME_SEEN_KEY     = STORAGE_PREFIX + 'welcomeSeen';
 const SETTINGS_SEEN_KEY    = STORAGE_PREFIX + 'settingsSeen';
 const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played count when last prompted
+const PUSH_PROMPTED_AT = STORAGE_PREFIX + 'pushPromptedAt'; // games-played count when last shown the push opt-in
+const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'deferred' | 'dismissed'
 // D3 US reference map coordinate space (viewBox dimensions)
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.10';
+const VERSION_NUMBER = '2.13.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1611,6 +1613,39 @@ function loadPersonalStats() {
     const raw = localStorage.getItem(STORAGE_PREFIX + 'stats');
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
+}
+
+// ── Push notification opt-in ─────────────────────────────────────────────────
+// Shows one of two panels: the standard "enable notifications" ask, or (iOS Safari
+// not yet added to the Home Screen) instructions to install first, since iOS only
+// allows Web Push for installed/standalone PWAs.
+function showPushOptInModal({ forceIOSInstructions = false } = {}) {
+  const modal = document.getElementById('push-optin-modal');
+  if (!modal) return;
+  const showIOS = forceIOSInstructions || (window.DistrictBackend?.isIOS?.() && !window.DistrictBackend?.isStandalone?.());
+  document.getElementById('push-optin-ask').classList.toggle('hidden', showIOS);
+  document.getElementById('push-optin-ios').classList.toggle('hidden', !showIOS);
+  modal.classList.remove('hidden');
+}
+
+// Offered after the 1st completed game, and again before the 3rd if the player hasn't
+// decided either way yet. Never shown once granted, permanently dismissed, or blocked
+// at the browser level — Settings > Daily Reminder remains available regardless.
+async function maybePromptPushOptIn() {
+  if (!window.DistrictBackend?.pushSupported?.()) return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
+  const decision = localStorage.getItem(PUSH_DECISION_KEY);
+  if (decision === 'granted' || decision === 'dismissed') return;
+  const existing = await window.DistrictBackend.getPushSubscription();
+  if (existing) { localStorage.setItem(PUSH_DECISION_KEY, 'granted'); return; }
+
+  const played = loadPersonalStats()?.played ?? 0;
+  if (played !== 1 && played !== 2) return;
+  const lastPrompted = parseInt(localStorage.getItem(PUSH_PROMPTED_AT) || '0', 10);
+  if (lastPrompted >= played) return;
+
+  localStorage.setItem(PUSH_PROMPTED_AT, String(played));
+  setTimeout(() => showPushOptInModal(), 3500);
 }
 
 // The Result tab reads device-local stats, which accumulate for anonymous play and are
@@ -4479,6 +4514,10 @@ function endGame(won, { skipAnims = false } = {}) {
   // then open results via the "View Result" banner button when ready.
   showResult(won, false);
 
+  // Offer the push notification opt-in after game 1 / before game 3 (real, signed-in
+  // games only — same gate as savePersonalStats, since it reads that played count).
+  if (!isArchiveGame && !isAnonymousPlayer) maybePromptPushOptIn();
+
   // Auto-prompt feedback every 5 games if not already prompted at this count
   const _fbStats = loadPersonalStats();
   if (_fbStats && _fbStats.played > 0 && _fbStats.played % 5 === 0) {
@@ -5650,6 +5689,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const _initPromise = init();
 
+  // Register the service worker on every visit (not gated on the push opt-in decision):
+  // it's also what makes the site installable, which iOS requires before Web Push works.
+  window.DistrictBackend?.registerServiceWorker?.();
+
   // District tile clicks — delegated from document so it survives game-section recreation
   document.addEventListener('click', e => {
     if (!e.target.closest('#district-tiles')) return;
@@ -5941,6 +5984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dismissSettingsHint();
     updateThemeToggle();
     updateHardModeLock();
+    refreshPushToggle();
     settingsModal.classList.remove('hidden');
   });
   document.getElementById('settings-close').addEventListener('click', () => {
@@ -6040,6 +6084,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('feedback-modal').classList.remove('hidden');
   });
 
+  // ── Push notification opt-in prompt ────────────────────────────────────────
+  // showPushOptInModal / maybePromptPushOptIn are defined at module scope (used by
+  // endGame() too) — this block just wires the modal's buttons.
+  document.getElementById('push-optin-enable')?.addEventListener('click', async () => {
+    const modal = document.getElementById('push-optin-modal');
+    try {
+      await window.DistrictBackend.subscribePush();
+      localStorage.setItem(PUSH_DECISION_KEY, 'granted');
+    } catch (_) {
+      // Declined the browser prompt, or subscription failed — treat like "not now"
+      // at stage 1 (still eligible for the 3rd-game re-ask) so a mis-tap isn't final.
+      const played = loadPersonalStats()?.played ?? 0;
+      localStorage.setItem(PUSH_DECISION_KEY, played >= 2 ? 'dismissed' : 'deferred');
+    } finally {
+      modal?.classList.add('hidden');
+    }
+  });
+  document.getElementById('push-optin-dismiss')?.addEventListener('click', () => {
+    const played = loadPersonalStats()?.played ?? 0;
+    localStorage.setItem(PUSH_DECISION_KEY, played >= 2 ? 'dismissed' : 'deferred');
+    document.getElementById('push-optin-modal')?.classList.add('hidden');
+  });
+  document.getElementById('push-optin-ios-dismiss')?.addEventListener('click', () => {
+    document.getElementById('push-optin-modal')?.classList.add('hidden');
+  });
+
   // Wire Hard Mode toggle
   const hardToggle = document.getElementById('settings-hard-toggle');
   if (hardToggle) {
@@ -6067,6 +6137,52 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('districtguess_confirmMode', confirmInputMode ? '1' : '0');
       if (!confirmInputMode) setConfirmPending(null); // clear any pending state
       reportSettings('change');
+    });
+  }
+
+  // Wire Daily Reminder (push) toggle
+  const pushToggle = document.getElementById('settings-push-toggle');
+  const pushDesc = document.getElementById('settings-push-desc');
+  async function refreshPushToggle() {
+    if (!pushToggle) return;
+    const supported = window.DistrictBackend?.pushSupported?.();
+    const blocked = supported && typeof Notification !== 'undefined' && Notification.permission === 'denied';
+    if (!supported || blocked) {
+      pushToggle.checked = false;
+      pushToggle.disabled = true;
+      if (pushDesc) pushDesc.textContent = blocked
+        ? "Blocked in your browser's site settings — enable notifications there first"
+        : 'Not supported in this browser';
+      return;
+    }
+    pushToggle.disabled = false;
+    if (pushDesc) pushDesc.textContent = 'One notification a day when the new district is live';
+    const sub = await window.DistrictBackend.getPushSubscription();
+    pushToggle.checked = !!sub;
+  }
+  if (pushToggle) {
+    pushToggle.addEventListener('change', async () => {
+      const wantOn = pushToggle.checked;
+      pushToggle.disabled = true;
+      try {
+        if (wantOn) {
+          if (window.DistrictBackend.isIOS() && !window.DistrictBackend.isStandalone()) {
+            pushToggle.checked = false;
+            document.getElementById('settings-modal').classList.add('hidden');
+            showPushOptInModal({ forceIOSInstructions: true });
+          } else {
+            await window.DistrictBackend.subscribePush();
+            localStorage.setItem(PUSH_DECISION_KEY, 'granted');
+          }
+        } else {
+          await window.DistrictBackend.unsubscribePush();
+        }
+      } catch (_) {
+        pushToggle.checked = !wantOn; // revert on failure/declined permission
+      } finally {
+        await refreshPushToggle();
+        reportSettings('change');
+      }
     });
   }
 
