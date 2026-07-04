@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.1';
+const VERSION_NUMBER = '2.12.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -882,18 +882,16 @@ function injectArchiveShapes(data) {
 // like a forming globe. A second hex layer (same positions) sits on top as the "shade": a
 // grayscale vignette — tiles near the rim get more opacity than tiles near the center —
 // replacing the old smooth radial-gradient shade with texture that matches the tile grid.
-// Tartan thread palette (CMU reds, from globe.js's TiledGlobe): ~16% of tiles take a
-// random thread colour, the rest stay Carnegie red — the flecks that read as tartan.
-// Deeper maroon variants only — the two pale/pink shades that used to be in here (#dc506e,
-// #f0788c) stood out too much against the darker Carnegie red field instead of reading as
-// subtle tartan texture.
-const GLOBE_THREADS = ['#c41230', '#a00a28', '#820519', '#6e0415'];
-const GLOBE_THREAD_PROB = 0.16;
+// Tartan thread palette (CMU reds + gold, from globe.js's TiledGlobe): ~29% of tiles
+// take a random thread colour, the rest stay Carnegie red — the flecks that read as
+// tartan.
+const GLOBE_THREADS = ['#c41230', '#a00a28', '#820519', '#6e0415', '#dc506e', '#f0788c', '#FDB515'];
+const GLOBE_THREAD_PROB = 0.29;
 function globeLoader(size = 96) {
-  const cols = 21;                          // hex centers per row (~3x the tile count of cols=12)
+  const cols = 30;                          // hex centers per row
   const spacingX = 100 / cols;              // % between hex centers, same row
   const r = spacingX / Math.sqrt(3);        // hex circumradius, in viewBox units
-  const rDraw = r * 0.86;                   // shrink so adjacent hexes leave a visible gap
+  const rDraw = r * 0.90;                   // shrink so adjacent hexes leave a visible gap
   const spacingY = 1.5 * r;                 // % between rows (pointy-top overlap)
 
   const hexPoints = (cx, cy) => {

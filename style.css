@@ -1523,22 +1523,18 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
 }
 .globe-loader .tiles polygon {
   fill: var(--red); opacity: 0;
-  animation: gl-fill 2.6s linear infinite;
+  animation: gl-fill 3.7s linear infinite;
   transform-box: fill-box; transform-origin: center;
   will-change: opacity, transform;
 }
-/* Grayscale hex-tile vignette (replaces the old smooth radial-gradient shade): each
-   shade tile's opacity is set inline by globeLoader() from its distance to the globe's
-   center, so the rim reads darker/lighter than the middle using the same hex texture as
-   the main tiles rather than a flat gradient. Light gray in light mode, dark gray in
-   dark mode (matches the app's light/dark theming convention used elsewhere).
-   Neither layer uses a stroke — the tile gap (rDraw shrink in globeLoader()) is what
-   separates hexes, so both layers read the same gap size without one needing a
-   same-color stroke to match the other. */
+/* Grayscale hex-tile vignette layer — currently switched off (fill: none) in favor of
+   the plain tile field; kept in place (rather than removed) so it can be turned back on
+   by swapping the fill back to a gray, without regenerating the shade polygon markup in
+   globeLoader(). */
 .globe-loader svg.shade { pointer-events: none; }
-.globe-loader .shade polygon { fill: #ccc; }
-body.dark-mode .globe-loader .shade polygon { fill: #1a1a1a; }
-@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: #1a1a1a; } }
+.globe-loader .shade polygon { fill: none; }
+body.dark-mode .globe-loader .shade polygon { fill: none; }
+@media (prefers-color-scheme: dark) { body:not(.light-mode) .globe-loader .shade polygon { fill: none; } }
 @keyframes gl-fill {
   0%   { opacity: 0; transform: scale(.55); }
   7%   { opacity: 1; transform: scale(1); }
