@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.9';
+const VERSION_NUMBER = '2.12.10';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5612,6 +5612,19 @@ window.addEventListener('district-auth', async () => {
     if (!accountResult) await bindAnonymousGameToAccount();
     window.location.reload();
     return;
+  }
+  // No anonymous guesses to reconcile, but the account being signed into may already
+  // have completed today's puzzle on another device/session — the in-memory game state
+  // (gameOver, guessHistory, welcome buttons) still reflects whatever was showing before
+  // login, so check the server and reload to rebuild everything from initServer() if so.
+  if (!isArchiveGame) {
+    let accountResult = null;
+    try { accountResult = (await window.DistrictBackend.today())?.result ?? null; }
+    catch (e) { /* network hiccup — fall through, no reload */ }
+    if (accountResult && accountResult.completed && !gameOver) {
+      window.location.reload();
+      return;
+    }
   }
   await hydratePersonalStatsFromServer(); // now includes the just-bound game
   refreshSignedInUI();                     // hide the sign-in nudges, show personal stats
