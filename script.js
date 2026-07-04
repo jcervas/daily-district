@@ -14,7 +14,7 @@ const FEEDBACK_PROMPTED_AT = STORAGE_PREFIX + 'feedbackAt'; // games-played coun
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.12.3';
+const VERSION_NUMBER = '2.12.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -806,9 +806,13 @@ function clientRevealClues(clues, history, completed, freeClue) {
   const districtDeck = Array.isArray(cl) ? [] : (Array.isArray(cl.district) ? cl.district : []);
   const stateSolved  = history.some(g => g.phase === 'state' && g.correct);
   const wrongState   = history.filter(g => g.phase === 'state' && !g.correct).length;
+  // A correct-state pick is a free transition and doesn't count toward MAX_GUESSES
+  // (see the guess counter elsewhere) — reveals must use the same count, or the clue
+  // bar runs one card ahead of what the displayed "guesses used" actually earned.
+  const guessesUsed = history.filter(g => !(g.phase === 'state' && g.correct)).length;
 
   const realSlots = freeClue ? MAX_GUESSES - 1 : MAX_GUESSES;
-  const nReveal = completed ? realSlots : Math.min(history.length, realSlots);
+  const nReveal = completed ? realSlots : Math.min(guessesUsed, realSlots);
 
   let unlocked;
   if (!stateSolved) {
