@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.5';
+const VERSION_NUMBER = '2.13.6';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -404,6 +404,9 @@ let _usRefW                = REF_VB_W; // viewBox width of the US reference map 
 let _usRefH                = REF_VB_H; // viewBox height of the US reference map SVG
 let _usRefRO               = null;   // ResizeObserver on #us-ref-map (rebuilds on size change)
 let districtSimulation     = null;   // active force simulation — updated on zoom for centroid pull
+let _districtBuildCollide  = null;   // collide radius (local units) the layout was solved at — lets
+                                      // _applyTileZoomScaling rescale each tile's declutter offset
+                                      // proportionally as the player zooms, instead of leaving it frozen
 let _gameStarted        = false;   // true after welcome is dismissed; guards clue/guess DOM rendering
 let guessCount          = 0;
 let guessHistory        = [];     // [{text, correct}]
@@ -4073,6 +4076,22 @@ function _applyTileZoomScaling(g, k) {
   const targetCirclePx = 14, densityScale = _effDensity(k), cssScale = _districtCssScale || 1, W = _districtW;
   const rk = targetCirclePx / (k * cssScale * densityScale);
 
+  // Rescale each tile's declutter offset from its true centroid (see buildDistrictD3Map's
+  // offX0/offY0) so it stays proportional to the CURRENT collide radius instead of the one
+  // it was solved at. Tile circles hold a constant on-screen size (rk) regardless of zoom,
+  // so the local-unit spacing needed to keep them from overlapping shrinks as k grows — a
+  // frozen offset would otherwise look increasingly off-center the further the player zooms
+  // in (and correct again only at the exact zoom level the layout happened to be built at).
+  if (districtSimulation && _districtBuildCollide) {
+    const collideNow = 16 / (k * cssScale * densityScale);
+    const ratio = collideNow / _districtBuildCollide;
+    districtSimulation.nodes().forEach(d => {
+      d.x = d.ox + (d.offX0 || 0) * ratio;
+      d.y = d.oy + (d.offY0 || 0) * ratio;
+    });
+    districtSimulation._applyIconPositions?.();
+  }
+
   // Gameplay circles: radius, stroke, text
   g.select('.dist-icons').selectAll('circle')
     .attr('r', rk)
@@ -4498,6 +4517,12 @@ function _drawGameplayTiles(ctx) {
   districtSimulation.tick(Math.ceil(Math.log(districtSimulation.alphaMin() / districtSimulation.alpha()) / Math.log(1 - districtSimulation.alphaDecay())));
   applyIconPositions();
   districtSimulation._applyIconPositions = applyIconPositions;
+  // Remember each tile's settled declutter offset (relative to its true centroid) at the
+  // collide radius it was solved with — _applyTileZoomScaling rescales this offset as the
+  // player zooms, rather than leaving it frozen at build-time's local-unit distance (which
+  // would balloon into an ever-larger on-screen offset the further the player zooms in).
+  _districtBuildCollide = collide;
+  nodes.forEach(d => { d.offX0 = d.x - d.ox; d.offY0 = d.y - d.oy; });
   _refreshFitBtnState();   // candidate set changed → re-evaluate whether Fit is actionable
 }
 
