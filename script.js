@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.0';
+const VERSION_NUMBER = '2.13.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1615,16 +1615,37 @@ function loadPersonalStats() {
   } catch { return null; }
 }
 
+// Per-browser steps to re-enable a notification permission the user (or an earlier visit)
+// blocked at the OS/browser level — the site itself can no longer re-prompt once denied,
+// so this is the only way back short of guesswork.
+const PUSH_BLOCKED_STEPS = {
+  chrome: ['Click the lock/info icon at the left of the address bar', 'Set <strong>Notifications</strong> to <strong>Allow</strong>', 'Reload this page'],
+  edge: ['Click the lock icon at the left of the address bar', 'Set <strong>Notifications</strong> to <strong>Allow</strong>', 'Reload this page'],
+  firefox: ['Click the lock icon at the left of the address bar', 'Clear the <strong>Blocked</strong> notification permission (or set it to Allow)', 'Reload this page'],
+  safari: ['Open <strong>Safari &rsaquo; Settings for This Website&hellip;</strong> (or Safari Preferences &rsaquo; Websites &rsaquo; Notifications)', 'Set Daily District\'s notification permission to <strong>Allow</strong>', 'Reload this page'],
+  opera: ['Click the lock icon at the left of the address bar', 'Set <strong>Notifications</strong> to <strong>Allow</strong>', 'Reload this page'],
+  'chrome-ios': ['Open the <strong>Settings</strong> app &rsaquo; Safari (iOS routes all browser permissions through Safari)', 'Find this site and allow notifications', 'Reload this page'],
+  other: ['Open your browser\'s site settings for this page (often via the icon next to the address bar)', 'Set <strong>Notifications</strong> to <strong>Allow</strong>', 'Reload this page'],
+};
+
 // ── Push notification opt-in ─────────────────────────────────────────────────
-// Shows one of two panels: the standard "enable notifications" ask, or (iOS Safari
-// not yet added to the Home Screen) instructions to install first, since iOS only
-// allows Web Push for installed/standalone PWAs.
-function showPushOptInModal({ forceIOSInstructions = false } = {}) {
+// Shows one of three panels: the standard "enable notifications" ask, (iOS Safari not
+// yet added to the Home Screen) instructions to install first since iOS only allows Web
+// Push for installed/standalone PWAs, or (permission previously denied at the browser
+// level) per-browser steps to unblock it — the site can't re-prompt once denied.
+function showPushOptInModal({ forceIOSInstructions = false, blocked = false } = {}) {
   const modal = document.getElementById('push-optin-modal');
   if (!modal) return;
-  const showIOS = forceIOSInstructions || (window.DistrictBackend?.isIOS?.() && !window.DistrictBackend?.isStandalone?.());
-  document.getElementById('push-optin-ask').classList.toggle('hidden', showIOS);
+  const showIOS = !blocked && (forceIOSInstructions || (window.DistrictBackend?.isIOS?.() && !window.DistrictBackend?.isStandalone?.()));
+  document.getElementById('push-optin-ask').classList.toggle('hidden', showIOS || blocked);
   document.getElementById('push-optin-ios').classList.toggle('hidden', !showIOS);
+  document.getElementById('push-optin-blocked').classList.toggle('hidden', !blocked);
+  if (blocked) {
+    const name = window.DistrictBackend?.browserName?.() || 'other';
+    const steps = PUSH_BLOCKED_STEPS[name] || PUSH_BLOCKED_STEPS.other;
+    const stepsEl = document.getElementById('push-blocked-steps');
+    if (stepsEl) stepsEl.innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+  }
   modal.classList.remove('hidden');
 }
 
@@ -6109,6 +6130,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('push-optin-ios-dismiss')?.addEventListener('click', () => {
     document.getElementById('push-optin-modal')?.classList.add('hidden');
   });
+  document.getElementById('push-optin-blocked-dismiss')?.addEventListener('click', () => {
+    document.getElementById('push-optin-modal')?.classList.add('hidden');
+  });
 
   // Wire Hard Mode toggle
   const hardToggle = document.getElementById('settings-hard-toggle');
@@ -6150,9 +6174,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!supported || blocked) {
       pushToggle.checked = false;
       pushToggle.disabled = true;
-      if (pushDesc) pushDesc.textContent = blocked
-        ? "Blocked in your browser's site settings — enable notifications there first"
-        : 'Not supported in this browser';
+      if (pushDesc) {
+        if (blocked) {
+          pushDesc.innerHTML = 'Blocked in your browser’s site settings — <a href="#" id="settings-push-blocked-link">tap here to see how to enable it</a>';
+          document.getElementById('settings-push-blocked-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('settings-modal')?.classList.add('hidden');
+            showPushOptInModal({ blocked: true });
+          });
+        } else {
+          pushDesc.textContent = 'Not supported in this browser';
+        }
+      }
       return;
     }
     pushToggle.disabled = false;

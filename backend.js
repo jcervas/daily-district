@@ -236,6 +236,18 @@
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   }
+  // Rough browser sniff used only to pick which "unblock notifications" steps to show —
+  // not used for any feature-detection, so false positives are low-stakes.
+  function browserName() {
+    const ua = navigator.userAgent || '';
+    if (/Edg\//.test(ua)) return 'edge';
+    if (/OPR\//.test(ua)) return 'opera';
+    if (/Firefox\//.test(ua)) return 'firefox';
+    if (/CriOS\//.test(ua)) return 'chrome-ios';
+    if (/Chrome\//.test(ua)) return 'chrome';
+    if (/Safari\//.test(ua)) return 'safari';
+    return 'other';
+  }
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -306,7 +318,7 @@
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
     logTelemetry, getProfile, updateProfile, deleteAccount,
-    pushSupported, isIOS, isStandalone, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
+    pushSupported, isIOS, isStandalone, browserName, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
   };
 
   // Best-effort session telemetry on load (no PII). Runs for everyone.
