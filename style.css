@@ -2777,7 +2777,6 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
   font-size: 0.88rem;
   color: var(--muted);
   text-align: left;
-  text-decoration: underline;
 }
 .settings-link-btn:hover { color: var(--text); }
 .settings-footer {
@@ -2871,7 +2870,7 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
 }
 .login-link,
 .welcome-how-to-link,
-.settings-link-btn,
+.settings-link-btn span,
 .settings-sub-link {
   color: var(--cmu-red);
   font-weight: 600;
@@ -2882,7 +2881,7 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
 }
 .login-link:hover,
 .welcome-how-to-link:hover,
-.settings-link-btn:hover,
+.settings-link-btn:hover span,
 .settings-sub-link:hover {
   color: var(--cmu-red);
   background-size: 100% 0.0625em;

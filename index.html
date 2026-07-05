@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=191" />
+  <link rel="stylesheet" href="style.css?v=192" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -283,7 +283,7 @@
       </label>
     </div>
     <div class="settings-divider"></div>
-    <button id="settings-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
+    <button id="settings-feedback-btn" class="settings-link-btn"><span>Send Feedback &rsaquo;</span></button>
     <div class="settings-footer">&copy; 2026 Jonathan Cervas &amp; Jason Fierman. All rights reserved.<br><span class="settings-version">Version <span class="beta-version">–</span></span></div>
   </div>
 </div>
@@ -651,7 +651,7 @@
              class="donate-btn result-donate-btn" target="_blank" rel="noopener">
             Donate to CMU
           </a>
-          <button id="result-feedback-btn" class="settings-link-btn">Send Feedback &rsaquo;</button>
+          <button id="result-feedback-btn" class="settings-link-btn"><span>Send Feedback &rsaquo;</span></button>
         </div>
       </div>
     </div>
@@ -669,6 +669,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=19" defer></script>
 <script src="login.js?v=18" defer></script>
-<script src="script.js?v=2.13.2" defer></script>
+<script src="script.js?v=2.13.3" defer></script>
 </body>
 </html>
