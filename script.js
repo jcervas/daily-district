@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.4';
+const VERSION_NUMBER = '2.13.5';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5673,15 +5673,19 @@ window.addEventListener('district-auth', async () => {
     window.location.reload();
     return;
   }
-  // No anonymous guesses to reconcile, but the account being signed into may already
-  // have completed today's puzzle on another device/session — the in-memory game state
-  // (gameOver, guessHistory, welcome buttons) still reflects whatever was showing before
-  // login, so check the server and reload to rebuild everything from initServer() if so.
+  // No anonymous guesses to reconcile, but the account being signed into may already have
+  // a game on today's puzzle from another device/session — completed, or in-progress with
+  // guesses already made — while the in-memory game state here (gameOver, guessHistory,
+  // welcome buttons) still reflects whatever was showing before login (a fresh, un-started
+  // game). Check the server and reload to rebuild everything from initServer() if so; that
+  // path already knows how to restore a partial/in-progress game via restoreServerGame(),
+  // not just a completed one.
   if (!isArchiveGame) {
     let accountResult = null;
     try { accountResult = (await window.DistrictBackend.today())?.result ?? null; }
     catch (e) { /* network hiccup — fall through, no reload */ }
-    if (accountResult && accountResult.completed && !gameOver) {
+    const hasRemoteProgress = accountResult && (accountResult.completed || (Array.isArray(accountResult.guess_history) && accountResult.guess_history.length > 0));
+    if (hasRemoteProgress && !gameOver && (!Array.isArray(guessHistory) || guessHistory.length === 0)) {
       window.location.reload();
       return;
     }
