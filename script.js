@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.3';
+const VERSION_NUMBER = '2.13.4';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -6171,6 +6171,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pushToggle) return;
     const supported = window.DistrictBackend?.pushSupported?.();
     const blocked = supported && typeof Notification !== 'undefined' && Notification.permission === 'denied';
+    // iOS Safari (and Chrome-for-iOS, which shares the same WebKit push restriction) never
+    // reports pushSupported() true unless the site has been added to the Home Screen first
+    // — that's a real, actionable state, not just "unsupported", so it needs its own message
+    // instead of falling into the generic "Not supported in this browser" text below.
+    const iosNeedsInstall = !supported && window.DistrictBackend?.isIOS?.() && !window.DistrictBackend?.isStandalone?.();
     if (!supported || blocked) {
       pushToggle.checked = false;
       pushToggle.disabled = true;
@@ -6181,6 +6186,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             document.getElementById('settings-modal')?.classList.add('hidden');
             showPushOptInModal({ blocked: true });
+          });
+        } else if (iosNeedsInstall) {
+          pushDesc.innerHTML = 'iPhone/iPad requires adding this site to your Home Screen first — <a href="#" id="settings-push-ios-link">tap here to see how</a>';
+          document.getElementById('settings-push-ios-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('settings-modal')?.classList.add('hidden');
+            showPushOptInModal({ forceIOSInstructions: true });
           });
         } else {
           pushDesc.textContent = 'Not supported in this browser';
@@ -6203,6 +6215,13 @@ document.addEventListener('DOMContentLoaded', () => {
             pushToggle.checked = false;
             document.getElementById('settings-modal').classList.add('hidden');
             showPushOptInModal({ forceIOSInstructions: true });
+          } else if (isAnonymousPlayer) {
+            // subscribePush() ties the subscription to an account row — silently failing
+            // here (as a plain catch would) left players who tried this signed out with no
+            // idea why the toggle snapped back off. Send them to sign in instead.
+            pushToggle.checked = false;
+            document.getElementById('settings-modal')?.classList.add('hidden');
+            document.getElementById('login-modal')?.classList.remove('hidden');
           } else {
             await window.DistrictBackend.subscribePush();
             localStorage.setItem(PUSH_DECISION_KEY, 'granted');
