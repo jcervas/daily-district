@@ -2852,7 +2852,23 @@ body.light-mode .welcome-wordmark-svg { filter: none; }
 /* ---- Clear button: header "Sign in" pill (fill slides up from the bottom) ---- */
 /* ---- Text links: carnegie-red with an underline that swipes in left→right
    on hover (jonathancervas.com / cmu_base ".link-underline-swipe"). The
-   underline is a currentColor gradient grown from 0 to full width. ---- */
+   underline is a currentColor gradient grown from 0 to full width.
+   Base rule catches every plain <a> in the app (privacy policy link, About
+   modal attribution links, the push-blocked-notice link, the game-over
+   reload link, etc.) so new links get this treatment automatically instead
+   of needing a selector added here each time; button-styled anchors
+   (.got-it-btn, .donate-modal-cta) opt out. ---- */
+a:not(.got-it-btn):not(.donate-modal-cta) {
+  color: var(--cmu-red);
+  font-weight: 600;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 0.0625em no-repeat;
+  padding-bottom: 0.0625em;
+  transition: background-size .4s ease, color .4s ease;
+}
+a:not(.got-it-btn):not(.donate-modal-cta):hover {
+  background-size: 100% 0.0625em;
+}
 .login-link,
 .welcome-how-to-link,
 .settings-link-btn,

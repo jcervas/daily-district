@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.1';
+const VERSION_NUMBER = '2.13.2';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
