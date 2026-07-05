@@ -1457,6 +1457,20 @@ body.dark-mode .rl-other, body:not(.light-mode) .rl-other { background: #5a626b;
   flex-shrink: 0;
 }
 .got-it-btn:hover { background: var(--cmu-red-dark); }
+/* ---- Push notification opt-in modal ---- */
+.push-optin-icon { font-size: 2.2rem; text-align: center; margin-bottom: 4px; }
+.push-optin-content h2 { text-align: center; }
+.push-optin-content > div > p { color: var(--muted); }
+.push-optin-actions { justify-content: center; }
+.push-ios-steps {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.push-ios-steps li + li { margin-top: 8px; }
+.push-ios-icon { color: var(--accent); }
+
 /* Donate modal's single footer CTA — .how-to-footer's space-between only makes sense
    with two children, so center the lone button here instead. */
 #donate-modal .how-to-footer { justify-content: center; }
