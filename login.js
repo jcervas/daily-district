@@ -36,6 +36,52 @@
     // Show the splash "Sign in" affordance only while signed out.
     const updateSigninAffordance = (user) => { if (signinBtn) signinBtn.hidden = !!user; };
 
+    // ---- Pending email-verification banner -----------------------------------
+    // With "Confirm email" enforced, signUp() returns no session — the player stays
+    // anonymous until they click the link in their inbox. The login modal shows a
+    // one-off "check your email" message at that moment, but it's gone the instant the
+    // modal closes with nothing to remind them afterward. Persist which email is
+    // pending in localStorage (survives reload/close) and show a dismissible banner
+    // until a real session actually shows up for that address.
+    const PENDING_VERIFY_KEY = 'dd_pendingVerifyEmail';
+    const VERIFY_DISMISSED_KEY = 'dd_verifyBannerDismissed'; // sessionStorage — reappears next visit
+    const verifyBanner = $('verify-email-banner');
+    const verifyMsg = $('verify-email-msg');
+    function setPendingVerification(email) {
+      if (email) localStorage.setItem(PENDING_VERIFY_KEY, email);
+      else localStorage.removeItem(PENDING_VERIFY_KEY);
+      sessionStorage.removeItem(VERIFY_DISMISSED_KEY);
+      refreshVerifyBanner();
+    }
+    function refreshVerifyBanner(signedIn = false) {
+      if (!verifyBanner) return;
+      const pending = localStorage.getItem(PENDING_VERIFY_KEY);
+      const dismissed = sessionStorage.getItem(VERIFY_DISMISSED_KEY) === '1';
+      if (signedIn && pending) setPendingVerification(null); // a session exists → they verified
+      const show = !!pending && !signedIn && !dismissed;
+      verifyBanner.classList.toggle('hidden', !show);
+      if (show && verifyMsg) verifyMsg.textContent = `Verify ${pending} to finish creating your account — check your inbox for the confirmation link.`;
+    }
+    $('verify-email-dismiss-btn')?.addEventListener('click', () => {
+      sessionStorage.setItem(VERIFY_DISMISSED_KEY, '1');
+      refreshVerifyBanner();
+    });
+    $('verify-email-resend-btn')?.addEventListener('click', async (e) => {
+      const pending = localStorage.getItem(PENDING_VERIFY_KEY);
+      if (!pending) return;
+      const btn = e.currentTarget;
+      const label = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const { error } = await B.resendConfirmation(pending);
+        btn.textContent = error ? 'Failed — try again' : 'Sent!';
+      } catch (_) {
+        btn.textContent = 'Failed — try again';
+      } finally {
+        setTimeout(() => { btn.disabled = false; btn.textContent = label; }, 2500);
+      }
+    });
+
     // ---- Profile modal (shared: first-time collection + later editing) ------
     const pModal = $('profile-modal');
     const pErr = $('profile-error');
@@ -265,6 +311,7 @@
           err.textContent = '';
         } else {
           err.textContent = 'Almost there — check your email for a confirmation link to finish signing up.';
+          setPendingVerification(email);
         }
       } catch (ex) { fail(ex); }
     });
@@ -304,6 +351,7 @@
       if (event === 'PASSWORD_RECOVERY') { hideGate(); newpwModal.classList.remove('hidden'); return; }
       refreshAccount();
       updateSigninAffordance(user);
+      refreshVerifyBanner(!!user);
       if (user) {
         hideGate();
         maybePromptProfile();
@@ -316,6 +364,7 @@
     const user = await B.getUser();
     refreshAccount();
     updateSigninAffordance(user);
+    refreshVerifyBanner(!!user);
     if (user) maybePromptProfile();
   });
 })();

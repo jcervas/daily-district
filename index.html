@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=192" />
+  <link rel="stylesheet" href="style.css?v=193" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -81,6 +81,18 @@
     </div>
   </div>
 </header>
+
+<!-- Shown after "Create an account" until the confirmation email link is clicked. Signup
+     with email confirmation enforced doesn't sign the player in, so without this they have
+     no persistent reminder that their account is still pending once they close the login
+     modal (the inline "check your email" message there is gone as soon as it's dismissed). -->
+<div id="verify-email-banner" class="banner hidden">
+  <span id="verify-email-msg">Verify your email to finish creating your account.</span>
+  <div class="banner-actions">
+    <button id="verify-email-resend-btn">Resend email</button>
+    <button id="verify-email-dismiss-btn" class="banner-dismiss">Dismiss</button>
+  </div>
+</div>
 
 <!-- Unofficial badge shown during archive (past-puzzle) play -->
 <div id="archive-badge" class="archive-badge hidden">Archive</div>
@@ -667,8 +679,8 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="globe.js?v=2.2.17" defer></script>
-<script src="backend.js?v=19" defer></script>
-<script src="login.js?v=18" defer></script>
-<script src="script.js?v=2.13.6" defer></script>
+<script src="backend.js?v=20" defer></script>
+<script src="login.js?v=19" defer></script>
+<script src="script.js?v=2.13.7" defer></script>
 </body>
 </html>

@@ -643,6 +643,12 @@ main:has(#already-played-banner:not(.hidden)) {
   border: 1.5px solid var(--accent);
 }
 #banner-new-map-btn:hover { background: var(--accent); color: white; }
+.banner-dismiss {
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+}
+.banner-dismiss:hover { color: var(--text); border-color: var(--muted); }
 
 /* ---- Map ---- */
 #map {

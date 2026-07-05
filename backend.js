@@ -88,6 +88,14 @@
     });
   }
   function signOut() { return client().auth.signOut(); }
+  // Re-send the signup confirmation email (e.g. the player lost the first one, or it
+  // expired). Same redirect as the original signUp so the link still lands back here.
+  function resendConfirmation(email) {
+    return client().auth.resend({
+      type: 'signup', email,
+      options: { emailRedirectTo: window.location.href.split('#')[0] },
+    });
+  }
   // Email a password-reset link back to the app; on return Supabase fires PASSWORD_RECOVERY.
   function resetPassword(email) {
     return client().auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
@@ -315,7 +323,7 @@
     SUPABASE_URL,
     client,
     getUser, onAuthChange,
-    signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword,
+    signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword, resendConfirmation,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
     logTelemetry, getProfile, updateProfile, deleteAccount,
     pushSupported, isIOS, isStandalone, browserName, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
