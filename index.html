@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=197" />
+  <link rel="stylesheet" href="style.css?v=198" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -143,7 +143,12 @@
     <div class="login-divider"><span>or</span></div>
     <form id="login-email-form" class="login-email-form" autocomplete="on">
       <input id="login-email" type="email" placeholder="Email" required autocomplete="email" />
-      <input id="login-password" type="password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+      <div class="login-password-wrap">
+        <input id="login-password" type="password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+        <button type="button" class="login-password-toggle" id="login-password-toggle" aria-label="Show password" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
       <div class="login-error" id="login-error"></div>
       <button type="submit" class="login-submit" id="login-signin">Sign in</button>
       <button type="button" class="login-secondary" id="login-signup">Create an account</button>
@@ -164,7 +169,12 @@
     <h2 class="login-title">Set a new password</h2>
     <p class="login-subtitle">Enter a new password for your account.</p>
     <form id="newpw-form" class="login-email-form" autocomplete="on">
-      <input id="newpw-password" type="password" placeholder="New password" required autocomplete="new-password" minlength="6" />
+      <div class="login-password-wrap">
+        <input id="newpw-password" type="password" placeholder="New password" required autocomplete="new-password" minlength="6" />
+        <button type="button" class="login-password-toggle" id="newpw-password-toggle" aria-label="Show password" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
       <div class="login-error" id="newpw-error"></div>
       <button type="submit" class="login-submit">Update password</button>
     </form>
@@ -694,7 +704,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=20" defer></script>
-<script src="login.js?v=19" defer></script>
+<script src="login.js?v=20" defer></script>
 <script src="script.js?v=2.13.10" defer></script>
 </body>
 </html>

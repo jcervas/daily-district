@@ -223,6 +223,23 @@
       accBtn.classList.remove('hidden');
     }
 
+    // Show/hide toggle for a password field — swaps the input's type and flips
+    // aria-pressed (the toggle button's eye icon has a slash through it via CSS while
+    // masked, using that state).
+    function wirePasswordToggle(inputId, btnId) {
+      const input = $(inputId);
+      const btn = $(btnId);
+      if (!input || !btn) return;
+      btn.addEventListener('click', () => {
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        btn.setAttribute('aria-pressed', String(!showing));
+        btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      });
+    }
+    wirePasswordToggle('login-password', 'login-password-toggle');
+    wirePasswordToggle('newpw-password', 'newpw-password-toggle');
+
     // ---- Login form (opened on demand from the welcome splash) --------------
     // The splash is the always-present fallback, so the login form is dismissable.
     const modal = $('login-modal');
@@ -241,7 +258,8 @@
       }
     };
     const hideGate = () => modal.classList.add('hidden');
-    const fail = (e) => { err.textContent = (e && e.message) || 'Something went wrong'; };
+    const setErr = (msg, success = false) => { err.textContent = msg; err.classList.toggle('login-success', success); };
+    const fail = (e) => setErr((e && e.message) || 'Something went wrong');
     const rememberEmail = (email) => { try { localStorage.setItem(LAST_EMAIL_KEY, email); } catch (_) {} };
 
     // While a sign-in request is in flight, every login action was staying fully visible
@@ -274,9 +292,16 @@
       modal.querySelectorAll('.login-divider').forEach((el) => el.classList.toggle('login-action-hidden', busy));
     }
 
+    // Set when signUpWithEmail comes back with a session already (email confirmation is
+    // off, or somehow already verified) — the account exists and is signed in immediately,
+    // but the login modal would otherwise vanish the instant onAuthChange fires with no
+    // acknowledgment at all that anything happened. Holds the gate open a beat longer so
+    // the success message is actually readable before it closes on its own.
+    let pendingSignupAck = false;
+
     modal.querySelectorAll('.login-provider-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        err.textContent = '';
+        setErr('');
         setLoginBusy(true, btn);
         try { await B.signInWithOAuth(btn.dataset.provider); }
         catch (e) { fail(e); setLoginBusy(false, btn); }
@@ -284,7 +309,7 @@
     });
     $('login-email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      err.textContent = '';
+      setErr('');
       const email = $('login-email').value.trim();
       const submitBtn = $('login-signin');
       setLoginBusy(true, submitBtn);
@@ -296,10 +321,10 @@
       finally { setLoginBusy(false, submitBtn); }
     });
     $('login-signup').addEventListener('click', async () => {
-      err.textContent = '';
+      setErr('');
       const email = $('login-email').value.trim();
       const pw = $('login-password').value;
-      if (!email || pw.length < 6) { err.textContent = 'Enter an email and a 6+ character password.'; return; }
+      if (!email || pw.length < 6) { setErr('Enter an email and a 6+ character password.'); return; }
       try {
         const { data, error } = await B.signUpWithEmail(email, pw);
         if (error) throw error;
@@ -308,9 +333,10 @@
         // until the link is clicked. (If confirmation is off, a session comes back
         // and onAuthChange signs them straight in.)
         if (data && data.session) {
-          err.textContent = '';
+          pendingSignupAck = true;
+          setErr('Account created! You’re all set.', true);
         } else {
-          err.textContent = 'Almost there — check your email for a confirmation link to finish signing up.';
+          setErr('Almost there — check your email for a confirmation link to finish signing up.', true);
           setPendingVerification(email);
         }
       } catch (ex) { fail(ex); }
@@ -318,12 +344,12 @@
     // Forgot password: email a reset link to the address in the email field.
     $('login-forgot-password').addEventListener('click', async () => {
       const email = $('login-email').value.trim();
-      if (!email) { err.textContent = 'Enter your email above, then tap "Forgot password?".'; return; }
-      err.textContent = '';
+      if (!email) { setErr('Enter your email above, then tap "Forgot password?".'); return; }
+      setErr('');
       try {
         const { error } = await B.resetPassword(email);
         if (error) throw error;
-        err.textContent = 'Check your email for a password-reset link.';
+        setErr('Check your email for a password-reset link.', true);
       } catch (ex) { fail(ex); }
     });
     // ---- Set-new-password modal (after following a reset link) ---------------
@@ -341,9 +367,9 @@
     });
 
     // Close returns to the welcome splash (which still has the Sign-in button).
-    $('login-close').addEventListener('click', () => { err.textContent = ''; hideGate(); });
-    $('welcome-signin-btn').addEventListener('click', () => { err.textContent = ''; showGate(); });
-    signinBtnHeader && signinBtnHeader.addEventListener('click', () => { err.textContent = ''; showGate(); });
+    $('login-close').addEventListener('click', () => { setErr(''); hideGate(); });
+    $('welcome-signin-btn').addEventListener('click', () => { setErr(''); showGate(); });
+    signinBtnHeader && signinBtnHeader.addEventListener('click', () => { setErr(''); showGate(); });
 
     // ---- React to auth state ------------------------------------------------
     B.onAuthChange((user, event) => {
@@ -353,11 +379,21 @@
       updateSigninAffordance(user);
       refreshVerifyBanner(!!user);
       if (user) {
-        hideGate();
-        maybePromptProfile();
-        // script.js listens for this to re-bind an in-progress anonymous game to the
-        // newly signed-in account.
-        window.dispatchEvent(new CustomEvent('district-auth', { detail: { user } }));
+        const finish = () => {
+          hideGate();
+          maybePromptProfile();
+          // script.js listens for this to re-bind an in-progress anonymous game to the
+          // newly signed-in account.
+          window.dispatchEvent(new CustomEvent('district-auth', { detail: { user } }));
+        };
+        if (pendingSignupAck) {
+          // Give the "Account created!" message above a moment to actually be read
+          // instead of the gate vanishing the instant the session lands.
+          pendingSignupAck = false;
+          setTimeout(finish, 1600);
+        } else {
+          finish();
+        }
       }
     });
 

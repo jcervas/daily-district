@@ -2378,7 +2378,48 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
   color: var(--text);
 }
 .login-email-form input::placeholder { color: var(--muted); }
+/* Password field + its show/hide toggle — the form's flex column gives every direct
+   child (inputs, this wrapper) the same width, so the wrapper just needs to size its
+   input the same way `.login-email-form input` normally would on its own. */
+.login-password-wrap { position: relative; display: flex; }
+.login-password-wrap input {
+  font: inherit;
+  padding: 10px 38px 10px 12px;   /* extra right padding clears the toggle icon */
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+.login-password-toggle {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+.login-password-toggle svg { width: 18px; height: 18px; }
+.login-password-toggle:hover { color: var(--text); }
+/* Eye has a slash through it while the password is masked (click to reveal); the slash
+   disappears once revealed, so the icon itself communicates the current state. */
+.login-password-toggle::after {
+  content: "";
+  position: absolute;
+  left: 9px; right: 9px;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  transform: translateY(-50%) rotate(-45deg);
+}
+.login-password-toggle[aria-pressed="true"]::after { display: none; }
 .login-error { color: var(--red, #C41230); font-size: 0.85rem; min-height: 1em; }
+.login-error.login-success { color: var(--green, #2e7d32); }
 
 /* ---- Profile danger zone (delete account) ---- */
 .profile-danger {
