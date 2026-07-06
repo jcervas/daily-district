@@ -1073,11 +1073,20 @@ circle.tile-ripple {
   border: 1.5px solid var(--accent);
 }
 #play-again-btn:hover { background: var(--accent); color: white; }
-/* The ribbon has no leading text on narrower result-modal widths where the game-over
-   ribbon's would normally balance the row via justify-content:space-between (it does
-   have text here — see #result-ribbon-text — but the action row can still wrap), so
-   let it wrap like the old .result-action-row did instead of overflowing. */
-#result-modal .gameover-ribbon .banner-actions { flex-wrap: wrap; }
+/* Four buttons (vs. the game-over ribbon's three) need a bit more help staying on one
+   row: shrink a touch below the game-over ribbon's own 480px stacking breakpoint, and
+   swap in the two longest labels' short alternates (District Profile → Profile, Play
+   Archive → Archive) via ribbon-label-full/short below. flex-shrink (not wrap) lets
+   button padding/text give up space gracefully instead of ever dropping to a second row. */
+#result-modal .gameover-ribbon .banner-actions { flex-wrap: nowrap; }
+#result-modal .gameover-ribbon .banner-actions button { flex-shrink: 1; min-width: 0; white-space: nowrap; }
+.ribbon-label-short { display: none; }
+@media (max-width: 480px) {
+  #result-modal .gameover-ribbon .banner-actions { gap: 5px; }
+  #result-modal .gameover-ribbon .banner-actions button { padding: 5px 8px; font-size: 0.76rem; }
+  .ribbon-label-full { display: none; }
+  .ribbon-label-short { display: inline; }
+}
 #share-copied {
   font-size: 0.85rem;
   color: var(--green);

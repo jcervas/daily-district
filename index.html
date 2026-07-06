@@ -598,7 +598,12 @@
                  handler; in normal flow with the other buttons (not absolutely positioned
                  over the district preview like every other .result-modal-close) so it can't
                  overlap them on narrow widths now that the ribbon holds every result action. -->
-            <button class="modal-close result-modal-close in-ribbon" id="result-back-btn">District Profile</button>
+            <!-- Two labels each for District Profile / Play Archive (the two longest) — CSS
+                 swaps to the short one below 480px so all four buttons keep to one row,
+                 matching the game-over ribbon's own (3-button) row instead of wrapping. -->
+            <button class="modal-close result-modal-close in-ribbon" id="result-back-btn">
+              <span class="ribbon-label-full">District Profile</span><span class="ribbon-label-short">Profile</span>
+            </button>
             <button id="post-x-btn" class="post-x-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
               Share
@@ -609,7 +614,7 @@
             </button>
             <button id="play-again-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-              Play Archive
+              <span class="ribbon-label-full">Play Archive</span><span class="ribbon-label-short">Archive</span>
             </button>
           </div>
         </div>
