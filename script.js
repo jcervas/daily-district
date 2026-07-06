@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.6';
+const VERSION_NUMBER = '2.13.9';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -6015,11 +6015,15 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(HOW_TO_SEEN_KEY, '1');
   });
 
-  // About / Donate — header button opens the modal instead of navigating straight out.
-  // The decorative header graphic is the canvas TiledGlobe (data-globe span in the HTML,
-  // auto-instantiated by globe.js on DOMContentLoaded) — same one used on the welcome screen.
-  document.getElementById('donate-btn')?.addEventListener('click', () => {
-    document.getElementById('donate-modal')?.classList.remove('hidden');
+  // About / Donate — every donate entry point (header icon, welcome splash, result
+  // footer) opens the same About modal instead of navigating straight out to GiveCampus;
+  // the modal itself holds the actual "Donate to CMU" link. The decorative header graphic
+  // is the canvas TiledGlobe (data-globe span in the HTML, auto-instantiated by globe.js
+  // on DOMContentLoaded) — same one used on the welcome screen.
+  ['donate-btn', 'welcome-donate-btn', 'result-donate-btn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      document.getElementById('donate-modal')?.classList.remove('hidden');
+    });
   });
   }); // end _initPromise.then
 
