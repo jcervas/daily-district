@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.10';
+const VERSION_NUMBER = '2.13.12';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -6215,6 +6215,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // — that's a real, actionable state, not just "unsupported", so it needs its own message
     // instead of falling into the generic "Not supported in this browser" text below.
     const iosNeedsInstall = !supported && window.DistrictBackend?.isIOS?.() && !window.DistrictBackend?.isStandalone?.();
+    // Same disabled-look as the Hard Mode lock (updateHardModeLock): grey out the whole
+    // switch, not just the native input, since the custom track/thumb ignore :disabled.
+    pushToggle.closest('.settings-toggle-wrap')?.classList.toggle('disabled', !supported || blocked);
     if (!supported || blocked) {
       pushToggle.checked = false;
       pushToggle.disabled = true;

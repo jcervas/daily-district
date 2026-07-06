@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.13.12 — Fix push opt-in modal + Settings toggle polish
+
+- Fixed the "Add to Home Screen" instructions / notification opt-in modal rendering behind the game-over/result modal (it was missing from the header-modal z-index tier) — it's now always visible when shown.
+- The Settings → Daily Reminder toggle now visibly greys out (same treatment as the locked Hard Mode toggle) when push isn't supported, blocked, or needs the iOS install step, instead of just disabling the invisible native checkbox.
+
 ## v2.13.0 — Opt-in daily reminder push notifications
 
 - Players can now opt into a daily push notification when the new puzzle goes live. Prompted after the 1st completed game, and again before the 3rd if not yet decided; manageable anytime via Settings → Daily Reminder.
