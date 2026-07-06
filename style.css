@@ -1062,45 +1062,22 @@ circle.tile-ripple {
   opacity: 0.85;
   margin-top: auto;
 }
-/* Shared base for all three action buttons — targeted by id (not the old
-   .result-action-row wrapper class) since they now live in the result modal's
-   top ribbon (.gameover-ribbon banner), not a dedicated wrapper of their own. */
-/* The ribbon has no leading text (unlike the game-over screen's), so center the button
-   row instead of letting justify-content:space-between hug it to one side, and let it
-   wrap on narrow widths like the old .result-action-row did. */
-#result-modal .gameover-ribbon-inner { justify-content: center; }
-#result-modal .gameover-ribbon .banner-actions { justify-content: center; flex-wrap: wrap; }
-#post-x-btn,
-#share-btn,
-#play-again-btn {
-  flex: 1;
-  min-width: 80px;
-  padding: 9px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border-radius: 100px;
-  cursor: pointer;
-  letter-spacing: 0.03em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-/* Share button (was X/Post) */
-.post-x-btn {
-  background: var(--cmu-red);
-  color: #fff !important;
-  border: 2px solid var(--cmu-red);
-}
-.post-x-btn:hover { background: var(--cmu-red-dark); border-color: var(--cmu-red-dark); }
+/* Result ribbon buttons (District Profile / Share / Post / Play Archive) are plain
+   children of .banner-actions inside .gameover-ribbon banner, so they pick up the exact
+   same solid-red .banner button look the game-over ribbon's View Results/Share buttons
+   use — no dedicated sizing/shape of their own to keep the two ribbons visually identical.
+   Play Archive is the one outlined exception, matching #gameover-new-map-btn's look. */
 #play-again-btn {
   background: transparent;
-  color: var(--cmu-red);
-  border: 2px solid var(--cmu-red);
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
 }
-#play-again-btn:hover { background: var(--cmu-red); color: white; }
+#play-again-btn:hover { background: var(--accent); color: white; }
+/* The ribbon has no leading text on narrower result-modal widths where the game-over
+   ribbon's would normally balance the row via justify-content:space-between (it does
+   have text here — see #result-ribbon-text — but the action row can still wrap), so
+   let it wrap like the old .result-action-row did instead of overflowing. */
+#result-modal .gameover-ribbon .banner-actions { flex-wrap: wrap; }
 #share-copied {
   font-size: 0.85rem;
   color: var(--green);
@@ -3008,11 +2985,23 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
    which turns it black on the dark pill in light mode. */
 .result-modal-close:hover { background: rgba(0, 0, 0, 0.65); color: #fff; }
 /* ...except when it lives in the result modal's top ribbon alongside the other action
-   buttons — sits in normal flow there instead of overlaying the preview image. */
+   buttons ("District Profile") — sits in normal flow there instead of overlaying the
+   preview image. .banner button (below) already wins on specificity for background/
+   color/padding/etc., so it picks up the same plain solid look as the game-over ribbon's
+   "View Results" button for free; this only needs to cancel the absolute positioning. */
 .result-modal-close.in-ribbon {
   position: static;
   top: auto; right: auto;
+  z-index: auto;
+  letter-spacing: normal;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
+/* .result-modal-close:hover's dark-pill hover color would otherwise still win here (a
+   :hover rule outranks .banner button's plain, hover-less look on specificity) — the
+   game-over ribbon's matching "View Results" button has no hover treatment at all, so
+   match that instead of visibly diverging only on hover. */
+.result-modal-close.in-ribbon:hover { background: var(--accent); color: #fff; }
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
   /* Fill the leftover space in the result pane (the pane centers its children, so

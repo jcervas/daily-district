@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.9';
+const VERSION_NUMBER = '2.13.10';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5329,6 +5329,12 @@ function openResultModal() {
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
   modal.classList.remove('hidden');
+  // Mirror the game-over ribbon's text ("Game over. You got it! CA-31.") into this
+  // ribbon's own span so the two read identically — #gameover-ribbon-text is only
+  // populated once a game is actually over (buildGameoverDiv's content pass).
+  const goRibbonText = document.getElementById('gameover-ribbon-text');
+  const resultRibbonText = document.getElementById('result-ribbon-text');
+  if (resultRibbonText) resultRibbonText.textContent = goRibbonText ? goRibbonText.textContent : '';
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
   _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
