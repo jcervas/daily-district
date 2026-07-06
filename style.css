@@ -2295,7 +2295,7 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 /* Header-triggered utility modals must always supersede whatever game modal is up
    (result / welcome / game-over, all z-index 200) — and login/profile — since the menu
    bar (z-index 600) is reachable over everything. */
-#settings-modal, #how-to-modal, #hints-modal, #feedback-modal { z-index: 340; }
+#settings-modal, #how-to-modal, #hints-modal, #feedback-modal, #push-optin-modal { z-index: 340; }
 .profile-checkbox {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; color: var(--muted); cursor: pointer; padding: 2px 0;
