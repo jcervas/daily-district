@@ -890,18 +890,30 @@ circle.tile-ripple {
 
 /* ---- Result section ---- */
 /* ---- Result modal ---- */
-/* All modals cap at the base 480px on desktop (full-screen on mobile, below); the
-   result modal just needs its own height/layout. */
+/* Unlike the other modals (capped at a small centered 480px card), the result modal takes
+   the same full-page dimensions as the game-over screen — matching `main`'s max-width so
+   it lines up with the gameplay/game-over column and leaves the same gutters open for the
+   desktop side-ad rails (see #result-modal's own background override below, which drops
+   the usual dark backdrop so those gutters actually show through instead of being dimmed). */
+#result-modal { background: transparent; align-items: stretch; }
 .modal-content.result-modal-content {
-  max-width: 480px;
-  width: 94vw;
-  height: 85vh;
-  max-height: 85vh;
+  max-width: 900px;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0;          /* tabs + panes handle their own padding */
+}
+/* Match `main`'s own wider column once there's room for it (same breakpoint that widens
+   main to 1100px), so the result modal keeps lining up with the gameplay/game-over screen
+   at every size instead of the two drifting apart. */
+@media (orientation: landscape) and (min-width: 600px) {
+  .modal-content.result-modal-content { max-width: 1100px; }
 }
 /* Wraps every tab-pane + the shared footer (ad/donate/feedback) as one flex column, so
    the footer shows below whichever tab is active instead of only inside one pane. */
@@ -1041,13 +1053,6 @@ circle.tile-ripple {
   width: 100%;
   text-align: center;
 }
-.result-action-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  justify-content: center;
-  flex-wrap: wrap;
-}
 .result-donate-btn {
   width: 100%;
   text-align: center;
@@ -1057,9 +1062,17 @@ circle.tile-ripple {
   opacity: 0.85;
   margin-top: auto;
 }
-/* Shared base for all three action buttons */
-.result-action-row button,
-.result-action-row .post-x-btn {
+/* Shared base for all three action buttons — targeted by id (not the old
+   .result-action-row wrapper class) since they now live in the result modal's
+   top ribbon (.gameover-ribbon banner), not a dedicated wrapper of their own. */
+/* The ribbon has no leading text (unlike the game-over screen's), so center the button
+   row instead of letting justify-content:space-between hug it to one side, and let it
+   wrap on narrow widths like the old .result-action-row did. */
+#result-modal .gameover-ribbon-inner { justify-content: center; }
+#result-modal .gameover-ribbon .banner-actions { justify-content: center; flex-wrap: wrap; }
+#post-x-btn,
+#share-btn,
+#play-again-btn {
   flex: 1;
   min-width: 80px;
   padding: 9px 14px;
@@ -2986,6 +2999,12 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
 /* Keep the text white on hover — the base .modal-close:hover sets color:var(--text),
    which turns it black on the dark pill in light mode. */
 .result-modal-close:hover { background: rgba(0, 0, 0, 0.65); color: #fff; }
+/* ...except when it lives in the result modal's top ribbon alongside the other action
+   buttons — sits in normal flow there instead of overlaying the preview image. */
+.result-modal-close.in-ribbon {
+  position: static;
+  top: auto; right: auto;
+}
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
   /* Fill the leftover space in the result pane (the pane centers its children, so

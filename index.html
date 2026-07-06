@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=193" />
+  <link rel="stylesheet" href="style.css?v=195" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -574,8 +574,33 @@
   <!-- Result modal (opens on game end or "View Result" click) -->
   <div id="result-modal" class="modal hidden">
     <div class="modal-content result-modal-content">
-      <!-- Single district preview shared across all tabs; the close button overlays its top-right -->
-      <button class="modal-close result-modal-close" id="result-back-btn">← Back to district</button>
+      <!-- Top action ribbon — same treatment as the game-over screen's ribbon (full-width
+           band, centered max-width inner row), holding every result action in one place
+           instead of buried at the bottom of the "Me" tab (the old .result-action-row). -->
+      <div class="gameover-ribbon banner">
+        <div class="gameover-ribbon-inner">
+          <div class="banner-actions">
+            <button id="post-x-btn" class="post-x-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Share
+            </button>
+            <button id="share-btn" class="post-x-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              Post
+            </button>
+            <button id="play-again-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              Play Archive
+            </button>
+            <!-- In the flow with the other ribbon buttons (not absolutely positioned over the
+                 district preview like every other .result-modal-close) so it can't overlap
+                 them on narrow widths now that the ribbon holds every result action. Still
+                 needs .modal-close for the shared close-button click handler in script.js. -->
+            <button class="modal-close result-modal-close in-ribbon" id="result-back-btn">← Back to district</button>
+          </div>
+        </div>
+      </div>
+      <!-- Single district preview shared across all tabs -->
       <div id="result-district-preview"></div>
 
       <div class="result-modal-tabs">
@@ -612,20 +637,6 @@
               <span>Sign in to track your streak and compare with other players.</span>
             </div>
             <button id="result-anon-signin-btn" class="result-anon-cta-btn">Sign in / Sign up</button>
-          </div>
-          <div class="result-action-row">
-            <button id="post-x-btn" class="post-x-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-              Share
-            </button>
-            <button id="share-btn" class="post-x-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              Post
-            </button>
-            <button id="play-again-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-              Play Archive
-            </button>
           </div>
         </div>
 
