@@ -187,7 +187,7 @@
       referrer: (document.referrer || '').slice(0, 2048) || null,
     };
   }
-  // event: one of session_start|game_start|game_guess|game_complete|share|error
+  // event: one of session_start|game_start|game_guess|game_complete|share|error|settings|ui_control
   async function logTelemetry(event, opts = {}) {
     try {
       const { data } = await client().auth.getUser();
@@ -200,6 +200,61 @@
         payload: opts.payload ?? {},
       });
     } catch (_) { /* best-effort; never disrupt gameplay */ }
+  }
+
+  // Cache the current access token (updated on auth changes) so the unload flush
+  // below can authenticate a raw fetch synchronously, without awaiting getSession().
+  let _accessToken = null;
+  client().auth.getSession().then(({ data }) => { _accessToken = data?.session?.access_token ?? null; });
+  client().auth.onAuthStateChange((_event, session) => { _accessToken = session?.access_token ?? null; });
+
+  // ── Button/control tap tracking (batched; never one request per click) ─────
+  // Buffered in memory and flushed periodically or on page hide, as a single
+  // 'ui_control' row with a payload.controls array — not one insert per tap.
+  let _controlBuffer = [];
+  let _controlFlushTimer = null;
+  function reportControl(name) {
+    if (!name) return;
+    _controlBuffer.push({ name, ts: Date.now() });
+    if (!_controlFlushTimer) _controlFlushTimer = setTimeout(flushControls, 15000);
+  }
+  function flushControls(useBeacon) {
+    if (_controlFlushTimer) { clearTimeout(_controlFlushTimer); _controlFlushTimer = null; }
+    if (!_controlBuffer.length) return;
+    const controls = _controlBuffer;
+    _controlBuffer = [];
+    const body = JSON.stringify([{
+      session_id: sessionId(),
+      event: 'ui_control',
+      ...deviceInfo(),
+      payload: { controls },
+    }]);
+    // On unload, fire a best-effort keepalive fetch (sendBeacon can't carry the
+    // apikey/Authorization headers PostgREST requires) instead of awaiting the
+    // normal supabase-js insert, which the page may not survive long enough for.
+    if (useBeacon) {
+      try {
+        fetch(`${SUPABASE_URL}/rest/v1/telemetry`, {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${_accessToken || SUPABASE_ANON_KEY}`,
+            Prefer: 'return=minimal',
+          },
+          body,
+        }).catch(() => {});
+      } catch (_) {}
+      return;
+    }
+    client().from('telemetry').insert(JSON.parse(body)).then(() => {}, () => {});
+  }
+  if (typeof window !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushControls(true);
+    });
+    window.addEventListener('pagehide', () => flushControls(true));
   }
 
   // ── Profile (standard fields; all optional, user-editable) ─────────────────
@@ -325,7 +380,7 @@
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword, resendConfirmation,
     today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
-    logTelemetry, getProfile, updateProfile, deleteAccount,
+    logTelemetry, reportControl, getProfile, updateProfile, deleteAccount,
     pushSupported, isIOS, isStandalone, browserName, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
   };
 
