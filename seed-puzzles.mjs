@@ -22,7 +22,7 @@ import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = fs.readFileSync(path.join(DIR, 'script.js'), 'utf8');
 const TOPO = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
-const STATE_ACS = path.resolve(DIR, '../createMaps/acs_by_state.csv');
+const STATE_ACS = path.join(DIR, 'data/acs_by_state.csv');
 
 // ── Extract a `const NAME = { ... };` object literal from script.js and eval it ─
 function extractObject(name) {
