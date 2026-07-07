@@ -1,3 +1,4 @@
 .DS_Store
 districts.topojson
 node_modules/
+data/output/
