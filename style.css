@@ -2237,6 +2237,22 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 /* ===== Archive picker ===== */
 .archive-note { font-size: 0.85rem; color: var(--muted); margin: 0 0 12px; }
 .archive-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; }
+/* On desktop the 480px-wide card read as a small floating box lost against the busy
+   game-over screen behind it. Give it the same wider column `main`/the result modal get
+   at this breakpoint, and spread the month list into two columns so the extra width goes
+   toward showing more months at once instead of just stretching each row's text. The
+   calendar (day-grid) view keeps its own narrower cap below so day cells stay compact
+   squares instead of ballooning to match the card's full width. */
+@media (orientation: landscape) and (min-width: 600px) {
+  .modal-content.archive-modal-content { max-width: 720px; }
+  .archive-list:not(.archive-calendar-view) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-content: start;
+    max-height: 62vh;
+  }
+  .archive-calendar-view { max-width: 420px; margin: 0 auto; }
+}
 .archive-item {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 11px 14px; font: inherit; cursor: pointer;
