@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.15';
+const VERSION_NUMBER = '2.13.16';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1894,6 +1894,7 @@ function wireGameoverCensus() {
   const wrap = document.getElementById('gameover-census');
   if (!wrap) return;
   const sheet = wrap.querySelector('.district-profile');
+  const body  = wrap.querySelector('.gameover-census-body');
   const open  = () => { wrap.classList.add('open'); fitGameoverCensus(); };
   // Dismiss + drop any user-dragged height so the next open starts from the fitted default.
   const close = () => {
@@ -1951,6 +1952,41 @@ function wireGameoverCensus() {
     z.addEventListener('pointerup', onUp);
     z.addEventListener('pointercancel', onUp);
   });
+
+  // Scrolling the body while already at its top edge grows the sheet toward its max
+  // height (reusing the same "user-sized" inline-height mechanism as the drag handle)
+  // instead of just sitting at its half-screen default — once it reaches max height,
+  // further scrolling falls through to the body's own native overflow-y scroll. The
+  // drag handle and close/reopen button are untouched; this only adds a second way to
+  // reach the same states.
+  function growSheetBy(deltaY) {
+    if (!sheet || deltaY <= 0) return false;               // only grows on scroll-down
+    const minH = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0);
+    const maxH = wrap.clientHeight;
+    const cur  = sheet.getBoundingClientRect().height;
+    if (cur >= maxH - 0.5) return false;                   // already full — let content scroll
+    wrap.classList.add('user-sized');
+    sheet.style.maxHeight = 'none';
+    sheet.style.height = `${Math.max(minH, Math.min(maxH, cur + deltaY))}px`;
+    return true;
+  }
+  if (body) {
+    body.addEventListener('wheel', (e) => {
+      if (body.scrollTop > 0) return;   // content itself isn't at the top — normal scroll
+      if (growSheetBy(e.deltaY)) e.preventDefault();
+    }, { passive: false });
+    let touchY = null;
+    body.addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+    body.addEventListener('touchmove', (e) => {
+      if (touchY == null) return;
+      const dy = touchY - e.touches[0].clientY;   // positive = finger moving up = scrolling down
+      const newY = e.touches[0].clientY;
+      if (body.scrollTop > 0) { touchY = newY; return; }
+      if (dy > 0 && growSheetBy(dy)) e.preventDefault();
+      touchY = newY;   // continuous delta each move instead of accumulating from touchstart
+    }, { passive: false });
+    body.addEventListener('touchend', () => { touchY = null; });
+  }
 
   // Decide the initial height once the content has laid out, and again on resize.
   requestAnimationFrame(() => requestAnimationFrame(fitGameoverCensus));
