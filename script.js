@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.18';
+const VERSION_NUMBER = '2.13.19';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -717,8 +717,13 @@ async function enterServerDistrictPhase(state, instant = false) {
   serverState = state;
   todayDistrict.properties.state = state;        // safe: the player guessed it
   correctStateGuessed = true;
+  // Usually already resolved by the prefetch kicked off during the correct-guess
+  // celebration hold (see submitStateGuessServer), so this arms/disarms instantly with
+  // no visible flash — it only shows if that prefetch is still in flight.
+  _armGuessLagIndicator();
   try { await loadServerStateShapes(state); }
   catch (err) { console.error('stateShapes() failed:', err); }
+  finally { _disarmGuessLagIndicator(); }
 
   // Single-map model: no pre-build/cross-fade needed. lockStateDropdown() → showDistrictD3Map()
   // builds the district render directly into the shared SVG and zooms into the state.
@@ -983,6 +988,30 @@ function showBuildLoader(text = 'Loading...') {
 }
 function hideBuildLoader() { document.getElementById('build-loader')?.remove(); }
 
+// Small delayed spinner shown over the state/district picker only when a guess-related
+// network round-trip (guess submit, district-shapes fetch) is taking noticeably long —
+// e.g. a slow connection. The setTimeout delay before it's added to the DOM means the
+// common fast-response case never sees it; it only kicks in once "nothing visibly
+// happening" would otherwise read as the game being frozen.
+let _guessLagTimer = null;
+function _armGuessLagIndicator(delay = 400) {
+  clearTimeout(_guessLagTimer);
+  _guessLagTimer = setTimeout(() => {
+    const host = document.querySelector('.us-ref-map-wrap');
+    if (!host || document.getElementById('guess-lag-indicator')) return;
+    const el = document.createElement('div');
+    el.id = 'guess-lag-indicator';
+    el.className = 'guess-lag-indicator';
+    el.innerHTML = globeLoader(34);
+    host.appendChild(el);
+  }, delay);
+}
+function _disarmGuessLagIndicator() {
+  clearTimeout(_guessLagTimer);
+  _guessLagTimer = null;
+  document.getElementById('guess-lag-indicator')?.remove();
+}
+
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
 async function startServerArchive(date, num, label) {
@@ -1157,8 +1186,10 @@ async function submitStateGuessServer(abbr) {
   // No motion until the server answers: shaking on every tap meant a correct guess shook
   // first, then turned green. The dim cue above is the only optimistic feedback; the shake
   // (wrong) or green flash (correct) is applied once we know the result.
+  _armGuessLagIndicator();
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { clearDim(); return serverGuessFailed(err); }
+  catch (err) { _disarmGuessLagIndicator(); clearDim(); return serverGuessFailed(err); }
+  _disarmGuessLagIndicator();
 
   // Correct: confirm the hit first — fade the other states out to the grey basemap, fill the
   // correct state gold + stamp a checkmark, hold briefly, THEN enter the district phase
@@ -1346,8 +1377,10 @@ async function submitDistrictTileServer(dist) {
   };
 
   let resp;
+  _armGuessLagIndicator();
   try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { clearPing(); return serverGuessFailed(err); }
+  catch (err) { _disarmGuessLagIndicator(); clearPing(); return serverGuessFailed(err); }
+  _disarmGuessLagIndicator();
   clearPing();
 
   if (resp.correct) {
@@ -1922,6 +1955,10 @@ function wireGameoverCensus() {
   // back to the half-screen default instead of settling wherever the finger let go.
   let startY = null, dy = 0, startH = 0, maxH = 0;
   const onDown = (e) => {
+    // On desktop a mouse drag starting over the titlebar's text otherwise falls through
+    // to the browser's native text-selection drag (nothing to do with the sheet resize
+    // logic below) — preventDefault stops that gesture before it starts.
+    e.preventDefault();
     startY = e.clientY; dy = 0;
     startH = sheet ? sheet.getBoundingClientRect().height : 0;
     maxH = wrap.clientHeight;   // never above the header

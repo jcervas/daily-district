@@ -1870,6 +1870,26 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   .us-ref-hint .hint-mobile  { display: inline; }
 }
 
+/* Delayed spinner shown over the state/district picker only once a guess-related
+   network round-trip is taking noticeably long (armed/disarmed in script.js via
+   _armGuessLagIndicator / _disarmGuessLagIndicator) — reassures the player the game
+   is still working instead of reading as frozen on a slow connection. */
+.guess-lag-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: guess-lag-fade-in 0.25s ease-out;
+}
+.guess-lag-indicator .globe-loader {
+  background: var(--bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+@keyframes guess-lag-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 /* ---- District D3 map (replaces US map once state is confirmed) ---- */
 /* Absolutely positioned to overlay the full wrap. If it were a flex sibling of
    #us-ref-map, the two would split the wrap height 50/50 during the 370ms
@@ -2012,6 +2032,8 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   padding: 9px 0 4px;
   cursor: ns-resize;   /* drag up/down to resize the sheet */
   touch-action: none;
+  user-select: none;   /* mouse drag on desktop must resize, not text-select the page */
+  -webkit-user-select: none;
 }
 .gameover-census-grip {
   width: 38px; height: 4px; border-radius: 999px;
@@ -2026,6 +2048,8 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   padding: 2px 8px 8px 16px;
   cursor: ns-resize;   /* drag up/down to resize the sheet */
   touch-action: none;
+  user-select: none;   /* mouse drag on desktop must resize, not text-select the title/page */
+  -webkit-user-select: none;
 }
 .gameover-census-title { font-weight: 800; font-size: 0.98rem; color: var(--text); }
 .gameover-census-body {
