@@ -3052,6 +3052,22 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
    game-over ribbon's matching "View Results" button has no hover treatment at all, so
    match that instead of visibly diverging only on hover. */
 .result-modal-close.in-ribbon:hover { background: var(--accent); color: #fff; }
+/* "View District Profile" (footer) needs .modal-close for the shared close-button click
+   handler, but that generic class is otherwise built for the corner-X close button on
+   every OTHER modal (position:absolute, top-right corner, transparent/no border) — applied
+   as-is here it floated the button out of the footer entirely and over the ribbon above.
+   Reset it back to the plain .donate-btn/.result-donate-btn pill look/position it actually
+   needs, the same way .result-modal-close.in-ribbon resets it for the ribbon's own copy. */
+#result-view-profile-btn {
+  position: static;
+  top: auto; right: auto;
+  background: transparent;
+  border: 2px solid var(--cmu-red);
+  color: var(--cmu-red);
+  font-size: 0.78rem;
+  padding: 7px 16px;
+}
+#result-view-profile-btn:hover { background: var(--cmu-red); color: #fff; }
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
   /* Fill the leftover space in the result pane (the pane centers its children, so
