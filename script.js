@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.16';
+const VERSION_NUMBER = '2.13.18';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1843,16 +1843,16 @@ function buildGameoverDiv() {
           </div>
         </div>
       </div>
-      <!-- District Profile — open-by-default bottom sheet with a blurred backdrop.
-           Dismiss by swiping the sheet down or tapping the chevron; reopen via the pill. -->
+      <!-- District Profile — open-by-default bottom sheet (Instagram-style 3-position
+           sheet: collapsed / half-screen default / full-screen). Drag the handle or
+           titlebar: a full swipe up expands to full height, a full swipe down collapses
+           it (reopen via the pill); anything short of that springs back to the default
+           half-screen height — see wireGameoverCensus()'s onUp for the snap thresholds. -->
       <div id="gameover-census" class="gameover-census open" role="dialog" aria-label="District Profile">
         <section class="district-profile">
           <div class="gameover-census-handle"><span class="gameover-census-grip"></span></div>
           <div class="gameover-census-titlebar">
             <span class="gameover-census-title">District Profile</span>
-            <button type="button" class="gameover-census-close" aria-label="Minimize District Profile">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="20" height="20"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
           </div>
           <div class="gameover-census-body">
             <div id="census-header"></div>
@@ -1902,29 +1902,37 @@ function wireGameoverCensus() {
     if (sheet) { sheet.style.height = ''; sheet.style.maxHeight = ''; }
   };
 
-  wrap.querySelector('.gameover-census-close')?.addEventListener('click', close);
   wrap.querySelector('.gameover-census-reopen')?.addEventListener('click', open);
 
-  // Drag the grip handle / titlebar to RESIZE the sheet to any height (anchored at the
-  // bottom): drag up to grow, down to shrink. A tap (no real movement) toggles full /
-  // fitted height; dragging down past the minimum dismisses it.
+  // The sheet's resting "half screen" height — same measurement fitGameoverCensus() uses
+  // (content height, capped at half the available area) — used as the middle of the three
+  // snap positions (collapsed / half / full) the drag gesture below settles into.
   const handleEl = wrap.querySelector('.gameover-census-handle');
   const barEl    = wrap.querySelector('.gameover-census-titlebar');
-  let startY = null, dy = 0, startH = 0, minH = 0, maxH = 0;
+  function defaultSheetHeight() {
+    const bodyEl = wrap.querySelector('.gameover-census-body');
+    const needed = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0) + (bodyEl?.scrollHeight || 0) + 4;
+    return Math.min(needed, wrap.clientHeight * 0.5);
+  }
+
+  // Instagram-style 3-position sheet: drag the grip handle / titlebar and it tracks the
+  // finger directly (anchored at the bottom, no minimum floor — it can visually collapse
+  // toward nothing as you swipe down). On release, a FULL swipe (past the midpoint toward
+  // that extreme) snaps to full height or fully collapses; anything short of that springs
+  // back to the half-screen default instead of settling wherever the finger let go.
+  let startY = null, dy = 0, startH = 0, maxH = 0;
   const onDown = (e) => {
     startY = e.clientY; dy = 0;
     startH = sheet ? sheet.getBoundingClientRect().height : 0;
-    minH = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0);  // never below the title strip
-    maxH = wrap.clientHeight;                                           // never above the header
+    maxH = wrap.clientHeight;   // never above the header
     if (sheet) sheet.style.transition = 'none';
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
   const onMove = (e) => {
     if (startY == null || !sheet) return;
     dy = e.clientY - startY;
-    if (Math.abs(dy) < 3) return;                 // let a tap stay a tap
-    // Dragging up (dy < 0) grows the sheet; clamp to [title strip, below header].
-    const h = Math.max(minH, Math.min(maxH, startH - dy));
+    // Dragging up (dy < 0) grows the sheet; clamp to [0, below header].
+    const h = Math.max(0, Math.min(maxH, startH - dy));
     wrap.classList.add('user-sized');             // takes over from the .fits/.expanded presets
     sheet.style.maxHeight = 'none';
     sheet.style.height = `${h}px`;
@@ -1932,22 +1940,26 @@ function wireGameoverCensus() {
   const onUp = () => {
     if (startY == null) return;
     if (sheet) sheet.style.transition = '';
-    const floor = (handleEl?.offsetHeight || 0) + (barEl?.offsetHeight || 0);
-    if (Math.abs(dy) < 6) {                        // tap → toggle full / fitted, clear manual size
+    const releaseH = sheet ? sheet.getBoundingClientRect().height : 0;
+    const half    = defaultSheetHeight();
+    const midUp   = (half + maxH) / 2;   // past here on the way up → snap full
+    const midDown = half / 2;            // past here on the way down → snap closed
+    if (releaseH >= midUp) {
       if (sheet) { sheet.style.height = ''; sheet.style.maxHeight = ''; }
       wrap.classList.remove('user-sized');
-      wrap.classList.toggle('expanded');
-    } else if (sheet && dy > 0 && sheet.getBoundingClientRect().height <= floor + 8) {
-      close();                                     // dragged down to the floor → dismiss
+      wrap.classList.add('expanded');
+    } else if (releaseH <= midDown) {
+      close();
+    } else {
+      if (sheet) { sheet.style.height = ''; sheet.style.maxHeight = ''; }
+      wrap.classList.remove('user-sized', 'expanded');
+      fitGameoverCensus();
     }
     startY = null; dy = 0;
-    fitGameoverCensus();   // re-evaluate fit if we cleared the manual size
   };
-  // Drag from the grip handle and the titlebar. Ignore pointerdowns on the close
-  // button so its click still fires (setPointerCapture would otherwise swallow it).
   [wrap.querySelector('.gameover-census-handle'), wrap.querySelector('.gameover-census-titlebar')].forEach(z => {
     if (!z) return;
-    z.addEventListener('pointerdown', (e) => { if (e.target.closest('.gameover-census-close')) return; onDown(e); });
+    z.addEventListener('pointerdown', onDown);
     z.addEventListener('pointermove', onMove);
     z.addEventListener('pointerup', onUp);
     z.addEventListener('pointercancel', onUp);

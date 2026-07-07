@@ -2028,16 +2028,6 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   touch-action: none;
 }
 .gameover-census-title { font-weight: 800; font-size: 0.98rem; color: var(--text); }
-.gameover-census-close {
-  flex: 0 0 auto;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px;
-  border: none; border-radius: 50%;
-  background: var(--surface-alt);
-  color: var(--text);
-  cursor: pointer;
-}
-.gameover-census-close:hover { background: var(--border); }
 .gameover-census-body {
   flex: 1 1 auto;     /* fill the remaining sheet height so it scrolls at any dragged size */
   min-height: 0;
