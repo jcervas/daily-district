@@ -287,7 +287,7 @@ header h1 {
   min-width: 0;
 }
 /* Header action pills — Sign in + Donate: identical size, outlined red, fill on
-   hover (matches #play-again-btn). Collapse to icon circles on narrow screens
+   hover (matches #gameover-new-map-btn). Collapse to icon circles on narrow screens
    (see the mobile media query). */
 .donate-btn,
 .header-signin-btn {
@@ -1062,28 +1062,22 @@ circle.tile-ripple {
   opacity: 0.85;
   margin-top: auto;
 }
-/* Result ribbon buttons (District Profile / Share / Post / Play Archive) are plain
-   children of .banner-actions inside .gameover-ribbon banner, so they pick up the exact
-   same solid-red .banner button look the game-over ribbon's View Results/Share buttons
-   use — no dedicated sizing/shape of their own to keep the two ribbons visually identical.
-   Play Archive is the one outlined exception, matching #gameover-new-map-btn's look. */
-#play-again-btn {
-  background: transparent;
-  color: var(--accent);
-  border: 1.5px solid var(--accent);
-}
-#play-again-btn:hover { background: var(--accent); color: white; }
-/* Four buttons (vs. the game-over ribbon's three) need a bit more help staying on one
-   row: shrink a touch below the game-over ribbon's own 480px stacking breakpoint, and
-   swap in the two longest labels' short alternates (District Profile → Profile, Play
-   Archive → Archive) via ribbon-label-full/short below. flex-shrink (not wrap) lets
-   button padding/text give up space gracefully instead of ever dropping to a second row. */
-#result-modal .gameover-ribbon .banner-actions { flex-wrap: nowrap; }
-#result-modal .gameover-ribbon .banner-actions button { flex-shrink: 1; min-width: 0; white-space: nowrap; }
+/* Ribbon buttons (View Results/District Profile, Share, Post, Play Archive) are plain
+   children of .banner-actions inside .gameover-ribbon banner, picking up the solid-red
+   .banner button look by default. Play Archive is the one outlined exception — see
+   #gameover-new-map-btn below.
+   Up to four buttons (Post is hidden outside the daily result view — see buildGameoverDiv/
+   buildGameoverContent) need help staying on one row: shrink below the ribbon's own 480px
+   stacking breakpoint, and swap in the two longest labels' short alternates (District
+   Profile → Profile, Play Archive → Archive) via ribbon-label-full/short below. flex-shrink
+   (not wrap) lets button padding/text give up space gracefully instead of ever dropping to
+   a second row. */
+.gameover-ribbon .banner-actions { flex-wrap: nowrap; }
+.gameover-ribbon .banner-actions button { flex-shrink: 1; min-width: 0; white-space: nowrap; }
 .ribbon-label-short { display: none; }
 @media (max-width: 480px) {
-  #result-modal .gameover-ribbon .banner-actions { gap: 5px; }
-  #result-modal .gameover-ribbon .banner-actions button { padding: 5px 8px; font-size: 0.76rem; }
+  .gameover-ribbon .banner-actions { gap: 5px; }
+  .gameover-ribbon .banner-actions button { padding: 5px 8px; font-size: 0.76rem; }
   .ribbon-label-full { display: none; }
   .ribbon-label-short { display: inline; }
 }
@@ -3048,30 +3042,12 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
 /* Keep the text white on hover — the base .modal-close:hover sets color:var(--text),
    which turns it black on the dark pill in light mode. */
 .result-modal-close:hover { background: rgba(0, 0, 0, 0.65); color: #fff; }
-/* ...except when it lives in the result modal's top ribbon alongside the other action
-   buttons ("District Profile") — sits in normal flow there instead of overlaying the
-   preview image. .banner button (below) already wins on specificity for background/
-   color/padding/etc., so it picks up the same plain solid look as the game-over ribbon's
-   "View Results" button for free; this only needs to cancel the absolute positioning. */
-.result-modal-close.in-ribbon {
-  position: static;
-  top: auto; right: auto;
-  z-index: auto;
-  letter-spacing: normal;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-/* .result-modal-close:hover's dark-pill hover color would otherwise still win here (a
-   :hover rule outranks .banner button's plain, hover-less look on specificity) — the
-   game-over ribbon's matching "View Results" button has no hover treatment at all, so
-   match that instead of visibly diverging only on hover. */
-.result-modal-close.in-ribbon:hover { background: var(--accent); color: #fff; }
 /* "View District Profile" (footer) needs .modal-close for the shared close-button click
    handler, but that generic class is otherwise built for the corner-X close button on
    every OTHER modal (position:absolute, top-right corner, transparent/no border) — applied
    as-is here it floated the button out of the footer entirely and over the ribbon above.
    Reset it back to the plain .donate-btn/.result-donate-btn pill look/position it actually
-   needs, the same way .result-modal-close.in-ribbon resets it for the ribbon's own copy. */
+   needs. */
 #result-view-profile-btn {
   position: static;
   top: auto; right: auto;

@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.20';
+const VERSION_NUMBER = '2.13.21';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1839,9 +1839,17 @@ function buildGameoverDiv() {
         <div class="gameover-ribbon-inner">
           <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
           <div class="banner-actions">
-            <button id="gameover-result-btn">View Results</button>
-            <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
-            <button id="gameover-new-map-btn">Play Archive</button>
+            <!-- This is the ONE ribbon for both the game-over screen and the result modal —
+                 openResultModal()/revealGameoverFromResult() reparent this whole element
+                 between the two instead of each keeping its own copy. gameover-result-btn's
+                 label/action toggles between View Results (closed) and District Profile
+                 (open) accordingly (archive games get "Today's Results" instead — see
+                 buildGameoverContent's isArchiveGame branch — and never open the result
+                 modal, so the District Profile state doesn't apply there). -->
+            <button id="gameover-result-btn"><span class="ribbon-label-full">View Results</span><span class="ribbon-label-short">Results</span></button>
+            <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result as text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
+            <button id="gameover-post-btn" class="go-share-btn hidden" aria-label="Post result image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Post</button>
+            <button id="gameover-new-map-btn"><span class="ribbon-label-full">Play Archive</span><span class="ribbon-label-short">Archive</span></button>
           </div>
         </div>
       </div>
@@ -5034,11 +5042,13 @@ async function showGameoverModal() {
         `<span class="gameover-next-sub">This district was played on ${dateStr ? dateStr + ' &middot; ' : ''}</span>`;
     }
     document.getElementById('gameover-next-cta')?.classList.add('hidden');
-    const resBtn = document.getElementById('gameover-result-btn');
-    if (resBtn) resBtn.textContent = "Today's Results";
+    _setResultRibbonBtnLabel("Today's Results", 'Results');
     // Keep Share visible in archive too — the share text names the specific puzzle
     // ("Daily District No. N"), so it doesn't read as today's daily (see buildShareText).
     document.getElementById('gameover-share-btn')?.classList.remove('hidden');
+    // Post (image share) opens through the result modal, which is today-only — archive
+    // games never reach that state, so there's nothing for it to share here.
+    document.getElementById('gameover-post-btn')?.classList.add('hidden');
   } else {
     // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
     // sign-in nudge (track stats / compare); signed-in players just see the countdown.
@@ -5048,6 +5058,9 @@ async function showGameoverModal() {
       document.getElementById('login-modal')?.classList.remove('hidden');
     });
     try { startNextDistrictCountdown(); } catch (e) { reportClientError('gameover_countdown', e); }
+    // Post (image share) is only meaningful once there's a result to share as an image —
+    // reachable via the result modal, which archive games never open (see above).
+    document.getElementById('gameover-post-btn')?.classList.remove('hidden');
   }
 
   const mapWrap = document.getElementById('gameover-map-wrap');
@@ -5420,17 +5433,25 @@ function _pushSideAds() {
 // Opens the (already-populated) result modal and fires confetti once per game on a win.
 // Used by the "View Result" banner button and "Review Result" welcome-splash button —
 // the actual content is rendered ahead of time by showResult(won, false) in endGame().
+// Set the shared ribbon's toggle button label (see buildGameoverDiv) — full text for
+// wide screens, short for narrow (the existing ribbon-label-full/short breakpoint).
+function _setResultRibbonBtnLabel(full, short) {
+  const btn = document.getElementById('gameover-result-btn');
+  if (btn) btn.innerHTML = `<span class="ribbon-label-full">${full}</span><span class="ribbon-label-short">${short}</span>`;
+}
+
 function openResultModal() {
   document.querySelector('.gameover-results-arrow')?.remove();
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
   modal.classList.remove('hidden');
-  // Mirror the game-over ribbon's text ("Game over. You got it! CA-31.") into this
-  // ribbon's own span so the two read identically — #gameover-ribbon-text is only
-  // populated once a game is actually over (buildGameoverDiv's content pass).
-  const goRibbonText = document.getElementById('gameover-ribbon-text');
-  const resultRibbonText = document.getElementById('result-ribbon-text');
-  if (resultRibbonText) resultRibbonText.textContent = goRibbonText ? goRibbonText.textContent : '';
+  // The ribbon is a single shared element (see buildGameoverDiv) — move it in from the
+  // game-over screen instead of rendering a second copy, so there's never more than one
+  // on screen. revealGameoverFromResult() moves it back out when this modal closes.
+  const ribbon = document.querySelector('.gameover-ribbon');
+  const resultContent = modal.querySelector('.result-modal-content');
+  if (ribbon && resultContent) resultContent.prepend(ribbon);
+  _setResultRibbonBtnLabel('District Profile', 'Profile');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
   _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
@@ -5932,19 +5953,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('archive-close').addEventListener('click', () => {
     document.getElementById('archive-modal').classList.add('hidden');
   });
-  document.getElementById('play-again-btn').addEventListener('click', openArchive);
   document.getElementById('banner-new-map-btn').addEventListener('click', openArchive);
 
   // Game-over modal controls — delegated from document so they survive div recreation
+  // (this now includes the ribbon's Share/Post buttons too, since the ribbon itself is
+  // reparented between the game-over screen and the result modal rather than each having
+  // its own static copy — see buildGameoverDiv()/openResultModal()/revealGameoverFromResult()).
   document.addEventListener('click', e => {
     if (e.target.closest('#gameover-result-btn')) {
       // The result modal is today-only. From an archive game-over, "Today's Results"
-      // returns to the daily (no reload) and opens its result modal on arrival.
-      if (isArchiveGame) returnToTodayDaily(true);
-      else openResultModal();
+      // returns to the daily (no reload) and opens its result modal on arrival. Otherwise
+      // this one button toggles the result modal open/closed (label already reflects
+      // which — "View Results" vs "District Profile" — via openResultModal/
+      // revealGameoverFromResult).
+      if (isArchiveGame) { returnToTodayDaily(true); return; }
+      const resultModal = document.getElementById('result-modal');
+      if (resultModal.classList.contains('hidden')) openResultModal();
+      else { resultModal.classList.add('hidden'); revealGameoverFromResult(); }
       return;
     }
     if (e.target.closest('#gameover-share-btn')) { shareResultText(); return; }
+    if (e.target.closest('#gameover-post-btn')) { shareResultImage(); return; }
     if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
     const btn = e.target.closest('#gameover-modal .mzb-go');
     if (!btn || !_goZoom) return;
@@ -5959,10 +5988,6 @@ document.addEventListener('DOMContentLoaded', () => {
       _setGoCycleIcon(_goZoomLevel);                 // morph icon to the next destination
     }
   });
-
-  // Result-modal share buttons (shared logic with the game-over screen's Share/Post).
-  document.getElementById('post-x-btn').addEventListener('click', shareResultText);
-  document.getElementById('share-btn').addEventListener('click', shareResultImage);
 
   // Census cards that have an explanation (.ms-explain) toggle it open/closed when clicked
   // anywhere — single toggle source, so a second click always collapses it.
@@ -6188,6 +6213,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // reveal the game-over screen behind it and re-open the District Profile sheet.
   const revealGameoverFromResult = () => {
     document.getElementById('gameover-modal')?.classList.remove('hidden');
+    // Move the shared ribbon back out of the result modal and restore its label — the
+    // result modal is today-only, so this is always the daily (never archive) context.
+    const ribbon = document.querySelector('.gameover-ribbon');
+    const goContent = document.querySelector('#gameover-modal .gameover-modal-content');
+    if (ribbon && goContent) goContent.prepend(ribbon);
+    _setResultRibbonBtnLabel('View Results', 'Results');
     document.getElementById('gameover-census')?.classList.add('open');
     // District celebration: the boundary spark trace + (on a win) the confetti firework,
     // fired together once the player returns to the map from the result modal. rAF so the

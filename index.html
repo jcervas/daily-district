@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=202" />
+  <link rel="stylesheet" href="style.css?v=203" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -583,42 +583,9 @@
   <!-- Result modal (opens on game end or "View Result" click) -->
   <div id="result-modal" class="modal hidden">
     <div class="modal-content result-modal-content">
-      <!-- Top action ribbon — same treatment (and button styling) as the game-over screen's
-           ribbon: full-width band, centered max-width inner row, ribbon text mirrored from
-           #gameover-ribbon-text (see openResultModal()), holding every result action in one
-           place instead of buried at the bottom of the "Me" tab (the old .result-action-row). -->
-      <div class="gameover-ribbon banner">
-        <div class="gameover-ribbon-inner">
-          <span id="result-ribbon-text" class="gameover-ribbon-text"></span>
-          <div class="banner-actions">
-            <!-- Styled + labeled like the game-over ribbon's "View Results" button, since
-                 closing back to the game-over screen is exactly what it does (see the
-                 shared .modal-close handler in script.js) — that screen's District Profile
-                 sheet is where you land, hence the label. Needs .modal-close for that
-                 handler; in normal flow with the other buttons (not absolutely positioned
-                 over the district preview like every other .result-modal-close) so it can't
-                 overlap them on narrow widths now that the ribbon holds every result action. -->
-            <!-- Two labels each for District Profile / Play Archive (the two longest) — CSS
-                 swaps to the short one below 480px so all four buttons keep to one row,
-                 matching the game-over ribbon's own (3-button) row instead of wrapping. -->
-            <button class="modal-close result-modal-close in-ribbon" id="result-back-btn">
-              <span class="ribbon-label-full">District Profile</span><span class="ribbon-label-short">Profile</span>
-            </button>
-            <button id="post-x-btn" class="post-x-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-              Share
-            </button>
-            <button id="share-btn" class="post-x-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              Post
-            </button>
-            <button id="play-again-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
-              <span class="ribbon-label-full">Play Archive</span><span class="ribbon-label-short">Archive</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- No ribbon here: the game-over screen's .gameover-ribbon is the ONE ribbon element,
+           reparented into this modal (openResultModal) and back out (revealGameoverFromResult)
+           as it opens/closes, instead of a second copy kept in sync — see buildGameoverDiv(). -->
       <!-- Single district preview shared across all tabs -->
       <div id="result-district-preview"></div>
 
@@ -714,6 +681,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=21" defer></script>
 <script src="login.js?v=20" defer></script>
-<script src="script.js?v=2.13.20" defer></script>
+<script src="script.js?v=2.13.21" defer></script>
 </body>
 </html>
