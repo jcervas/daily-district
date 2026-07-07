@@ -689,8 +689,12 @@
                  data-ad-client="ca-pub-2164002681613672"
                  data-ad-slot="9215455129"></ins>
           </div>
-          <button type="button" id="result-donate-btn" class="donate-btn result-donate-btn">
-            Donate to CMU
+          <!-- Closes back to the game-over screen's District Profile sheet — same action as
+               the ribbon's "Profile" button (.modal-close), just also offered here at the
+               bottom of the results content since that's where a player reading the results
+               is most likely to want it next, instead of a donate ask. -->
+          <button type="button" id="result-view-profile-btn" class="modal-close donate-btn result-donate-btn">
+            View District Profile
           </button>
           <button id="result-feedback-btn" class="settings-link-btn"><span>Send Feedback &rsaquo;</span></button>
         </div>
@@ -710,6 +714,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=21" defer></script>
 <script src="login.js?v=20" defer></script>
-<script src="script.js?v=2.13.14" defer></script>
+<script src="script.js?v=2.13.15" defer></script>
 </body>
 </html>
