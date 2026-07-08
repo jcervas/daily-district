@@ -88,6 +88,24 @@ Body: `{ "phase":"state"|"district", "value":"NV"|"NV-02", "seconds":123 }`
 ```
 `409 already_completed` if the day is already finished.
 
+### `POST /functions/v1/send-daily-push`
+Sends the opt-in daily Web Push reminder to every row in `push_subscriptions`.
+Source lives in [supabase/functions/send-daily-push/index.ts](supabase/functions/send-daily-push/index.ts)
+(the other functions are deployed-only for now — this one is committed because a
+2026-07-08 outage showed we had no copy to debug from).
+
+- Invoked daily at **13:00 UTC (9am ET)** by the pg_cron job `invoke-send-daily-push`
+  (pg_net `http_post`). Not user-callable: `verify_jwt` is off, auth is the
+  `x-cron-secret` header checked against the `CRON_SECRET` function secret (same
+  value stored in Vault as `dd_push_cron_secret` for the cron job to read).
+- Needs `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (+ optional `VAPID_SUBJECT`)
+  function secrets. The keys are `.trim()`ed before use — the stored secrets have
+  stray whitespace that made `setVapidDetails` throw and killed every send until
+  2026-07-08.
+- Returns `{ total, sent, removed, failed, errors, puzzleDate }`; dead
+  subscriptions (404/410) are deleted. To check the last cron run:
+  `select * from net._http_response order by created desc` (rows purge after ~6h).
+
 Puzzle date is the calendar day in **America/New_York** (all players share one).
 
 ## Verified end-to-end (2026-06-22)
