@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.22';
+const VERSION_NUMBER = '2.13.23';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1835,24 +1835,6 @@ function buildGameoverDiv() {
   el.id = 'gameover-modal';
   el.innerHTML = `
     <div class="gameover-modal-content">
-      <div class="gameover-ribbon banner">
-        <div class="gameover-ribbon-inner">
-          <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
-          <div class="banner-actions">
-            <!-- This is the ONE ribbon for both the game-over screen and the result modal —
-                 openResultModal()/revealGameoverFromResult() reparent this whole element
-                 between the two instead of each keeping its own copy. gameover-result-btn's
-                 label/action toggles between View Results (closed) and District Profile
-                 (open) accordingly (archive games get "Today's Results" instead — see
-                 buildGameoverContent's isArchiveGame branch — and never open the result
-                 modal, so the District Profile state doesn't apply there). -->
-            <button id="gameover-result-btn"><span class="ribbon-label-full">View Results</span><span class="ribbon-label-short">Results</span></button>
-            <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result as text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
-            <button id="gameover-post-btn" class="go-share-btn hidden" aria-label="Post result image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Post</button>
-            <button id="gameover-new-map-btn"><span class="ribbon-label-full">Play Archive</span><span class="ribbon-label-short">Archive</span></button>
-          </div>
-        </div>
-      </div>
       <div class="gameover-card">
         <div id="gameover-next" class="gameover-next">
           <div class="gameover-card-header">
@@ -2059,7 +2041,23 @@ function destroyGameoverDiv() {
   _goZoomState = null;
   stopNextDistrictCountdown();
   document.getElementById('gameover-modal')?.remove();
+  document.getElementById('postgame-ribbon')?.classList.add('hidden');
+  _syncPostgameRibbonHeight();
 }
+
+// The shared ribbon (#postgame-ribbon, static in index.html) is position:fixed so it can
+// be full-viewport-width regardless of which screen sits beneath it — which means it no
+// longer reserves its own space in normal document flow the way an in-flow ribbon would.
+// Everything that needs to start below it (the game-over screen's own content, and every
+// .modal's padding-top) reads this custom property instead. Measured rather than hardcoded
+// because the ribbon's height varies (single row vs. the <480px stacked layout, and text
+// length), same reasoning as fitGameoverCensus()'s measured heights elsewhere in this file.
+function _syncPostgameRibbonHeight() {
+  const ribbon = document.getElementById('postgame-ribbon');
+  const h = (ribbon && !ribbon.classList.contains('hidden')) ? ribbon.getBoundingClientRect().height : 0;
+  document.documentElement.style.setProperty('--postgame-ribbon-h', `${h}px`);
+}
+window.addEventListener('resize', () => _syncPostgameRibbonHeight());
 
 // ============================================================
 //  MAP
@@ -4967,6 +4965,11 @@ async function showGameoverModal() {
   destroyGameoverDiv();
   _gameOverAnimsCallback = null;  // animations ran on district-tiles which is now gone
   buildGameoverDiv();
+  document.getElementById('postgame-ribbon')?.classList.remove('hidden');
+  // Also restore the toggle button's default label — a prior game-over could have left it
+  // on "District Profile" (result modal open) if the player started a fresh archive/daily
+  // game without going through the close path first.
+  _setResultRibbonBtnLabel('View Results', 'Results');
 
   // District Profile lives in the game-over card now — populate it once the card exists.
   if (todayDistrict) fetchAndRenderCensusPanel(districtDataFor(todayDistrict));
@@ -5071,6 +5074,11 @@ async function showGameoverModal() {
     // otherwise stay frozen at the tight remaining-districts zoom).
     try { zoomUSRefMapToValid(true); } catch (e) { reportClientError('gameover_refzoom', e); }
     if (mapWrap) mapWrap.classList.add(won ? 'gameover-win-pulse' : 'gameover-loss-shake');
+    // Ribbon text/labels/button visibility are all settled by now — measure its actual
+    // rendered height (single row vs. the <480px stacked layout) once the browser has
+    // laid it out, so #gameover-modal and every .modal can reserve exactly that much
+    // space below the fixed ribbon instead of guessing.
+    _syncPostgameRibbonHeight();
   });
 }
 
@@ -5445,12 +5453,9 @@ function openResultModal() {
   document.getElementById('gameover-census')?.classList.remove('open');
   const modal = document.getElementById('result-modal');
   modal.classList.remove('hidden');
-  // The ribbon is a single shared element (see buildGameoverDiv) — move it in from the
-  // game-over screen instead of rendering a second copy, so there's never more than one
-  // on screen. revealGameoverFromResult() moves it back out when this modal closes.
-  const ribbon = document.querySelector('.gameover-ribbon');
-  const resultContent = modal.querySelector('.result-modal-content');
-  if (ribbon && resultContent) resultContent.prepend(ribbon);
+  // #postgame-ribbon is a single, always-mounted, fixed element (see index.html) shown
+  // for the whole game-over/result experience — it never moves; only its toggle button's
+  // label changes here. revealGameoverFromResult() restores it when this modal closes.
   _setResultRibbonBtnLabel('District Profile', 'Profile');
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
@@ -5955,10 +5960,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('banner-new-map-btn').addEventListener('click', openArchive);
 
-  // Game-over modal controls — delegated from document so they survive div recreation
-  // (this now includes the ribbon's Share/Post buttons too, since the ribbon itself is
-  // reparented between the game-over screen and the result modal rather than each having
-  // its own static copy — see buildGameoverDiv()/openResultModal()/revealGameoverFromResult()).
+  // Game-over modal controls — delegated from document so they survive div recreation.
+  // The ribbon's own buttons (#gameover-result-btn/-share-btn/-post-btn/-new-map-btn) are
+  // included here too even though #postgame-ribbon is now static (not recreated) — no
+  // harm keeping them on the same delegated listener as everything else in this block.
   document.addEventListener('click', e => {
     if (e.target.closest('#gameover-result-btn')) {
       // The result modal is today-only. From an archive game-over, "Today's Results"
@@ -6213,11 +6218,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // reveal the game-over screen behind it and re-open the District Profile sheet.
   const revealGameoverFromResult = () => {
     document.getElementById('gameover-modal')?.classList.remove('hidden');
-    // Move the shared ribbon back out of the result modal and restore its label — the
+    // #postgame-ribbon never moved (see openResultModal) — just restore its label. The
     // result modal is today-only, so this is always the daily (never archive) context.
-    const ribbon = document.querySelector('.gameover-ribbon');
-    const goContent = document.querySelector('#gameover-modal .gameover-modal-content');
-    if (ribbon && goContent) goContent.prepend(ribbon);
     _setResultRibbonBtnLabel('View Results', 'Results');
     document.getElementById('gameover-census')?.classList.add('open');
     // District celebration: the boundary spark trace + (on a win) the confetti firework,

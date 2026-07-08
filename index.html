@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=204" />
+  <link rel="stylesheet" href="style.css?v=205" />
   <!-- Preload the server-mode map data so fetch starts before JS executes.
        Stage B (SERVER_MODE) ships states-only geometry + district names; the
        district topojson (districts-core / districts-overlay / counties-lines) is
@@ -81,6 +81,28 @@
     </div>
   </div>
 </header>
+
+<!-- Shared "game over" action ribbon — the ONE instance of it, static in the DOM instead
+     of being built fresh by buildGameoverDiv() or reparented between screens. Fixed right
+     below the header so it's always full-viewport-width with its own backdrop, no matter
+     which screen (game-over map or the result modal on top of it) is showing beneath it;
+     only the inner row is capped to the header's own content width. Shown/hidden and
+     populated by showGameoverModal()/destroyGameoverDiv(); its main button's label/action
+     toggles between View Results (closed) and District Profile (open) via openResultModal()/
+     revealGameoverFromResult() (archive games get "Today's Results" instead — see
+     showGameoverModal's isArchiveGame branch — and never open the result modal, so the
+     District Profile state doesn't apply there). -->
+<div id="postgame-ribbon" class="gameover-ribbon banner hidden">
+  <div class="gameover-ribbon-inner">
+    <span id="gameover-ribbon-text" class="gameover-ribbon-text"></span>
+    <div class="banner-actions">
+      <button id="gameover-result-btn"><span class="ribbon-label-full">View Results</span><span class="ribbon-label-short">Results</span></button>
+      <button id="gameover-share-btn" class="go-share-btn" aria-label="Share result as text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Share</button>
+      <button id="gameover-post-btn" class="go-share-btn hidden" aria-label="Post result image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:middle;margin-right:4px"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Post</button>
+      <button id="gameover-new-map-btn"><span class="ribbon-label-full">Play Archive</span><span class="ribbon-label-short">Archive</span></button>
+    </div>
+  </div>
+</div>
 
 <!-- Shown after "Create an account" until the confirmation email link is clicked. Signup
      with email confirmation enforced doesn't sign the player in, so without this they have
@@ -583,9 +605,9 @@
   <!-- Result modal (opens on game end or "View Result" click) -->
   <div id="result-modal" class="modal hidden">
     <div class="modal-content result-modal-content">
-      <!-- No ribbon here: the game-over screen's .gameover-ribbon is the ONE ribbon element,
-           reparented into this modal (openResultModal) and back out (revealGameoverFromResult)
-           as it opens/closes, instead of a second copy kept in sync — see buildGameoverDiv(). -->
+      <!-- No ribbon here: #postgame-ribbon (above, static) is the ONE ribbon element for
+           the whole game-over/result experience — fixed in place, never rebuilt or moved.
+           openResultModal()/revealGameoverFromResult() just toggle its button's label. -->
       <!-- Single district preview shared across all tabs -->
       <div id="result-district-preview"></div>
 
@@ -681,6 +703,6 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=21" defer></script>
 <script src="login.js?v=20" defer></script>
-<script src="script.js?v=2.13.22" defer></script>
+<script src="script.js?v=2.13.23" defer></script>
 </body>
 </html>
