@@ -2271,21 +2271,25 @@ body.dark-mode .gameover-census-reopen { color: #fff; background: rgba(22, 22, 2
 /* ===== Archive picker ===== */
 .archive-note { font-size: 0.85rem; color: var(--muted); margin: 0 0 12px; }
 .archive-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; }
-/* On desktop the 480px-wide card read as a small floating box lost against the busy
-   game-over screen behind it. Give it the same wider column `main`/the result modal get
-   at this breakpoint, and spread the month list into two columns so the extra width goes
-   toward showing more months at once instead of just stretching each row's text. The
-   calendar (day-grid) view keeps its own narrower cap below so day cells stay compact
-   squares instead of ballooning to match the card's full width. */
+/* On desktop the 480px-wide card (then a 720px one) still read as a small floating box
+   lost against the busy game-over screen behind it — scale with the viewport instead of
+   a fixed cap so it reads as genuinely large on real desktop widths, not just "less small".
+   More padding throughout gives it presence without enlarging any individual piece of
+   text. Three columns (up from two) puts the extra width toward showing more months at
+   once instead of stretching each row wider than its content needs. The calendar
+   (day-grid) view keeps its own narrower cap below so day cells stay compact squares
+   instead of ballooning to match the card's full width. */
 @media (orientation: landscape) and (min-width: 600px) {
-  .modal-content.archive-modal-content { max-width: 720px; }
+  .modal-content.archive-modal-content { max-width: min(92vw, 960px); padding: 32px; }
   .archive-list:not(.archive-calendar-view) {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     align-content: start;
-    max-height: 62vh;
+    gap: 10px;
+    max-height: 70vh;
   }
-  .archive-calendar-view { max-width: 420px; margin: 0 auto; }
+  .archive-item { padding: 14px 18px; }
+  .archive-calendar-view { max-width: 480px; margin: 0 auto; }
 }
 .archive-item {
   display: flex; align-items: center; justify-content: space-between;
@@ -2329,12 +2333,15 @@ body.dark-mode .archive-cal-cell.has-puzzle { background: rgba(44, 44, 50, 0.62)
    still blocks clicks to the background, so the scrim was only ever cosmetic. */
 #archive-modal { background: transparent; }
 
-/* Frosted-glass treatment matching the District Profile sheet (.district-profile):
-   a translucent + blurred container, with glassy list items so they stand out on it. */
+/* Frosted-glass treatment loosely matching the District Profile sheet (.district-profile),
+   but noticeably more opaque + blurred: that sheet mostly overlays a map, where a light
+   touch of translucency is fine, while this one is a wall of text (month/puzzle-count
+   list) read against a busy, colorful game-over screen — legibility needs to win out
+   over seeing much of what's behind it. */
 .modal-content.archive-modal-content {
-  background: rgba(255, 255, 255, 0.20);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.30);
   border-radius: 18px;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.10);
@@ -2348,10 +2355,10 @@ body.dark-mode .archive-cal-cell.has-puzzle { background: rgba(44, 44, 50, 0.62)
   border-color: var(--muted);
 }
 /* Dark theme: tint the glass dark so light text stays readable. */
-body.dark-mode .archive-modal-content { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+body.dark-mode .archive-modal-content { background: rgba(22, 22, 26, 0.72); border-color: rgba(255, 255, 255, 0.14); }
 body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 @media (prefers-color-scheme: dark) {
-  body:not(.light-mode) .archive-modal-content { background: rgba(22, 22, 26, 0.34); border-color: rgba(255, 255, 255, 0.14); }
+  body:not(.light-mode) .archive-modal-content { background: rgba(22, 22, 26, 0.72); border-color: rgba(255, 255, 255, 0.14); }
   body:not(.light-mode) .archive-modal-content .archive-item { background: rgba(44, 44, 50, 0.62); border-color: rgba(255, 255, 255, 0.16); }
 }
 
