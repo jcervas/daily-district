@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.35';
+const VERSION_NUMBER = '2.13.36';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1156,6 +1156,12 @@ function armGuessPendingPattern(node) {
   const r = Math.min(24, Math.min(bbox.width, bbox.height) / HEXES_ACROSS / Math.sqrt(3));
   if (!(r > 0)) return;
   const rDraw    = r * 1.00;              // full-size hexes — no honeycomb gap (edges touch)
+
+  // Palette: the state phase pends in the red tartan mix (Carnegie red base + ~16% thread
+  // flecks). Once the state is correctly guessed we're picking a DISTRICT within it — pend
+  // in solid gold (no threads) instead, so the field reads as the "unlocked" gold state.
+  const baseColor  = correctStateGuessed ? '#FDB515' : 'var(--red)';
+  const threadProb = correctStateGuessed ? 0 : GLOBE_THREAD_PROB;
   const spacingX = Math.sqrt(3) * r;
   const spacingY = 1.5 * r;
   const hexPts = (cx, cy) => {
@@ -1196,12 +1202,13 @@ function armGuessPendingPattern(node) {
     for (let x = bbox.x - spacingX; x <= bbox.x + bbox.width + spacingX; x += spacingX) {
       const cx = x + xOff, cy = y;
       const pts = hexPts(cx, cy);
-      // Tartan tile: mostly Carnegie red, ~16% a random thread color — the loader flecks.
+      // Tartan tile: mostly the base color, ~threadProb a random thread color (the loader
+      // flecks). threadProb is 0 in the district phase, so every hex is the solid gold base.
       const t = document.createElementNS(SVG_NS, 'polygon');
       t.setAttribute('points', pts);
       t.setAttribute('class', 'guess-pending-hex');
-      t.style.fill = Math.random() < GLOBE_THREAD_PROB
-        ? GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0] : 'var(--red)';
+      t.style.fill = Math.random() < threadProb
+        ? GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0] : baseColor;
       // Fill sweep from the top-right corner (same diagonal wipe as globeLoader).
       const u = (cx - bbox.x) / bbox.width, v = (cy - bbox.y) / bbox.height;
       t.style.animationDelay = `${(-(0.55 * ((1 - u) + v) + Math.random() * 0.12)).toFixed(3)}s`;
