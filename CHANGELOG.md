@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.13.41 — Automated daily X post
+
+- New `post-daily-tweet.mjs` + `.github/workflows/daily-tweet.yml`: posts today's puzzle teaser to [@daily_district_](https://x.com/daily_district_) every day at 14:00 UTC — the landscape district image (same rendering as the in-app Share image, no answer shown) plus a randomly chosen message and the puzzle number. Renders server-side from `districts-core.topojson` + `districts-overlay.topojson` using the deterministic schedule in `puzzle-schedule.mjs`. Needs `X_API_KEY` / `X_API_SECRET` / `X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET` repo secrets; supports a dry-run mode (`DRY_RUN=1` locally, or the workflow_dispatch "dry run" input, which uploads the PNG as an artifact instead of posting).
+- Added a root `package.json` — dependencies are for the automation script only; the site itself remains static and dependency-free.
+
 ## v2.13.12 — Fix push opt-in modal + Settings toggle polish
 
 - Fixed the "Add to Home Screen" instructions / notification opt-in modal rendering behind the game-over/result modal (it was missing from the header-modal z-index tier) — it's now always visible when shown.

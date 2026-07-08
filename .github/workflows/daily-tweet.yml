@@ -1,0 +1,43 @@
+# Posts the daily puzzle teaser (district image + random message) to
+# https://x.com/daily_district_ via post-daily-tweet.mjs.
+#
+# Requires repo secrets from an X developer app (Read + Write) authorized
+# on the @daily_district_ account:
+#   X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+name: Daily X post
+
+on:
+  schedule:
+    # 14:00 UTC = 10:00 AM ET during daylight saving, 9:00 AM ET in winter.
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Render the image only — do not post'
+        type: boolean
+        default: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Render and post
+        run: node post-daily-tweet.mjs
+        env:
+          DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '' }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      - name: Upload preview (dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-tweet-preview
+          path: daily-tweet-preview.png
