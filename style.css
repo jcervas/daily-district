@@ -1943,7 +1943,12 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   flex-shrink: 0;
   width: 100%;
   display: block;        /* override .banner's flex — the inner row is the flex container */
-  margin: 0;
+  /* Vertical breathing room above/below the band (horizontal stays 0 so it's still
+     full-bleed edge to edge) — also makes the border-top below actually read as a
+     line instead of sitting flush against the header's own border-bottom. Included
+     in _syncPostgameRibbonHeight()'s measurement, so content below still lands
+     exactly at the margin box's bottom edge with no gap or overlap. */
+  margin: 10px 0;
   padding: 0;
   border: none;
   border-bottom: 1px solid var(--banner-border);

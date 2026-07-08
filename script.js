@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.23';
+const VERSION_NUMBER = '2.13.24';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -2054,7 +2054,14 @@ function destroyGameoverDiv() {
 // length), same reasoning as fitGameoverCensus()'s measured heights elsewhere in this file.
 function _syncPostgameRibbonHeight() {
   const ribbon = document.getElementById('postgame-ribbon');
-  const h = (ribbon && !ribbon.classList.contains('hidden')) ? ribbon.getBoundingClientRect().height : 0;
+  let h = 0;
+  if (ribbon && !ribbon.classList.contains('hidden')) {
+    // getBoundingClientRect() is the border box only — add the top/bottom margin (the
+    // 10px breathing room around the band) so the full span from `top: var(--header-h)`
+    // to where content below should start is reserved, not just the visible band itself.
+    const cs = getComputedStyle(ribbon);
+    h = (parseFloat(cs.marginTop) || 0) + ribbon.getBoundingClientRect().height + (parseFloat(cs.marginBottom) || 0);
+  }
   document.documentElement.style.setProperty('--postgame-ribbon-h', `${h}px`);
 }
 window.addEventListener('resize', () => _syncPostgameRibbonHeight());
