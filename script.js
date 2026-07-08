@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.36';
+const VERSION_NUMBER = '2.13.37';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -3457,14 +3457,14 @@ const STATE_COLOR = {
   light: {
     valid:     { fill: '#d4606e', opacity: 1.0 },   // saturated salmon-red — clearly "in play"
     elim:      { fill: '#b8bcc4', opacity: 1.0 },   // blue-gray — clearly "out"
-    confirmed: { fill: '#C41230', opacity: 1.0 },   // solid CMU red — the answer
+    confirmed: { fill: '#FDB515', opacity: 1.0 },   // CMU gold — the answer (matches the correct-guess reveal)
     hover:     '#a01025',                            // darker red — clear interactive feedback
   },
   // Dark mode
   dark: {
     valid:     { fill: '#9b2d3e', opacity: 1.0 },   // medium crimson — warm on dark bg
     elim:      { fill: '#48484a', opacity: 1.0 },   // dark gray — clearly inactive
-    confirmed: { fill: '#e8314a', opacity: 1.0 },   // bright red — pops on dark bg
+    confirmed: { fill: '#FDB515', opacity: 1.0 },   // CMU gold — the answer (matches the correct-guess reveal)
     hover:     '#ff4d62',                            // bright pink-red — obvious on dark
   },
 };
@@ -4705,7 +4705,9 @@ function _drawGameplayTiles(ctx) {
     const fillColor = d.isCorrect ? c.confirmed.fill
                     : d.isCold   ? c.elim.fill
                     : c.valid.fill;   // in-play and hot share the valid color (hot is dimmed via opacity)
-    const textColor = (d.isCold && !dark) ? '#888' : '#fff';
+    // Answer tile is gold (confirmed) — needs dark text like the correct-guess reveal's
+    // checkmark (#1a1a1a); white would be unreadable on gold. Others keep white / cold-grey.
+    const textColor = d.isCorrect ? '#1a1a1a' : (d.isCold && !dark) ? '#888' : '#fff';
     const opacity   = d.isCold ? 0.18 : d.isHot ? 0.32 : 1;
 
     const grp = iconG.append('g')
