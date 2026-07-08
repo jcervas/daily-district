@@ -66,8 +66,23 @@ Telemetry can be gated behind login or a consent toggle if preferred.
 
 ## Edge Functions
 
+Source for every deployed function is committed under
+[supabase/functions/](supabase/functions/) (one `index.ts` per function) — keep it
+in sync when redeploying.
+
+### Admin loaders: `load-puzzles`, `load-geometries`
+One-shot loaders that (re)populate `puzzles` / `district_geometries`. Guarded by a
+`?secret=` query param checked against the **`LOAD_SECRET` function secret**
+(Dashboard → Edge Functions → Secrets). The secret is NOT set yet after the
+2026-07-08 rotation (the old value was hardcoded in the function source and had to
+go before committing the source publicly), so both loaders currently return 403 —
+set `LOAD_SECRET` before the next seeding run, or load via SQL instead
+(`seed-puzzles.mjs` can emit upsert SQL).
+
 ### `POST /functions/v1/today`
-Returns the current puzzle for the signed-in user.
+Returns the current puzzle for the signed-in user. Playtest accounts allowed to
+reset their own daily result come from the **`TEST_EMAILS` function secret**
+(comma-separated addresses — kept out of the public repo; unset = no testers).
 ```json
 { "date":"2026-06-22", "puzzleNumber":519,
   "clues":[{"icon","label","value"}, ...],   // only unlocked-so-far
@@ -90,9 +105,6 @@ Body: `{ "phase":"state"|"district", "value":"NV"|"NV-02", "seconds":123 }`
 
 ### `POST /functions/v1/send-daily-push`
 Sends the opt-in daily Web Push reminder to every row in `push_subscriptions`.
-Source lives in [supabase/functions/send-daily-push/index.ts](supabase/functions/send-daily-push/index.ts)
-(the other functions are deployed-only for now — this one is committed because a
-2026-07-08 outage showed we had no copy to debug from).
 
 - Invoked daily at **13:00 UTC (9am ET)** by the pg_cron job `invoke-send-daily-push`
   (pg_net `http_post`). Not user-callable: `verify_jwt` is off, auth is the
