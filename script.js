@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.25';
+const VERSION_NUMBER = '2.13.26';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5053,11 +5053,10 @@ async function showGameoverModal() {
     }
     document.getElementById('gameover-next-cta')?.classList.add('hidden');
     _setResultRibbonBtnLabel("Today's Results", 'Results');
-    // Keep Share visible in archive too — the share text names the specific puzzle
-    // ("Daily District No. N"), so it doesn't read as today's daily (see buildShareText).
-    document.getElementById('gameover-share-btn')?.classList.remove('hidden');
-    // Post (image share) opens through the result modal, which is today-only — archive
-    // games never reach that state, so there's nothing for it to share here.
+    // Archive replays are unofficial and unsaved — don't let players share/post them as
+    // if they were a result worth bragging about, or risk a casual viewer skimming past
+    // a shared archive result as if it were today's puzzle.
+    document.getElementById('gameover-share-btn')?.classList.add('hidden');
     document.getElementById('gameover-post-btn')?.classList.add('hidden');
   } else {
     // "New district at midnight ET" ribbon + countdown. Anonymous players also get a
@@ -5068,8 +5067,9 @@ async function showGameoverModal() {
       document.getElementById('login-modal')?.classList.remove('hidden');
     });
     try { startNextDistrictCountdown(); } catch (e) { reportClientError('gameover_countdown', e); }
-    // Post (image share) is only meaningful once there's a result to share as an image —
-    // reachable via the result modal, which archive games never open (see above).
+    // Undo the archive branch's hiding of both — a player could reach this branch right
+    // after an archive game-over (e.g. via "Today's Results"), where they were hidden.
+    document.getElementById('gameover-share-btn')?.classList.remove('hidden');
     document.getElementById('gameover-post-btn')?.classList.remove('hidden');
   }
 
@@ -5585,11 +5585,9 @@ function buildShareText() {
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
   // Differentiate a hard-mode game (shape only — no terrain/hints during play).
   const hardTag = gameHardMode ? ' 🔒 Hard mode' : '';
-  // Archive replays name the specific past puzzle so the share doesn't read as today's daily.
-  const title = (isArchiveGame && serverArchive?.puzzleNumber != null)
-    ? `Daily District No. ${serverArchive.puzzleNumber}`
-    : 'Daily District';
-  return `🗺️ ${title} — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
+  // Archive games never reach this — both share buttons are hidden during archive play
+  // (see showGameoverModal's isArchiveGame branch), so this is always today's daily.
+  return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
 }
 
 // Share the result as text + a landscape map image via the Web Share API; falls back to
