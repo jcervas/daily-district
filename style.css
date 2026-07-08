@@ -3106,8 +3106,27 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
   color: var(--cmu-red);
   font-size: 0.78rem;
   padding: 7px 16px;
+  /* This is the only visible hint that the game-over map + District Profile sheet are
+     sitting right behind the result modal (mobile especially — the modal covers the
+     full screen there, so there's no glimpse of it like the gutters give on desktop).
+     A slow, continuous glow keeps drawing the eye back to it for as long as the modal
+     stays open, the same way .gameover-results-arrow pulses forever rather than just
+     flashing once on arrival. */
+  animation: result-profile-glow 2.2s ease-in-out infinite;
 }
-#result-view-profile-btn:hover { background: var(--cmu-red); color: #fff; }
+#result-view-profile-btn:hover {
+  background: var(--cmu-red);
+  color: #fff;
+  animation-play-state: paused;
+  box-shadow: none;
+}
+@keyframes result-profile-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 18, 48, 0.45); }
+  50%      { box-shadow: 0 0 14px 4px rgba(196, 18, 48, 0.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #result-view-profile-btn { animation: none; }
+}
 /* Ad placeholder — only shown to not-signed-in players (toggled in JS). */
 .result-ad {
   /* Fill the leftover space in the result pane (the pane centers its children, so
