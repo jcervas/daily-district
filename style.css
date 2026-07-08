@@ -1090,6 +1090,13 @@ circle.tile-ripple {
   .ribbon-label-full { display: none; }
   .ribbon-label-short { display: inline; }
 }
+/* Very narrow phones (≤360px, e.g. iPhone SE): the longest label ("Today's District")
+   can't shrink its text, so tighten the whole row a touch more so all four buttons still
+   fit on one line instead of the last one ("Archive") clipping at the ribbon's edge. */
+@media (max-width: 360px) {
+  .gameover-ribbon .banner-actions { gap: 4px; }
+  .gameover-ribbon .banner-actions button { padding: 5px 6px; font-size: 0.7rem; }
+}
 #share-copied {
   font-size: 0.85rem;
   color: var(--green);
