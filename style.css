@@ -1569,6 +1569,26 @@ body.dark-mode .globe-loader .shade polygon { fill: none; }
 }
 @media (prefers-reduced-motion: reduce) { .globe-loader .tiles polygon { animation-play-state: paused; } }
 
+/* Guess-pending hex pattern — fills the tapped state/district-tile shape while its /guess
+   round-trip is in flight (see armGuessPendingPattern() in script.js), instead of a
+   separate floating spinner. Same hex motif as globeLoader() so the "this is loading"
+   language stays consistent app-wide, but opacity-only (no transform: scale() like
+   gl-fill uses) — a transform on a <polygon> tiled via <pattern> resolves its fill-box
+   against the untiled shape and visibly tears each repeat instead of scaling in place. */
+.guess-pending-hex {
+  fill: var(--red);
+  opacity: 0;
+  animation: guess-pending-pulse 1.4s linear infinite;
+}
+@keyframes guess-pending-pulse {
+  0%   { opacity: 0; }
+  7%   { opacity: 1; }
+  60%  { opacity: 1; }
+  74%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .guess-pending-hex { animation-play-state: paused; opacity: 0.6; } }
+
 /* ---- Personal stats ---- */
 .personal-grid {
   display: grid;

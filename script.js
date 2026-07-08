@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.29';
+const VERSION_NUMBER = '2.13.30';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1117,6 +1117,55 @@ function serverGuessFailed(err) {
   return initServer();
 }
 
+// Fills the tapped state/district-tile shape with a pulsing hex pattern while its /guess
+// round-trip is in flight — only the tapped shape gets this; every other state/tile keeps
+// dimming exactly as it already did. Returns nothing; the caller doesn't need to disarm it
+// explicitly because every resolution path (correct/wrong/network-error) already overwrites
+// `fill` with a solid color right after — for tiles that happens via the tile-correct-pop/
+// tile-wrong-shake CSS classes (an author-stylesheet `fill` wins over the presentation
+// attribute set here), for states via the existing #FDB515/#C41230 .attr('fill', …) calls,
+// and on error via _applyStateStyle()/the caller's own fill restore.
+const GUESS_PENDING_PATTERN_ID = 'guess-pending-pattern';
+function armGuessPendingPattern(node) {
+  if (!node || !usRefSvgSel) return;
+  let bbox;
+  try { bbox = node.getBBox(); } catch { return; }   // detached/zero-size node — skip
+  if (!bbox || !bbox.width || !bbox.height) return;
+
+  // Hex circumradius: aim for ~4 hexes across the shape's smaller dimension so a tiny
+  // district-tile circle and a huge state like Texas both read as "tiled", not a single
+  // giant hex or an unreadably fine grid. Clamped so neither extreme looks broken.
+  const r = Math.max(4, Math.min(26, Math.min(bbox.width, bbox.height) / 4 / Math.sqrt(3)));
+  const tileW = Math.sqrt(3) * r;
+  const tileH = 3 * r;
+  const hexPoints = (cx, cy) => {
+    let pts = '';
+    for (let i = 0; i < 6; i++) {
+      const ang = (-90 + i * 60) * Math.PI / 180;
+      pts += `${(cx + r * Math.cos(ang)).toFixed(2)},${(cy + r * Math.sin(ang)).toFixed(2)} `;
+    }
+    return pts.trim();
+  };
+
+  let defs = usRefSvgSel.select('defs');
+  if (defs.empty()) defs = usRefSvgSel.insert('defs', ':first-child');
+  let pattern = defs.select(`#${GUESS_PENDING_PATTERN_ID}`);
+  if (pattern.empty()) pattern = defs.append('pattern').attr('id', GUESS_PENDING_PATTERN_ID);
+  pattern
+    .attr('patternUnits', 'userSpaceOnUse')
+    .attr('width', tileW)
+    .attr('height', tileH)
+    .html('');   // clear any previous (differently-sized) hexes before rebuilding
+  // Two hexes per tile, one per honeycomb row, each on its own animation offset so the
+  // fill reads as a loose sweep rather than every cell pulsing in lockstep.
+  pattern.append('polygon').attr('class', 'guess-pending-hex')
+    .attr('points', hexPoints(0, 0)).style('animation-delay', '0s');
+  pattern.append('polygon').attr('class', 'guess-pending-hex')
+    .attr('points', hexPoints(tileW / 2, 1.5 * r)).style('animation-delay', '-0.7s');
+
+  d3.select(node).attr('fill', `url(#${GUESS_PENDING_PATTERN_ID})`);
+}
+
 // ── State guess via /guess ──────────────────────────────────────
 async function submitStateGuessServer(abbr) {
   _guessLocked = true;
@@ -1144,6 +1193,7 @@ async function submitStateGuessServer(abbr) {
     co.group.style('opacity', (isNaN(cur) ? 1 : cur) * DIM_FACTOR);
   }
   pressedEl?.raise();
+  if (pressedEl) armGuessPendingPattern(pressedEl.node());
   _setStatePickInteractive(false);
   // Restore each state + callout's proper style + interaction (network failure / wrong guess).
   const clearDim = () => {
@@ -1330,10 +1380,12 @@ async function submitDistrictTileServer(dist) {
   const tilesEl     = document.getElementById('us-ref-map');   // tiles live in the shared map now
   const clickedTile = tilesEl?.querySelector(`g.district-tile[data-dist="${dist}"]`);
   const tileCircle  = clickedTile?.querySelector('circle');
+  const tileOrigFill = tileCircle?.getAttribute('fill') || null;
   let rippleLayer = null, globeHost = null;
   if (clickedTile && tileCircle) {
     clickedTile.classList.add('tile-active');
     tilesEl.classList.add('tiles-pinging');
+    armGuessPendingPattern(tileCircle);
     if (TILE_PING_MODE === 'globe') globeHost = startTileGlobe(tileCircle);
     else if (TILE_PING_MODE === 'ripple') rippleLayer = startTileRipple(clickedTile, tileCircle);
     // default 'none' → just the dim of the other tiles, no ping animation
@@ -1343,6 +1395,10 @@ async function submitDistrictTileServer(dist) {
     tilesEl.classList.remove('tiles-pinging');
     rippleLayer?.remove();
     globeHost?.remove();
+    // Correct/wrong resolve the tile's color via the tile-correct-pop/tile-wrong-shake
+    // CSS classes regardless of this attribute — only needed to undo the pending pattern
+    // on a network error, where neither of those classes ever gets added.
+    if (tileCircle && tileOrigFill) tileCircle.setAttribute('fill', tileOrigFill);
   };
 
   let resp;
