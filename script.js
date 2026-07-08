@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.32';
+const VERSION_NUMBER = '2.13.34';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1117,83 +1117,131 @@ function serverGuessFailed(err) {
   return initServer();
 }
 
-// Fills the tapped state/district-tile shape with the globeLoader() tiled-hex look
-// (same GLOBE_THREADS/GLOBE_THREAD_PROB tartan mix, at the same default probability)
-// while its /guess round-trip is in flight — only the tapped shape gets this; every
-// other state/tile keeps dimming exactly as it already did. resolveGuessPendingPattern()
-// below handles transitioning it to a solid color once the answer is known; on a network
-// error the caller's own fill restore (clearDim()/clearPing()'s tileOrigFill) cleans it up.
-const GUESS_PENDING_PATTERN_ID = 'guess-pending-pattern';
+// Overlays the tapped state/district-tile shape with the globeLoader() tiled-hex globe —
+// individual gap-separated hexes (honeycomb) laid across the shape's bounding box, clipped
+// to the shape, in the same GLOBE_THREADS/GLOBE_THREAD_PROB tartan mix, animated with the
+// same gl-fill sweep, plus a rim shade layer for the spherical vignette — so a district-tile
+// circle reads as the loader's globe disc. Only the tapped shape gets this; every other
+// state/tile keeps dimming as before. A tiling <pattern> can't do the per-hex randomness or
+// the vignette (it just repeats one small cell with no notion of a center), which is why
+// this builds an actual clipped hex field the way globeLoader() itself does.
+//
+// resolveGuessPendingPattern() recolors the field to a solid gold/red honeycomb once the
+// answer is known; the imminent board re-render (processState/DistrictGuessServer) wipes it,
+// with _clearGuessPending() as a belt-and-suspenders cleanup on every path.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const _guessPendingGroups = new WeakMap();   // node → its overlay <g>
+let _guessPendingSeq = 0;
+
+function _clearGuessPending() {
+  document.querySelectorAll('.guess-pending-group').forEach(g => g.remove());
+  document.querySelectorAll('clipPath[id^="guess-clip-"]').forEach(c => c.remove());
+}
+
 function armGuessPendingPattern(node) {
-  if (!node || !usRefSvgSel) return;
+  if (!node) return;
+  const svg = node.ownerSVGElement || (node.closest && node.closest('svg'));
+  if (!svg) return;
   let bbox;
   try { bbox = node.getBBox(); } catch { return; }   // detached/zero-size node — skip
   if (!bbox || !bbox.width || !bbox.height) return;
+  _clearGuessPending();   // never leave a stale overlay from a prior tap
 
-  // Hex circumradius: aim for ~4 hexes across the shape's smaller dimension so a tiny
-  // district-tile circle and a huge state like Texas both read as "tiled", not a single
-  // giant hex or an unreadably fine grid. Clamped so neither extreme looks broken.
-  const r = Math.max(4, Math.min(22, Math.min(bbox.width, bbox.height) / 4 / Math.sqrt(3)));
-  const hexPoints = (cx, cy) => {
-    let pts = '';
+  // Hex circumradius sized PROPORTIONAL to the shape (no absolute-unit floor): a district
+  // tile circle sits in a heavily counter-scaled coordinate space where it's only a few
+  // user-units across, so an absolute floor would make one hex bigger than the whole circle
+  // (the earlier "weird blob"). ~9 hexes across the smaller dimension reads as the fine
+  // honeycomb of the loader; the upper cap only guards a single huge state.
+  const HEXES_ACROSS = 9;
+  const r = Math.min(24, Math.min(bbox.width, bbox.height) / HEXES_ACROSS / Math.sqrt(3));
+  if (!(r > 0)) return;
+  const rDraw    = r * 0.82;              // shrink so adjacent hexes leave the honeycomb gap
+  const spacingX = Math.sqrt(3) * r;
+  const spacingY = 1.5 * r;
+  const hexPts = (cx, cy) => {
+    let p = '';
     for (let i = 0; i < 6; i++) {
       const ang = (-90 + i * 60) * Math.PI / 180;
-      pts += `${(cx + r * Math.cos(ang)).toFixed(2)},${(cy + r * Math.sin(ang)).toFixed(2)} `;
+      p += `${(cx + rDraw * Math.cos(ang)).toFixed(2)},${(cy + rDraw * Math.sin(ang)).toFixed(2)} `;
     }
-    return pts.trim();
+    return p.trim();
   };
 
-  // A single 2-hex tile (like the old version) tartan-colored would just repeat the same
-  // 2 random colors everywhere — obviously patterned rather than a loose scatter. Use a
-  // 2×4 grid of independently-rolled hexes per tile instead, same tiling math (row height
-  // 1.5r, alternate rows offset by half a column) just carried on for 4 rows before the
-  // tile repeats, so the repetition is far less noticeable.
-  const COLS = 2, ROWS = 4;
-  const tileW = COLS * Math.sqrt(3) * r;
-  const tileH = ROWS * 1.5 * r;
+  // Clip the hex field to a bare clone of the shape (geometry only). Inserted as a sibling
+  // right after `node` in the same parent, so the clone's coords line up with the field's.
+  const clipId = `guess-clip-${++_guessPendingSeq}`;
+  let defs = svg.querySelector('defs');
+  if (!defs) { defs = document.createElementNS(SVG_NS, 'defs'); svg.insertBefore(defs, svg.firstChild); }
+  const clip = document.createElementNS(SVG_NS, 'clipPath');
+  clip.setAttribute('id', clipId);
+  clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const clone = node.cloneNode(false);
+  ['class', 'id', 'style', 'fill', 'filter', 'stroke'].forEach(a => clone.removeAttribute(a));
+  clip.appendChild(clone);
+  defs.appendChild(clip);
 
-  let defs = usRefSvgSel.select('defs');
-  if (defs.empty()) defs = usRefSvgSel.insert('defs', ':first-child');
-  let pattern = defs.select(`#${GUESS_PENDING_PATTERN_ID}`);
-  if (pattern.empty()) pattern = defs.append('pattern').attr('id', GUESS_PENDING_PATTERN_ID);
-  pattern
-    .attr('patternUnits', 'userSpaceOnUse')
-    .attr('width', tileW)
-    .attr('height', tileH)
-    .html('');   // clear any previous (differently-sized/colored) hexes before rebuilding
+  const group = document.createElementNS(SVG_NS, 'g');
+  group.setAttribute('class', 'guess-pending-group');
+  group.setAttribute('clip-path', `url(#${clipId})`);
+  group.setAttribute('pointer-events', 'none');
+  const tilesG = document.createElementNS(SVG_NS, 'g'); tilesG.setAttribute('class', 'gp-tiles');
+  const shadeG = document.createElementNS(SVG_NS, 'g'); shadeG.setAttribute('class', 'gp-shade');
 
-  for (let row = 0; row < ROWS; row++) {
-    const rowOffset = (row % 2) ? Math.sqrt(3) * r / 2 : 0;
-    for (let col = 0; col < COLS; col++) {
-      const fill = Math.random() < GLOBE_THREAD_PROB
+  const cx0 = bbox.x + bbox.width / 2, cy0 = bbox.y + bbox.height / 2;
+  const rad = Math.hypot(bbox.width, bbox.height) / 2 || 1;
+
+  let rowIdx = 0;
+  for (let y = bbox.y - spacingY; y <= bbox.y + bbox.height + spacingY; y += spacingY, rowIdx++) {
+    const xOff = (rowIdx % 2) ? spacingX / 2 : 0;
+    for (let x = bbox.x - spacingX; x <= bbox.x + bbox.width + spacingX; x += spacingX) {
+      const cx = x + xOff, cy = y;
+      const pts = hexPts(cx, cy);
+      // Tartan tile: mostly Carnegie red, ~16% a random thread color — the loader flecks.
+      const t = document.createElementNS(SVG_NS, 'polygon');
+      t.setAttribute('points', pts);
+      t.setAttribute('class', 'guess-pending-hex');
+      t.style.fill = Math.random() < GLOBE_THREAD_PROB
         ? GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0] : 'var(--red)';
-      pattern.append('polygon').attr('class', 'guess-pending-hex')
-        .attr('points', hexPoints(col * Math.sqrt(3) * r + rowOffset, row * 1.5 * r))
-        .style('fill', fill)
-        .style('animation-delay', `${(-Math.random() * 1.4).toFixed(2)}s`);
+      // Fill sweep from the top-right corner (same diagonal wipe as globeLoader).
+      const u = (cx - bbox.x) / bbox.width, v = (cy - bbox.y) / bbox.height;
+      t.style.animationDelay = `${(-(0.55 * ((1 - u) + v) + Math.random() * 0.12)).toFixed(3)}s`;
+      tilesG.appendChild(t);
+      // Rim shade: bg-colored hexes whose opacity ramps 0 (center) → ~0.55 (rim), the
+      // vignette that makes a circular tile read as a lit sphere.
+      const op = Math.max(0, Math.min(1, (Math.hypot(cx - cx0, cy - cy0) / rad - 0.4) / 0.5)) * 0.55;
+      if (op > 0.02) {
+        const s = document.createElementNS(SVG_NS, 'polygon');
+        s.setAttribute('points', pts);
+        s.setAttribute('class', 'guess-pending-shade');
+        s.style.opacity = op.toFixed(3);
+        shadeG.appendChild(s);
+      }
     }
   }
-
-  d3.select(node).attr('fill', `url(#${GUESS_PENDING_PATTERN_ID})`);
+  group.appendChild(tilesG);
+  group.appendChild(shadeG);
+  node.parentNode.insertBefore(group, node.nextSibling);
+  _guessPendingGroups.set(node, group);
 }
 
-// Transitions the pending pattern's hexes to a solid color — gold on a correct guess,
-// CMU red on a wrong one — then swaps the shape's own fill to that literal color once the
-// transition finishes, so it reads as a normal solid fill afterward instead of staying a
-// (now uniformly-colored) pattern. district-tile correct/wrong already have their own
-// richer reveal (tile-correct-pop/tile-wrong-shake, which starts from red and CSS-animates
-// to gold on its own) — call this for those too so the tartan settles before that kicks in,
-// but the pop/shake animation is what actually carries the red→gold motion there.
+// Settles the pending globe into a solid honeycomb — gold on a correct guess, CMU red on a
+// wrong one: recolor every tile, stop the pulse and hold it solid, and fade the vignette
+// out. Left in place (not removed) so the honeycomb reads for the celebration beat; the
+// board re-render that follows shortly (plus _clearGuessPending) removes it.
 function resolveGuessPendingPattern(node, correct) {
+  const group = node && _guessPendingGroups.get(node);
+  if (!group) return;
   const color = correct ? '#FDB515' : '#C41230';
-  const hexes = document.querySelectorAll(`#${GUESS_PENDING_PATTERN_ID} .guess-pending-hex`);
-  hexes.forEach(hex => {
-    hex.style.transition = 'fill 0.3s ease';
-    hex.style.animation = 'none';
-    hex.style.opacity = '1';
-    hex.style.fill = color;
+  group.querySelectorAll('.guess-pending-hex').forEach(h => {
+    h.style.transition = 'fill 0.3s ease, opacity 0.3s ease';
+    h.style.animation = 'none';
+    h.style.opacity = '1';
+    h.style.fill = color;
   });
-  if (node) setTimeout(() => { d3.select(node).attr('fill', color); }, 300);
+  group.querySelectorAll('.guess-pending-shade').forEach(s => {
+    s.style.transition = 'opacity 0.3s ease';
+    s.style.opacity = '0';
+  });
 }
 
 // ── State guess via /guess ──────────────────────────────────────
@@ -1227,6 +1275,7 @@ async function submitStateGuessServer(abbr) {
   _setStatePickInteractive(false);
   // Restore each state + callout's proper style + interaction (network failure / wrong guess).
   const clearDim = () => {
+    _clearGuessPending();
     _setStatePickInteractive(true);
     for (const [a, el] of Object.entries(usRefLayers)) _applyStateStyle(el, a);
     for (const a of Object.keys(usRefCallouts)) _applyCalloutStyle(a);
@@ -1288,6 +1337,7 @@ async function submitStateGuessServer(abbr) {
 }
 
 function processStateGuessServer(abbr, resp) {
+  _clearGuessPending();   // the board re-render below replaces the map — drop the overlay first
   serverPuzzle.clues = resp.clues || serverPuzzle.clues;
   if (resp.cluesTotal != null) serverPuzzle.cluesTotal = resp.cluesTotal;
   guessHistory.push({ text: abbr, correct: !!resp.correct, phase: 'state', adjacent: !!resp.adjacent });
@@ -1447,7 +1497,7 @@ async function submitDistrictTileServer(dist) {
   let resp;
   const pendingSince = performance.now();
   try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds, anonGuessOpts()); }
-  catch (err) { clearPing(); return serverGuessFailed(err); }
+  catch (err) { clearPing(); _clearGuessPending(); return serverGuessFailed(err); }
   // Same minimum pending beat as the state guess: keep the pulsing tartan visible even
   // when the answer comes back instantly (archive) or near-instantly (fast connection).
   const holdLeft = 600 - (performance.now() - pendingSince);
@@ -1487,6 +1537,7 @@ async function submitDistrictTileServer(dist) {
 }
 
 function processDistrictGuessServer(dist, fullGuess, resp) {
+  _clearGuessPending();   // the board re-render / game-over transition below replaces the tiles
   serverPuzzle.clues = resp.clues || serverPuzzle.clues;
   if (resp.cluesTotal != null) serverPuzzle.cluesTotal = resp.cluesTotal;
   guessHistory.push({ text: fullGuess, correct: !!resp.correct, phase: 'district', adjacent: !!resp.adjacent });
