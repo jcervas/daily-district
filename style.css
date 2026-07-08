@@ -1943,16 +1943,18 @@ body.light-mode .state-chip { background: #e5e5ea; color: var(--muted); }
   flex-shrink: 0;
   width: 100%;
   display: block;        /* override .banner's flex — the inner row is the flex container */
-  /* Vertical breathing room above/below the band (horizontal stays 0 so it's still
-     full-bleed edge to edge) — also makes the border-top below actually read as a
-     line instead of sitting flush against the header's own border-bottom. Included
-     in _syncPostgameRibbonHeight()'s measurement, so content below still lands
-     exactly at the margin box's bottom edge with no gap or overlap. */
-  margin: 10px 0;
+  margin: 0;
   padding: 0;
   border: none;
   border-bottom: 1px solid var(--banner-border);
-  border-top: 1px solid var(--banner-border);
+  /* A real margin here would be transparent — showing whatever happens to be behind the
+     ribbon at that screen position (a modal's dark scrim, if one's open), which reads as
+     a stray gray gap rather than an intentional part of the design. An opaque border in
+     --bg (the screen's own background color) instead reads as the ribbon being gently
+     inset from the header, as if it belongs to the screen below rather than floating
+     independently of it. Counted for free in _syncPostgameRibbonHeight()'s measurement
+     (getBoundingClientRect() is the border box), unlike a margin would've been. */
+  border-top: 5px solid var(--bg);
   border-radius: 0;
   background: var(--banner-bg);
 }
