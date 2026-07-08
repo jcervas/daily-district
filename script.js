@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.34';
+const VERSION_NUMBER = '2.13.35';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1150,12 +1150,12 @@ function armGuessPendingPattern(node) {
   // Hex circumradius sized PROPORTIONAL to the shape (no absolute-unit floor): a district
   // tile circle sits in a heavily counter-scaled coordinate space where it's only a few
   // user-units across, so an absolute floor would make one hex bigger than the whole circle
-  // (the earlier "weird blob"). ~9 hexes across the smaller dimension reads as the fine
-  // honeycomb of the loader; the upper cap only guards a single huge state.
-  const HEXES_ACROSS = 9;
+  // (the earlier "weird blob"). A fine grid (~40 hexes across the smaller dimension) reads
+  // as the dense loader field; the upper cap only guards a single huge state.
+  const HEXES_ACROSS = 40;
   const r = Math.min(24, Math.min(bbox.width, bbox.height) / HEXES_ACROSS / Math.sqrt(3));
   if (!(r > 0)) return;
-  const rDraw    = r * 0.82;              // shrink so adjacent hexes leave the honeycomb gap
+  const rDraw    = r * 1.00;              // full-size hexes — no honeycomb gap (edges touch)
   const spacingX = Math.sqrt(3) * r;
   const spacingY = 1.5 * r;
   const hexPts = (cx, cy) => {
