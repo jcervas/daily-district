@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.39';
+const VERSION_NUMBER = '2.13.40';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5597,9 +5597,9 @@ function openResultModal() {
   // #postgame-ribbon is a single, always-mounted, fixed element (see index.html) shown
   // for the whole game-over/result experience — it never moves; only its toggle button's
   // label changes here. revealGameoverFromResult() restores it when this modal closes.
-  // "Today's District" (not "Profile") — the button returns to the game-over screen's
-  // district map + profile; "Profile" alone read as a user/account profile on mobile.
-  _setResultRibbonBtnLabel("Today's District", "Today's District");
+  // Returns to the game-over screen's district map + profile. "Profile" alone read as a
+  // user/account profile, so: "View District" on wide screens, "Today's District" on narrow.
+  _setResultRibbonBtnLabel("View District", "Today's District");
   // Re-render preview now that modal is visible and container has real dimensions
   requestAnimationFrame(() => renderDistrictPreview());
   _pushResultAd();   // anonymous players: activate the ad slot now that it's on screen
