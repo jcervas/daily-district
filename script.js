@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.30';
+const VERSION_NUMBER = '2.13.31';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1117,14 +1117,12 @@ function serverGuessFailed(err) {
   return initServer();
 }
 
-// Fills the tapped state/district-tile shape with a pulsing hex pattern while its /guess
-// round-trip is in flight — only the tapped shape gets this; every other state/tile keeps
-// dimming exactly as it already did. Returns nothing; the caller doesn't need to disarm it
-// explicitly because every resolution path (correct/wrong/network-error) already overwrites
-// `fill` with a solid color right after — for tiles that happens via the tile-correct-pop/
-// tile-wrong-shake CSS classes (an author-stylesheet `fill` wins over the presentation
-// attribute set here), for states via the existing #FDB515/#C41230 .attr('fill', …) calls,
-// and on error via _applyStateStyle()/the caller's own fill restore.
+// Fills the tapped state/district-tile shape with the globeLoader() tiled-hex look
+// (same GLOBE_THREADS/GLOBE_THREAD_PROB tartan mix, at the same default probability)
+// while its /guess round-trip is in flight — only the tapped shape gets this; every
+// other state/tile keeps dimming exactly as it already did. resolveGuessPendingPattern()
+// below handles transitioning it to a solid color once the answer is known; on a network
+// error the caller's own fill restore (clearDim()/clearPing()'s tileOrigFill) cleans it up.
 const GUESS_PENDING_PATTERN_ID = 'guess-pending-pattern';
 function armGuessPendingPattern(node) {
   if (!node || !usRefSvgSel) return;
@@ -1135,9 +1133,7 @@ function armGuessPendingPattern(node) {
   // Hex circumradius: aim for ~4 hexes across the shape's smaller dimension so a tiny
   // district-tile circle and a huge state like Texas both read as "tiled", not a single
   // giant hex or an unreadably fine grid. Clamped so neither extreme looks broken.
-  const r = Math.max(4, Math.min(26, Math.min(bbox.width, bbox.height) / 4 / Math.sqrt(3)));
-  const tileW = Math.sqrt(3) * r;
-  const tileH = 3 * r;
+  const r = Math.max(4, Math.min(22, Math.min(bbox.width, bbox.height) / 4 / Math.sqrt(3)));
   const hexPoints = (cx, cy) => {
     let pts = '';
     for (let i = 0; i < 6; i++) {
@@ -1147,6 +1143,15 @@ function armGuessPendingPattern(node) {
     return pts.trim();
   };
 
+  // A single 2-hex tile (like the old version) tartan-colored would just repeat the same
+  // 2 random colors everywhere — obviously patterned rather than a loose scatter. Use a
+  // 2×4 grid of independently-rolled hexes per tile instead, same tiling math (row height
+  // 1.5r, alternate rows offset by half a column) just carried on for 4 rows before the
+  // tile repeats, so the repetition is far less noticeable.
+  const COLS = 2, ROWS = 4;
+  const tileW = COLS * Math.sqrt(3) * r;
+  const tileH = ROWS * 1.5 * r;
+
   let defs = usRefSvgSel.select('defs');
   if (defs.empty()) defs = usRefSvgSel.insert('defs', ':first-child');
   let pattern = defs.select(`#${GUESS_PENDING_PATTERN_ID}`);
@@ -1155,15 +1160,40 @@ function armGuessPendingPattern(node) {
     .attr('patternUnits', 'userSpaceOnUse')
     .attr('width', tileW)
     .attr('height', tileH)
-    .html('');   // clear any previous (differently-sized) hexes before rebuilding
-  // Two hexes per tile, one per honeycomb row, each on its own animation offset so the
-  // fill reads as a loose sweep rather than every cell pulsing in lockstep.
-  pattern.append('polygon').attr('class', 'guess-pending-hex')
-    .attr('points', hexPoints(0, 0)).style('animation-delay', '0s');
-  pattern.append('polygon').attr('class', 'guess-pending-hex')
-    .attr('points', hexPoints(tileW / 2, 1.5 * r)).style('animation-delay', '-0.7s');
+    .html('');   // clear any previous (differently-sized/colored) hexes before rebuilding
+
+  for (let row = 0; row < ROWS; row++) {
+    const rowOffset = (row % 2) ? Math.sqrt(3) * r / 2 : 0;
+    for (let col = 0; col < COLS; col++) {
+      const fill = Math.random() < GLOBE_THREAD_PROB
+        ? GLOBE_THREADS[(Math.random() * GLOBE_THREADS.length) | 0] : 'var(--red)';
+      pattern.append('polygon').attr('class', 'guess-pending-hex')
+        .attr('points', hexPoints(col * Math.sqrt(3) * r + rowOffset, row * 1.5 * r))
+        .style('fill', fill)
+        .style('animation-delay', `${(-Math.random() * 1.4).toFixed(2)}s`);
+    }
+  }
 
   d3.select(node).attr('fill', `url(#${GUESS_PENDING_PATTERN_ID})`);
+}
+
+// Transitions the pending pattern's hexes to a solid color — gold on a correct guess,
+// CMU red on a wrong one — then swaps the shape's own fill to that literal color once the
+// transition finishes, so it reads as a normal solid fill afterward instead of staying a
+// (now uniformly-colored) pattern. district-tile correct/wrong already have their own
+// richer reveal (tile-correct-pop/tile-wrong-shake, which starts from red and CSS-animates
+// to gold on its own) — call this for those too so the tartan settles before that kicks in,
+// but the pop/shake animation is what actually carries the red→gold motion there.
+function resolveGuessPendingPattern(node, correct) {
+  const color = correct ? '#FDB515' : '#C41230';
+  const hexes = document.querySelectorAll(`#${GUESS_PENDING_PATTERN_ID} .guess-pending-hex`);
+  hexes.forEach(hex => {
+    hex.style.transition = 'fill 0.3s ease';
+    hex.style.animation = 'none';
+    hex.style.opacity = '1';
+    hex.style.fill = color;
+  });
+  if (node) setTimeout(() => { d3.select(node).attr('fill', color); }, 300);
 }
 
 // ── State guess via /guess ──────────────────────────────────────
@@ -1217,7 +1247,10 @@ async function submitStateGuessServer(abbr) {
     for (const [a, el] of Object.entries(usRefLayers)) {
       if (a !== abbr) el.attr('fill-opacity', 0);
     }
-    if (pressedEl) pressedEl.attr('fill', '#FDB515').attr('fill-opacity', 1).raise();
+    if (pressedEl) {
+      resolveGuessPendingPattern(pressedEl.node(), true);
+      pressedEl.attr('fill-opacity', 1).raise();
+    }
     _showStateCheck(abbr);
     _guessLocked = false;
     // Prefetch the state's district shapes NOW so the ~1s Edge Function round-trip runs
@@ -1238,7 +1271,8 @@ async function submitStateGuessServer(abbr) {
   void panel.offsetWidth;            // restart the shake on rapid re-taps
   panel.classList.add('shake');
   if (pressedEl) {
-    pressedEl.attr('fill', '#C41230').attr('fill-opacity', 0.9).raise();
+    resolveGuessPendingPattern(pressedEl.node(), false);
+    pressedEl.attr('fill-opacity', 0.9).raise();
   }
   setTimeout(() => panel.classList.remove('shake'), 450);
   setTimeout(() => { clearDim(); _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
@@ -1408,6 +1442,7 @@ async function submitDistrictTileServer(dist) {
 
   if (resp.correct) {
     if (tileCircle) {
+      resolveGuessPendingPattern(tileCircle, true);
       tileCircle.classList.add('tile-correct-pop');
       const ns = 'http://www.w3.org/2000/svg';
       const checkEl = document.createElementNS(ns, 'text');
@@ -1425,7 +1460,10 @@ async function submitDistrictTileServer(dist) {
     }
     setTimeout(() => { _distLocked = false; processDistrictGuessServer(dist, fullGuess, resp); }, 380);
   } else {
-    if (tileCircle) tileCircle.classList.add('tile-wrong-shake');
+    if (tileCircle) {
+      resolveGuessPendingPattern(tileCircle, false);
+      tileCircle.classList.add('tile-wrong-shake');
+    }
     setTimeout(() => {
       tileCircle?.classList.remove('tile-wrong-shake');
       _distLocked = false;
