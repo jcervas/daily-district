@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.37';
+const VERSION_NUMBER = '2.13.38';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1238,6 +1238,10 @@ function armGuessPendingPattern(node) {
 function resolveGuessPendingPattern(node, correct) {
   const group = node && _guessPendingGroups.get(node);
   if (!group) return;
+  // Keep the overlay on top of its shape: the state branches re-.raise() the pressed state
+  // (to lift it above the white border mesh), which would otherwise re-bury this group
+  // (its next sibling) beneath the now-topmost state, hiding the resolved color.
+  group.parentNode?.appendChild(group);
   const color = correct ? '#FDB515' : '#C41230';
   group.querySelectorAll('.guess-pending-hex').forEach(h => {
     h.style.transition = 'fill 0.3s ease, opacity 0.3s ease';
@@ -1317,8 +1321,8 @@ async function submitStateGuessServer(abbr) {
       if (a !== abbr) el.attr('fill-opacity', 0);
     }
     if (pressedEl) {
-      resolveGuessPendingPattern(pressedEl.node(), true);
       pressedEl.attr('fill-opacity', 1).raise();
+      resolveGuessPendingPattern(pressedEl.node(), true);   // raises the overlay above the just-raised state
     }
     _showStateCheck(abbr);
     _guessLocked = false;
@@ -1336,8 +1340,8 @@ async function submitStateGuessServer(abbr) {
   void panel.offsetWidth;            // restart the shake on rapid re-taps
   panel.classList.add('shake');
   if (pressedEl) {
-    resolveGuessPendingPattern(pressedEl.node(), false);
     pressedEl.attr('fill-opacity', 0.9).raise();
+    resolveGuessPendingPattern(pressedEl.node(), false);   // raises the overlay above the just-raised state
   }
   setTimeout(() => panel.classList.remove('shake'), 450);
   setTimeout(() => { clearDim(); _guessLocked = false; processStateGuessServer(abbr, resp); }, 380);
