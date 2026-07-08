@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.31';
+const VERSION_NUMBER = '2.13.32';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1234,11 +1234,24 @@ async function submitStateGuessServer(abbr) {
   const panel = document.getElementById('us-ref-map');
 
   let resp;
+  const pendingSince = performance.now();
   // No motion until the server answers: shaking on every tap meant a correct guess shook
-  // first, then turned green. The dim cue above is the only optimistic feedback; the shake
-  // (wrong) or green flash (correct) is applied once we know the result.
+  // first, then turned green. The dim + tartan cues above are the only optimistic feedback;
+  // the shake (wrong) or gold resolve (correct) is applied once we know the result.
   try { resp = serverArchive ? archiveLocalGuess('state', abbr) : await window.DistrictBackend.guess('state', abbr, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearDim(); return serverGuessFailed(err); }
+
+  // Correct-guess prefetch kicks off BEFORE the pending hold below so the ~1s Edge
+  // Function round-trip overlaps it (enterServerDistrictPhase awaits the same in-flight
+  // promise) — the hold shouldn't push the district phase later than it has to.
+  if (resp.correct) loadServerStateShapes(resp.state || abbr).catch(() => {});
+
+  // Hold the pulsing tartan on screen for a minimum beat before resolving it. Without
+  // this the pattern is invisible whenever the answer comes back fast — instantly for
+  // archive replays (validated locally, no network at all), and in one ~100ms flash on
+  // a quick connection — which made the whole effect look like it wasn't there.
+  const holdLeft = 600 - (performance.now() - pendingSince);
+  if (holdLeft > 0) await new Promise(r => setTimeout(r, holdLeft));
 
   // Correct: confirm the hit first — fade the other states out to the grey basemap, fill the
   // correct state gold + stamp a checkmark, hold briefly, THEN enter the district phase
@@ -1253,10 +1266,6 @@ async function submitStateGuessServer(abbr) {
     }
     _showStateCheck(abbr);
     _guessLocked = false;
-    // Prefetch the state's district shapes NOW so the ~1s Edge Function round-trip runs
-    // DURING the celebration hold instead of after it (enterServerDistrictPhase awaits the
-    // same in-flight promise), roughly halving the pause before the district phase.
-    loadServerStateShapes(resp.state || abbr).catch(() => {});
     setTimeout(() => {
       _hideStateCheck();
       processStateGuessServer(abbr, resp);
@@ -1436,8 +1445,13 @@ async function submitDistrictTileServer(dist) {
   };
 
   let resp;
+  const pendingSince = performance.now();
   try { resp = serverArchive ? archiveLocalGuess('district', fullGuess) : await window.DistrictBackend.guess('district', fullGuess, elapsedSeconds, anonGuessOpts()); }
   catch (err) { clearPing(); return serverGuessFailed(err); }
+  // Same minimum pending beat as the state guess: keep the pulsing tartan visible even
+  // when the answer comes back instantly (archive) or near-instantly (fast connection).
+  const holdLeft = 600 - (performance.now() - pendingSince);
+  if (holdLeft > 0) await new Promise(r => setTimeout(r, holdLeft));
   clearPing();
 
   if (resp.correct) {
