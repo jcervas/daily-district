@@ -899,9 +899,11 @@ circle.tile-ripple {
 /* Unlike the other modals (capped at a small centered 480px card), the result modal takes
    the full page height (not the generic centered-card sizing) so it lines up with the
    game-over screen behind it and leaves room for #postgame-ribbon above + the desktop
-   side-ad rails beside it (see #result-modal's own background override below, which drops
-   the usual dark backdrop so those gutters actually show through instead of being dimmed). */
-#result-modal { background: transparent; align-items: stretch; }
+   side-ad rails beside it. It keeps the standard dark scrim (inherited from .modal) so the
+   game screen behind it is dimmed like every other modal; the side-ad rails are lifted
+   above the scrim (see .side-ad z-index below) so they stay bright/clickable in the gutters
+   rather than the scrim having to carve a hole around them. */
+#result-modal { align-items: stretch; }
 .modal-content.result-modal-content {
   max-width: 900px;
   width: 100%;
@@ -3164,7 +3166,12 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 40;                 /* above the game, below the sticky header + modals */
+  /* Above the modal scrims (result/About/etc., 200–340) so the ads stay bright and
+     clickable in the gutters while a modal dims the game behind it — the ads sit ON the
+     scrim rather than the scrim having to be narrowed to dodge them. Still below the
+     sticky header (600). They only render in the gutters (fixed at 50%±726px), so they
+     never overlap the centered modal content despite the higher z-index. */
+  z-index: 400;
   width: 160px;
   /* Height tracks the served ad, but min-height keeps a 600px box (so the placeholder
      still shows if the ad collapses/hasn't filled). translateY(-50%) centers it. */
