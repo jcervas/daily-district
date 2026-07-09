@@ -16,6 +16,10 @@ on:
         description: 'Render the image only — do not post'
         type: boolean
         default: false
+      delete_tweet_id:
+        description: 'Delete this tweet id instead of posting'
+        type: string
+        default: ''
 
 jobs:
   post:
@@ -28,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Render and post
-        run: node post-daily-tweet.mjs
+        run: node post-daily-tweet.mjs ${{ inputs.delete_tweet_id != '' && format('--delete-tweet={0}', inputs.delete_tweet_id) || '' }}
         env:
           DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '' }}
           X_API_KEY: ${{ secrets.X_API_KEY }}

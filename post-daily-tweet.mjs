@@ -13,6 +13,7 @@
 //   node post-daily-tweet.mjs                  post today's puzzle
 //   DRY_RUN=1 node post-daily-tweet.mjs        render daily-tweet-preview.png + print text, no post
 //   node post-daily-tweet.mjs --date=2026-07-04   override the puzzle date (testing)
+//   node post-daily-tweet.mjs --delete-tweet=<id>  delete a tweet from the account (needs creds)
 // ============================================================
 
 import fs from 'node:fs';
@@ -128,7 +129,30 @@ async function renderPng(svg) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+async function xClient() {
+  const { TwitterApi } = await import('twitter-api-v2');
+  const missing = ['X_API_KEY', 'X_API_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET']
+    .filter(k => !process.env[k]);
+  if (missing.length) throw new Error(`Missing env vars: ${missing.join(', ')}`);
+  return new TwitterApi({
+    appKey: process.env.X_API_KEY,
+    appSecret: process.env.X_API_SECRET,
+    accessToken: process.env.X_ACCESS_TOKEN,
+    accessSecret: process.env.X_ACCESS_TOKEN_SECRET,
+  });
+}
+
 async function main() {
+  const deleteFlag = process.argv.find(a => a.startsWith('--delete-tweet='));
+  if (deleteFlag) {
+    const id = deleteFlag.slice(15);
+    if (!/^\d+$/.test(id)) throw new Error(`Bad tweet id: ${id}`);
+    const client = await xClient();
+    const { data } = await client.v2.deleteTweet(id);
+    console.log(`Delete tweet ${id}: deleted=${data.deleted}`);
+    return;
+  }
+
   const date = puzzleDate();
   const num = puzzleNumberFor(date);
   if (num < 1) throw new Error(`Puzzle number ${num} for ${date} is before launch (2026-06-22)`);
@@ -162,17 +186,7 @@ async function main() {
     return;
   }
 
-  const { TwitterApi } = await import('twitter-api-v2');
-  const missing = ['X_API_KEY', 'X_API_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET']
-    .filter(k => !process.env[k]);
-  if (missing.length) throw new Error(`Missing env vars: ${missing.join(', ')} (or set DRY_RUN=1)`);
-
-  const client = new TwitterApi({
-    appKey: process.env.X_API_KEY,
-    appSecret: process.env.X_API_SECRET,
-    accessToken: process.env.X_ACCESS_TOKEN,
-    accessSecret: process.env.X_ACCESS_TOKEN_SECRET,
-  });
+  const client = await xClient();
 
   const mediaId = await client.v2.uploadMedia(Buffer.from(png), { media_type: 'image/png' });
   try {
