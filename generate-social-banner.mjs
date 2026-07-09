@@ -139,7 +139,7 @@ async function chip(label, cx, cy, { scale = 1, opacity = 1, solid = false } = {
 }
 
 // ── Style: "chips" — scattered guess-chips on a light field, centred lockup ────
-async function buildChips() {
+async function buildChips(features) {
   const W = 1500, H = 500;
   const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`];
   parts.push('<defs>'
@@ -148,6 +148,21 @@ async function buildChips() {
     + `<filter id="chipShadow" x="-40%" y="-40%" width="180%" height="180%">`
     + `<feGaussianBlur stdDeviation="5"/></filter></defs>`);
   parts.push(`<rect width="${W}" height="${H}" fill="url(#bg)"/>`);
+
+  // Faint district line-art in the background — a few of the gnarliest shapes,
+  // large and bleeding off the edges, behind the chips and lockup.
+  const byId = id => features.find(f => f.properties['state-district'] === id);
+  const lines = [
+    ['MD-01', -150, -120, 580, 520], // top-left bleed
+    ['WA-02', 1120, 140, 600, 560],  // bottom-right bleed
+    ['NC-01', 30, 250, 380, 340],    // lower-left
+  ];
+  parts.push(`<g fill="none" stroke="${RED}" stroke-opacity="0.13" stroke-width="2.5" stroke-linejoin="round">`);
+  for (const [id, x, y, w, h] of lines) {
+    const f = byId(id);
+    if (f) parts.push(`<g transform="translate(${x},${y})"><path d="${silhouettePath(f, w, h, 4)}"/></g>`);
+  }
+  parts.push('</g>');
 
   // Scattered guess-chips. [label, cx, cy, scale, opacity, solidSwatch]
   const chips = [
@@ -194,13 +209,9 @@ async function main() {
   const outDir = path.join(DIR, 'social', 'out');
   fs.mkdirSync(outDir, { recursive: true });
 
-  let built;
-  if (style === 'red') {
-    const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
-    built = buildBanner(topojson.feature(topo, topo.objects.districts).features, n);
-  } else {
-    built = await buildChips();
-  }
+  const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
+  const features = topojson.feature(topo, topo.objects.districts).features;
+  const built = style === 'red' ? buildBanner(features, n) : await buildChips(features);
   const { svg, picks } = built;
 
   const Resvg = await loadResvg();
