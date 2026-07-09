@@ -3,3 +3,5 @@ districts.topojson
 node_modules/
 daily-tweet-preview.png
 data/output/
+social/out/
+social/*.mp4
