@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.50';
+const VERSION_NUMBER = '2.13.51';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -5780,6 +5780,24 @@ function showResult(won, autoOpen = true) {
   document.getElementById('result-ad')?.classList.toggle('hidden', !isAnonymousPlayer);
 }
 
+// Rotating call-to-action taglines for the shared result text — one is picked at random
+// each share so the message varies from day to day. All are addressed to the recipient, so
+// they read naturally whether the sharer won or lost.
+const SHARE_TAGLINES = [
+  'Can you identify it?',
+  'Can you name it?',
+  'Can you place it?',
+  'Do you know where this is?',
+  'Recognize this shape?',
+  'Can you do better?',
+  'Think you can beat me?',
+  'Can you spot it?',
+  'Where in the country is this?',
+  'How well do you know the map?',
+  'Know your districts?',
+  'Your turn — give it a shot.',
+];
+
 function buildShareText() {
   const answer  = todayDistrict.properties['state-district'];
   const won     = guessHistory.some(g => g.correct && g.phase === 'district');
@@ -5794,9 +5812,10 @@ function buildShareText() {
   const outcome = won ? `solved in ${winNum}/${MAX_GUESSES} guesses` : `unsolved (${MAX_GUESSES}/${MAX_GUESSES})`;
   // Differentiate a hard-mode game (shape only — no terrain/hints during play).
   const hardTag = gameHardMode ? ' 🔒 Hard mode' : '';
+  const tagline = SHARE_TAGLINES[Math.floor(Math.random() * SHARE_TAGLINES.length)];
   // Archive games never reach this — both share buttons are hidden during archive play
   // (see showGameoverModal's isArchiveGame branch), so this is always today's daily.
-  return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\nCan you identify it? https://daily-district.com/`;
+  return `🗺️ Daily District — ${outcome}${hardTag}\n${grid}\n${tagline} https://daily-district.com/`;
 }
 
 // Share the result as text + a landscape map image via the Web Share API; falls back to

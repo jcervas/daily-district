@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.13.51 — Randomized share-text tagline
+
+- The shared result text now picks its call-to-action line at random from a 12-line pool (`SHARE_TAGLINES`) instead of always saying "Can you identify it?", so the message varies from share to share. All taglines are addressed to the recipient, so they read naturally whether the sharer won or lost.
+
 ## v2.13.50 — Sharper result-modal preview + real wordmark on the share images
 
 - The result-modal district preview now renders into the same 800-wide reference viewBox the Share image uses (keeping the box's aspect ratio) instead of the box's own ~414px size. Stroke widths are absolute in viewBox units, so at the small size the 2.5px district outline and 0.6px roads had been reading ~2× too heavy; the preview now matches the Share image's finer, cleaner weight.
