@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.47';
+const VERSION_NUMBER = '2.13.48';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1028,6 +1028,12 @@ async function startServerArchive(date, num, label) {
   // when an archive game is launched after finishing the daily.
   gamePhase          = 'state';
   eliminatedStates   = new Set();
+  // Clear the guess locks. A state-phase loss latches _guessLocked = true forever
+  // (finishServerLoss locks the finished game); without this reset the archive board
+  // renders fine but every state tap dies silently in submitStateGuess().
+  _guessLocked       = false;
+  _distLocked        = false;
+  _pendingConfirmAbbr = null;
   _gameStarted       = true;
   districts          = [];
   districtPoints     = {};
@@ -2679,6 +2685,7 @@ async function fetchAndRenderCensusPanel(districtData) {
   // the mystery feature is redacted, so they ride along in the revealed census (`d`).
   const areaMi2     = Math.round((d.area_sqmi ?? todayDistrict?.properties.area_sqmi) || 0);
   const delegCount  = (stateDistrictMap[districtData.state] || []).length;
+  const isAtLarge   = delegCount === 1;   // referenced by the plan-year card's fallback text below
   const margin      = d.Margin2024Pres ?? todayDistrict?.properties.Margin2024Pres;
   const pctDem      = Math.round((d.DemPct2024Pres ?? todayDistrict?.properties.DemPct2024Pres ?? 0) * 100);
   const pctRep      = Math.round((d.RepPct2024Pres ?? todayDistrict?.properties.RepPct2024Pres ?? 0) * 100);

@@ -1,5 +1,10 @@
 # District Guess — Changelog
 
+## v2.13.48 — Fix unresponsive state map when playing an archive after a state-phase loss
+
+- Fixed archive puzzles launching with a completely unresponsive state map (no state could be tapped/clicked) whenever the previous game — the daily or another archive — ended without the state being found. A state-phase loss latches the `_guessLocked` guard to lock the finished board, and `startServerArchive()` reset every other game global except that lock, so every state tap on the fresh archive board died silently in `submitStateGuess()`. The archive reset now clears `_guessLocked`/`_distLocked` and any stale tap-to-confirm selection. Reproduced and verified end-to-end with touch taps under iPhone emulation.
+- Fixed the District Profile panel silently failing to render (`isAtLarge is not defined`) for districts with no plan-year data — the "District Plan Last Redrawn" card's at-large fallback referenced a variable that was never defined in `fetchAndRenderCensusPanel()`.
+
 ## v2.13.44 — Consolidate the national-map/District Profile pipeline into data/; push refreshed ACS/compactness data
 
 - Replaced the pipeline scattered across the `createMaps` repo (`national/{normalize_plans.py,build_national.py,build_national.sh}`, `acs_by_district.R`, `acs_by_state.R`), `build-map.sh`, and the whole `tools/census/` toolkit (`build_census.py`, `apply_census.py`, `build_reps.py`, `build_clues.py`, `build_pop2020.py`, `build_lang.py`, `build_plan_year.py`, `apply_compactness.py`) with one `Makefile`-driven pipeline in `data/` — all R + mapshaper, no Python, no `tidycensus`/`tigris` (Census API calls now go straight to `api.census.gov` via a small base-R + jsonlite client, `data/lib/census_api.R`). Every ported script was diffed against a fresh run of its predecessor before the originals were removed.
