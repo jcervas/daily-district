@@ -2375,8 +2375,10 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 #profile-modal { z-index: 320; }
 /* Header-triggered utility modals must always supersede whatever game modal is up
    (result / welcome / game-over, all z-index 200) — and login/profile — since the menu
-   bar (z-index 600) is reachable over everything. */
-#settings-modal, #how-to-modal, #hints-modal, #feedback-modal, #push-optin-modal { z-index: 340; }
+   bar (z-index 600) is reachable over everything. #donate-modal (the "About" modal) opens
+   from the header too, so it belongs here — without it, it ties the result modal at the
+   base .modal z-index (200) and loses on DOM order, opening BEHIND the result screen. */
+#settings-modal, #how-to-modal, #hints-modal, #feedback-modal, #push-optin-modal, #donate-modal { z-index: 340; }
 .profile-checkbox {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; color: var(--muted); cursor: pointer; padding: 2px 0;
