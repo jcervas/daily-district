@@ -24,6 +24,7 @@ const SITE = 'daily-district.com';
 // CMU palette.
 const RED = '#C41230';
 const WHITE = '#ffffff';
+const INK = '#1a1a1a';
 
 const FONT_FILES = ['SemiBold', 'Bold', 'ExtraBold', 'Black']
   .map(w => path.join(DIR, 'social', 'fonts', `Barlow-${w}.ttf`));
@@ -70,6 +71,20 @@ const text = (str, x, y, o) =>
   + ` font-size="${o.size}" fill="${o.fill}" text-anchor="${o.anchor || 'start'}"`
   + `${o.spacing ? ` letter-spacing="${o.spacing}"` : ''}>${esc(str)}</text>`;
 
+let _Resvg;
+async function loadResvg() {
+  if (!_Resvg) ({ Resvg: _Resvg } = await import('@resvg/resvg-js'));
+  return _Resvg;
+}
+// Advance width (px) of a single line, via resvg's bbox.
+async function measure(str, size, weight) {
+  const Resvg = await loadResvg();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="${Math.ceil(size * 2)}">`
+    + `<text x="0" y="${size}" font-family="Barlow" font-weight="${weight}" font-size="${size}">${esc(str)}</text></svg>`;
+  const bb = new Resvg(svg, { font: { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Barlow' } }).getBBox();
+  return bb ? bb.x + bb.width : str.length * size * 0.55;
+}
+
 // ── Build ─────────────────────────────────────────────────────────────────────
 function buildBanner(features, n) {
   const W = 1500, H = 500;
@@ -108,18 +123,87 @@ function buildBanner(features, n) {
   return { svg: parts.join(''), picks: picks.map(p => p.id) };
 }
 
+// A guess "chip" like the game's autocomplete: white pill, soft shadow, a small
+// red swatch, and a label. Centred on (cx, cy). Returns an SVG <g>.
+async function chip(label, cx, cy, { scale = 1, opacity = 1, solid = false } = {}) {
+  const size = 19 * scale, h = 44 * scale, r = h / 2;
+  const padX = 17 * scale, sw = 20 * scale, gapS = 11 * scale, swR = 5 * scale;
+  const w = padX + sw + gapS + await measure(label, size, 700) + padX;
+  const x = cx - w / 2, y = cy - h / 2;
+  return `<g opacity="${opacity}">`
+    + `<rect x="${x.toFixed(1)}" y="${(y + 4 * scale).toFixed(1)}" width="${w.toFixed(1)}" height="${h}" rx="${r}" fill="rgba(30,15,20,0.13)" filter="url(#chipShadow)"/>`
+    + `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h}" rx="${r}" fill="${WHITE}"/>`
+    + `<rect x="${(x + padX).toFixed(1)}" y="${(cy - sw / 2).toFixed(1)}" width="${sw}" height="${sw}" rx="${swR}" fill="${RED}" fill-opacity="${solid ? 1 : 0.45}"/>`
+    + text(label, x + padX + sw + gapS, cy + size * 0.34, { size, weight: 700, fill: '#70707a' })
+    + `</g>`;
+}
+
+// ── Style: "chips" — scattered guess-chips on a light field, centred lockup ────
+async function buildChips() {
+  const W = 1500, H = 500;
+  const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`];
+  parts.push('<defs>'
+    + `<radialGradient id="bg" cx="0.5" cy="0.42" r="0.75">`
+    + `<stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f2ecef"/></radialGradient>`
+    + `<filter id="chipShadow" x="-40%" y="-40%" width="180%" height="180%">`
+    + `<feGaussianBlur stdDeviation="5"/></filter></defs>`);
+  parts.push(`<rect width="${W}" height="${H}" fill="url(#bg)"/>`);
+
+  // Scattered guess-chips. [label, cx, cy, scale, opacity, solidSwatch]
+  const chips = [
+    ['OHIO', 130, 66, 0.95, 0.5, false],
+    ['AZ-03', 612, 78, 0.82, 0.4, false],
+    ['FL-27', 662, 132, 1.0, 1, true],
+    ['PA-08', 1372, 66, 0.95, 0.5, false],
+    ['NY-14', 1226, 250, 1.0, 0.95, true],
+    ['WA-07', 1168, 300, 0.9, 0.45, false],
+    ['VA-05', 322, 300, 0.9, 0.5, false],
+    ['CA-05', 438, 340, 0.95, 0.72, false],
+    ['TEXAS', 1078, 428, 0.98, 0.85, true],
+    ['NC-02', 176, 468, 0.98, 0.9, true],
+    ['IL-12', 262, 476, 0.9, 0.45, false],
+    ['ILLINOIS', 842, 462, 0.98, 0.95, true],
+    ['VA-10', 772, 470, 0.9, 0.5, false],
+  ];
+  for (const [label, cx, cy, scale, opacity, solid] of chips) {
+    parts.push(await chip(label, cx, cy, { scale, opacity, solid }));
+  }
+
+  // Centre lockup: wordmark, two-tone tagline, URL.
+  const wmW = 620, wmH = wmW * 56 / 260, wc = 200;
+  parts.push(wordmark((W - wmW) / 2, wc - wmH / 2, wmW, RED));
+
+  const tSize = 31, a = 'Play free.', b = 'New district every day.';
+  const aw = await measure(a, tSize, 800), bw = await measure(b, tSize, 800);
+  const wsp = tSize * 0.32; // word-space between the two colours (bbox trims spaces)
+  const sx = W / 2 - (aw + wsp + bw) / 2, tY = wc + wmH / 2 + 44;
+  parts.push(text(a, sx, tY, { size: tSize, weight: 800, fill: INK }));
+  parts.push(text(b, sx + aw + wsp, tY, { size: tSize, weight: 800, fill: RED }));
+
+  parts.push(text('daily-district.com', W / 2, tY + 62, { size: 54, weight: 900, fill: RED, anchor: 'middle' }));
+
+  parts.push('</svg>');
+  return { svg: parts.join(''), picks: chips.map(c => c[0]) };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const arg = k => process.argv.find(a => a.startsWith(`--${k}`));
-  const n = arg('n=') ? parseInt(arg('n=').slice(4), 10) : 6;
+  const style = arg('style=') ? arg('style=').slice(8) : 'chips'; // 'chips' | 'red'
+  const n = arg('n=') ? parseInt(arg('n=').slice(4), 10) : 7;
   const outDir = path.join(DIR, 'social', 'out');
   fs.mkdirSync(outDir, { recursive: true });
 
-  const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
-  const features = topojson.feature(topo, topo.objects.districts).features;
+  let built;
+  if (style === 'red') {
+    const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
+    built = buildBanner(topojson.feature(topo, topo.objects.districts).features, n);
+  } else {
+    built = await buildChips();
+  }
+  const { svg, picks } = built;
 
-  const { svg, picks } = buildBanner(features, n);
-  const { Resvg } = await import('@resvg/resvg-js');
+  const Resvg = await loadResvg();
   const png = new Resvg(svg, {
     fitTo: { mode: 'width', value: 3000 }, // 2× 1500×500
     font: { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Barlow' },
@@ -127,7 +211,7 @@ async function main() {
 
   const out = path.join(outDir, 'banner-twitter.png');
   fs.writeFileSync(out, png);
-  console.log(`banner-twitter.png (${png.length}b) — frieze: ${picks.join(', ')}`);
+  console.log(`banner-twitter.png (${png.length}b) — ${style}: ${picks.join(', ')}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
