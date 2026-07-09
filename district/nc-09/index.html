@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/district-pages.css?v=4" />
+  <link rel="stylesheet" href="/district-pages.css?v=5" />
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2164002681613672" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -85,10 +85,18 @@
     </section>
     <section class="dd-card">
       <h2>Geography</h2>
-      <div class="dd-locator">
-        <img src="/state-svgs/nc.svg" alt="Outline of North Carolina" loading="lazy" width="200" height="200" />
-        <p class="dd-source">North Carolina</p>
+    <figure class="dd-map-wrap" style="margin:0 0 6px">
+      <div id="dd-map" data-focus-state="NC" data-focus-district="NC-09"><img src="/state-svgs/nc.svg" alt="Map of North Carolina" width="200" height="200" /></div>
+      <div class="map-zoom-btns" role="group" aria-label="Map zoom">
+        <button type="button" class="mzb" data-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" class="mzb" data-zoom="out" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="mzb" data-zoom="fit" aria-label="Fit the whole country" title="Fit"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
       </div>
+      <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
+      <div id="dd-map-title" class="dd-map-title"></div>
+      <div id="dd-map-tip" class="dd-map-tip"></div>
+    </figure>
+    <p class="dd-map-hint">NC-09 is shown in red. Click a neighboring district to open it, or zoom out to explore the country.</p>
       <div class="dd-grid" style="margin-top:12px">
         <div class="dd-stat"><div class="dd-stat-val">3,307 mi²</div><div class="dd-stat-lbl">Land area</div></div>
         <div class="dd-stat"><div class="dd-stat-val">230/mi²</div><div class="dd-stat-lbl">Pop. density</div></div>
@@ -113,5 +121,8 @@
     <p>Daily District — a daily game about U.S. congressional districts.<br>
     Demographics from the U.S. Census Bureau (ACS 5-year); presidential results via The Downballot.</p>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script src="/district-map.js?v=2" defer></script>
 </body>
 </html>

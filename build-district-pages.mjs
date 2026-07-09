@@ -29,8 +29,9 @@ import { dirname, join } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SITE = 'https://daily-district.com';
-const CSS_V = 4; // bump when district-pages.css changes
+const CSS_V = 5; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
+const MAP_JS_V = 2; // bump when the emitted district-map.js changes
 
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
@@ -336,10 +337,14 @@ function districtPage(r) {
   if (geo.area) {
     S.push(`<section class="dd-card">
       <h2>Geography</h2>
-      <div class="dd-locator">
-        <img src="/state-svgs/${r.state.toLowerCase()}.svg" alt="Outline of ${esc(r.stateName)}" loading="lazy" width="200" height="200" />
-        <p class="dd-source">${esc(r.stateName)}${r.atLarge ? ' (single at-large district)' : ''}</p>
-      </div>
+${mapFigure({
+      focusState: r.state,
+      focusDistrict: r.id,
+      fallback: `<img src="/state-svgs/${r.state.toLowerCase()}.svg" alt="Map of ${esc(r.stateName)}" width="200" height="200" />`,
+      hint: r.atLarge
+        ? `${esc(r.stateName)} elects a single at-large representative. Zoom out to explore other states.`
+        : `${esc(r.id)} is shown in red. Click a neighboring district to open it, or zoom out to explore the country.`,
+    })}
       <div class="dd-grid" style="margin-top:12px">
         ${statBox(fmt(geo.area) + ' mi²', 'Land area')}
         ${density != null ? statBox(fmt(density) + '/mi²', 'Pop. density') : ''}
@@ -372,7 +377,7 @@ function districtPage(r) {
     <div class="dd-cta"><a href="/">Can you guess this district? Play Daily District →</a></div>`;
 
   return shell({ title: `${fullName} — Representative, Demographics &amp; Map | Daily District`,
-    description: metaDesc, canonical, body });
+    description: metaDesc, canonical, body, scripts: mapAssets() });
 }
 
 function statBox(val, lbl) {
@@ -400,25 +405,10 @@ function browsePage() {
     </div>`;
   }).join('\n      ');
 
-  // Zoom cluster reuses the game's markup/classes (.map-zoom-btns / .mzb); the
-  // fit button uses a maximize icon to frame the whole country.
-  const mapFigure = `    <figure class="dd-map-wrap" style="margin:0 0 6px">
-      <div id="dd-map"><p style="padding:44px 12px;text-align:center;color:var(--dd-muted)">Loading map…</p></div>
-      <div class="map-zoom-btns" role="group" aria-label="Map zoom">
-        <button type="button" class="mzb" data-zoom="in" aria-label="Zoom in">+</button>
-        <button type="button" class="mzb" data-zoom="out" aria-label="Zoom out">&minus;</button>
-        <button type="button" class="mzb" data-zoom="fit" aria-label="Fit the whole country" title="Fit"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
-      </div>
-      <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
-      <div id="dd-map-title" class="dd-map-title"></div>
-      <div id="dd-map-tip" class="dd-map-tip"></div>
-    </figure>
-    <p class="dd-map-hint">Click a state to zoom in, then click a district to open its profile.</p>`;
-
   const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>Districts</nav>
     <h1 class="dd-title">All U.S. House Districts</h1>
     <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
-${mapFigure}
+${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its profile.' })}
     <details class="dd-browse-all">
       <summary>Or browse all ${records.length} districts as a list</summary>
       ${blocks}
@@ -427,23 +417,57 @@ ${mapFigure}
   return shell({
     title: 'All U.S. Congressional Districts — Representatives & Demographics | Daily District',
     description: `Directory of all ${records.length} U.S. House districts with representatives, Census demographics, and election results. Explore any district, then play the daily game.`,
-    canonical, body, scripts: mapScripts(),
+    canonical, body, scripts: mapAssets(),
   });
 }
 
-// Interactive national map for /districts/. Client code avoids template
-// literals and ${} so it can be embedded verbatim in this generator.
-function mapScripts() {
-  const client = `(function(){
+// Map figure markup, shared by the browse hub (no focus) and each district
+// profile (focusState/focusDistrict start it zoomed on that district). Zoom
+// cluster reuses the game's markup/classes (.map-zoom-btns / .mzb).
+function mapFigure({ focusState = '', focusDistrict = '', fallback = '', hint = '' } = {}) {
+  const data = focusState
+    ? ` data-focus-state="${esc(focusState)}" data-focus-district="${esc(focusDistrict)}"`
+    : '';
+  const loading = fallback || `<p style="padding:44px 12px;text-align:center;color:var(--dd-muted)">Loading map…</p>`;
+  return `    <figure class="dd-map-wrap" style="margin:0 0 6px">
+      <div id="dd-map"${data}>${loading}</div>
+      <div class="map-zoom-btns" role="group" aria-label="Map zoom">
+        <button type="button" class="mzb" data-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" class="mzb" data-zoom="out" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="mzb" data-zoom="fit" aria-label="Fit the whole country" title="Fit"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+      </div>
+      <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
+      <div id="dd-map-title" class="dd-map-title"></div>
+      <div id="dd-map-tip" class="dd-map-tip"></div>
+    </figure>${hint ? `\n    <p class="dd-map-hint">${hint}</p>` : ''}`;
+}
+
+// d3 + topojson + the shared map client (external, cached across all pages).
+function mapAssets() {
+  return `  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script src="/district-map.js?v=${MAP_JS_V}" defer></script>
+`;
+}
+
+// The shared client, written to /district-map.js. Reads its target from the
+// #dd-map element's data attributes; with no focus it's the national browse
+// map, with a focus it starts zoomed on that district (shown in red). Avoids
+// template literals / ${} so it embeds verbatim.
+function mapClientJs() {
+  return `(function(){
   var STATE_NAMES=` + JSON.stringify(STATE_NAMES) + `;
   var ord=function(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
   var el=document.getElementById('dd-map');
   if(!el||typeof d3==='undefined'||typeof topojson==='undefined'){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); return; }
+  var focusState=el.getAttribute('data-focus-state')||'';
+  var focusDistrict=el.getAttribute('data-focus-district')||'';
   var W=960,H=600;
   var wrap=el.parentNode;
   var back=document.getElementById('dd-map-back');
   var titleEl=document.getElementById('dd-map-title');
   var tip=document.getElementById('dd-map-tip');
+  function init(){
   d3.json('/districts-map.topojson?v=` + MAP_V + `').then(function(topo){
     el.innerHTML='';
     var dcol=topojson.feature(topo,topo.objects.districts);
@@ -459,7 +483,8 @@ function mapScripts() {
     var hitLayer=g.append('g');
     var stateFeat={}; states.forEach(function(f){stateFeat[f.properties.st]=f;});
     var counts={}; districts.forEach(function(f){counts[f.properties.st]=(counts[f.properties.st]||0)+1;});
-    var dSel=districtsLayer.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path);
+    var dSel=districtsLayer.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path)
+      .classed('current',function(d){ return focusDistrict && d.properties.sd===focusDistrict; });
     bordersLayer.selectAll('path.dd-s').data(states).enter().append('path').attr('class','dd-s').attr('d',path);
     var hitSel=hitLayer.selectAll('path.dd-statehit').data(states).enter().append('path').attr('class','dd-statehit').attr('d',path);
     var selected=null;
@@ -497,7 +522,7 @@ function mapScripts() {
     dSel.on('mousemove',function(ev,d){ if(selected===d.properties.st) showTip(ev,labelFor(d)); })
         .on('mouseenter',function(ev,d){ if(selected===d.properties.st) d3.select(this).raise().classed('hot',true); })
         .on('mouseleave',function(ev,d){ d3.select(this).classed('hot',false); hideTip(); })
-        .on('click',function(ev,d){ if(selected===d.properties.st) window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; });
+        .on('click',function(ev,d){ if(selected===d.properties.st && d.properties.sd!==focusDistrict) window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; });
 
     // Zoom/pan via d3.zoom; wheel disabled so the page still scrolls over the map.
     var zoom=d3.zoom().scaleExtent([1,40]).on('zoom',function(ev){ g.attr('transform',ev.transform); });
@@ -532,12 +557,17 @@ function mapScripts() {
     });
 
     applyMode();
+    // On a district profile the map opens zoomed to that district's state.
+    if(focusState && stateFeat[focusState]){ zoomToState(focusState); }
   }).catch(function(){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); });
+  }
+  // Only load geometry + render once the map is near the viewport (profile maps
+  // sit below the fold); fires immediately when already in view (browse hub).
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})){ io.disconnect(); init(); } }, { rootMargin: '300px' });
+    io.observe(el);
+  } else { init(); }
 })();`;
-  return `  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-  <script>${client}</script>
-`;
 }
 
 // ---- write output ----------------------------------------------------------
@@ -554,6 +584,9 @@ for (const r of records) {
 
 mkdirSync(join(ROOT, 'districts'), { recursive: true });
 writeFileSync(join(ROOT, 'districts', 'index.html'), browsePage());
+
+// Shared interactive-map client, loaded by the browse hub and every profile.
+writeFileSync(join(ROOT, 'district-map.js'), mapClientJs());
 
 // sitemap.xml
 const today = new Date().toISOString().slice(0, 10);

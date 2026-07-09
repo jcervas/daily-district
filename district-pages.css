@@ -327,6 +327,13 @@ path.dd-d.hot {
 }
 /* Districts are only clickable once a state is selected. */
 path.dd-d.live { cursor: pointer; }
+/* The district a profile page is about — always shown, not a link. */
+path.dd-d.current {
+  fill: rgba(196, 18, 48, .5);
+  stroke: var(--dd-red);
+  stroke-width: 2.2;
+  pointer-events: none;
+}
 path.dd-d.dim {
   fill: #eceef2;
   stroke: #d6dae1;
@@ -426,6 +433,7 @@ path.dd-statehit { fill: transparent; stroke: none; cursor: pointer; }
   path.dd-d { fill: #2b3038; stroke: #444b57; }
   path.dd-d.hot { fill: rgba(196, 18, 48, .32); stroke: #ff5069; }
   path.dd-d.dim { fill: #23272e; stroke: #333944; }
+  path.dd-d.current { fill: rgba(196, 18, 48, .55); stroke: #ff5069; }
   path.dd-s { stroke: #6b7382; }
   .dd-map-back { background: #23272e; color: var(--dd-ink); }
   .dd-map-back:hover { border-color: #ff5069; color: #ff5069; }
