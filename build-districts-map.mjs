@@ -2,24 +2,28 @@
 /**
  * build-districts-map.mjs
  *
- * Produces districts-map.topojson — a small, property-stripped, simplified
- * geometry file used ONLY by the interactive map on /districts/. It is kept
- * separate from the game's districts-core.topojson on purpose: the game plans
- * to stop shipping district geometry (fingerprint hardening), so the public
- * browse map owns its own lightweight copy and won't block that.
+ * Produces the geometry the interactive map uses:
  *
- * Source: districts-core.topojson (districts + states objects).
- * Output: districts-map.topojson  (objects: districts {sd,st}, states {st})
+ *  1. districts-map.topojson — small, property-stripped, heavily simplified
+ *     (8%) national file. Loaded up front for the whole-country view. Kept
+ *     separate from the game's districts-core.topojson on purpose (the game
+ *     plans to drop district geometry for fingerprint hardening).
+ *
+ *  2. districts-detail/<st>.topojson — one full-detail (unsimplified) file per
+ *     state, loaded on demand when the map zooms into that state so district
+ *     boundaries are crisp up close. Source: districts.topojson (full detail).
  *
  * Requires mapshaper on PATH (npm i -g mapshaper). Run: node build-districts-map.mjs
  */
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const SRC = 'districts-core.topojson';
 const OUT = 'districts-map.topojson';
+const DETAIL_SRC = 'districts.topojson';   // full-detail source (gitignored)
+const DETAIL_DIR = 'districts-detail';
 const SIMPLIFY = '8%'; // visvalingam; keep-shapes so no district collapses
 
 const t = JSON.parse(readFileSync(SRC, 'utf8'));
@@ -67,3 +71,28 @@ const ns = out.objects.states.geometries.length;
 const missing = out.objects.districts.geometries.filter((g) => !g.arcs || !g.arcs.length).length;
 console.log(`Wrote ${OUT}: ${nd} districts, ${ns} states, ${missing} with no geometry.`);
 if (nd !== 435 || missing) process.exitCode = 1;
+
+// ---- per-state full-detail slices -----------------------------------------
+if (!existsSync(DETAIL_SRC)) {
+  console.warn(`\nSkipping ${DETAIL_DIR}/ — ${DETAIL_SRC} not found (gitignored full-detail source).`);
+} else {
+  const full = JSON.parse(readFileSync(DETAIL_SRC, 'utf8'));
+  const states = [...new Set(full.objects.districts.geometries.map((g) => g.properties.state))].sort();
+  rmSync(DETAIL_DIR, { recursive: true, force: true });
+  mkdirSync(DETAIL_DIR, { recursive: true });
+  let biggest = 0, biggestSt = '';
+  for (const st of states) {
+    const dest = join(DETAIL_DIR, `${st.toLowerCase()}.topojson`);
+    execFileSync('mapshaper', [
+      DETAIL_SRC,
+      '-target', 'districts',
+      '-filter', `this.properties.state===${JSON.stringify(st)}`,
+      '-each', 'sd=this.properties["state-district"], st=this.properties.state',
+      '-filter-fields', 'sd,st',
+      '-o', dest, 'format=topojson', 'quantization=1e5',
+    ], { stdio: ['ignore', 'ignore', 'ignore'] });
+    const kb = readFileSync(dest).length;
+    if (kb > biggest) { biggest = kb; biggestSt = st; }
+  }
+  console.log(`Wrote ${DETAIL_DIR}/ — ${states.length} states, largest ${biggestSt} ${(biggest / 1024).toFixed(0)} KB.`);
+}

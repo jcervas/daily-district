@@ -76,8 +76,22 @@
       var k=Math.max(1, Math.min(40, 0.9*Math.min(W/bw, H/bh)));
       return d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-cx,-cy);
     }
+    // Swap in unsimplified per-state geometry the first time we zoom to a state,
+    // so district boundaries are crisp up close (the national file is heavily
+    // simplified). Cached; the state outline is re-merged from the detail arcs.
+    var detailDone={};
+    function upgradeDetail(st){
+      if(detailDone[st]) return; detailDone[st]=true;
+      d3.json('/districts-detail/'+st.toLowerCase()+'.topojson?v=1').then(function(topo){
+        var obj=topo.objects[Object.keys(topo.objects)[0]];
+        var byId={}; topojson.feature(topo,obj).features.forEach(function(f){ byId[f.properties.sd]=f; });
+        dSel.filter(function(d){return d.properties.st===st;}).each(function(d){ if(byId[d.properties.sd]) d3.select(this).attr('d', path(byId[d.properties.sd])); });
+        var outline=topojson.merge(topo, obj.geometries);
+        bordersLayer.selectAll('path.dd-s').filter(function(d){return d.properties.st===st;}).attr('d', path(outline));
+      }).catch(function(){ detailDone[st]=false; });
+    }
     function zoomToState(st){
-      selected=st; setStateHot(st,false); applyMode();
+      selected=st; setStateHot(st,false); applyMode(); upgradeDetail(st);
       back.classList.add('show'); titleEl.textContent=STATE_NAMES[st]||st; hideTip();
       svg.transition().duration(650).call(zoom.transform, transformFor(path.bounds(stateFeat[st])));
     }

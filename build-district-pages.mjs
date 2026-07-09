@@ -31,7 +31,8 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const SITE = 'https://daily-district.com';
 const CSS_V = 5; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
-const MAP_JS_V = 2; // bump when the emitted district-map.js changes
+const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
+const MAP_JS_V = 3; // bump when the emitted district-map.js changes
 
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
@@ -533,8 +534,22 @@ function mapClientJs() {
       var k=Math.max(1, Math.min(40, 0.9*Math.min(W/bw, H/bh)));
       return d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-cx,-cy);
     }
+    // Swap in unsimplified per-state geometry the first time we zoom to a state,
+    // so district boundaries are crisp up close (the national file is heavily
+    // simplified). Cached; the state outline is re-merged from the detail arcs.
+    var detailDone={};
+    function upgradeDetail(st){
+      if(detailDone[st]) return; detailDone[st]=true;
+      d3.json('/districts-detail/'+st.toLowerCase()+'.topojson?v=` + DETAIL_V + `').then(function(topo){
+        var obj=topo.objects[Object.keys(topo.objects)[0]];
+        var byId={}; topojson.feature(topo,obj).features.forEach(function(f){ byId[f.properties.sd]=f; });
+        dSel.filter(function(d){return d.properties.st===st;}).each(function(d){ if(byId[d.properties.sd]) d3.select(this).attr('d', path(byId[d.properties.sd])); });
+        var outline=topojson.merge(topo, obj.geometries);
+        bordersLayer.selectAll('path.dd-s').filter(function(d){return d.properties.st===st;}).attr('d', path(outline));
+      }).catch(function(){ detailDone[st]=false; });
+    }
     function zoomToState(st){
-      selected=st; setStateHot(st,false); applyMode();
+      selected=st; setStateHot(st,false); applyMode(); upgradeDetail(st);
       back.classList.add('show'); titleEl.textContent=STATE_NAMES[st]||st; hideTip();
       svg.transition().duration(650).call(zoom.transform, transformFor(path.bounds(stateFeat[st])));
     }
