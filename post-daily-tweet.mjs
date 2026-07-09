@@ -62,7 +62,26 @@ function puzzleNumberFor(dateStr) {
 // ── Rendering (mirrors _renderDistrictToBlob / _buildRichMapLayers in script.js,
 //    light mode) ──────────────────────────────────────────────────────────────
 
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// "Daily District" wordmark as an SVG <g> string, scaled to `width` px with its top-left at
+// (x, y), tinted `fill` at `opacity`. Mirrors _appendWordmark in script.js. The wordmark's
+// paths use fill="currentColor" — resvg doesn't resolve that, so we substitute the color
+// directly. Cached across calls; returns '' if the file is missing.
+let _wordmarkRaw;
+function wordmarkGroup(x, y, width, fill, opacity) {
+  if (_wordmarkRaw === undefined) {
+    try { _wordmarkRaw = fs.readFileSync(path.join(DIR, 'wordmark.svg'), 'utf8'); }
+    catch { _wordmarkRaw = null; }
+  }
+  if (!_wordmarkRaw) return '';
+  const vb = (_wordmarkRaw.match(/viewBox="([^"]+)"/)?.[1] || '0 0 260 56').split(/\s+/).map(Number);
+  const vbW = vb[2] || 260;
+  const inner = _wordmarkRaw
+    .replace(/^[\s\S]*?<svg[^>]*>/, '')
+    .replace(/<\/svg>[\s\S]*$/, '')
+    .replace(/currentColor/g, fill);
+  const scale = width / vbW;
+  return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.toFixed(4)})" opacity="${opacity}">${inner}</g>`;
+}
 
 // AlbersUSA fit to the largest sub-polygon so small islands don't blow out the extent.
 function previewProjection(feature, W, H, pad) {
@@ -112,7 +131,9 @@ function buildSvg(district, overlay) {
   parts.push(`<path d="M0,0L${W},0L${W},${H}L0,${H}Z ${dPath}" fill="rgba(0,0,0,0.18)" fill-rule="evenodd"/>`);
   parts.push(`<path d="${dPath}" fill="#C41230" fill-opacity="0.25"/>`);
   parts.push(`<path d="${dPath}" fill="none" stroke="#C41230" stroke-width="2.5" stroke-linejoin="round"/>`);
-  parts.push(`<text x="${W - 12}" y="${H - 12}" text-anchor="end" font-family="Helvetica, Arial, 'DejaVu Sans', sans-serif" font-size="13" font-weight="600" fill="rgba(0,0,0,0.35)">${esc('Daily District')}</text>`);
+  // Wordmark watermark, bottom-right — large and semi-transparent (light mode: near-black at 0.4).
+  const wmW = 240, wmH = wmW * 56 / 260;
+  parts.push(wordmarkGroup(W - wmW - 20, H - wmH - 16, wmW, '#000000', 0.4));
   parts.push('</svg>');
   return parts.join('');
 }

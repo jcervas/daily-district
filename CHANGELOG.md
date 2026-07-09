@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.13.50 — Sharper result-modal preview + real wordmark on the share images
+
+- The result-modal district preview now renders into the same 800-wide reference viewBox the Share image uses (keeping the box's aspect ratio) instead of the box's own ~414px size. Stroke widths are absolute in viewBox units, so at the small size the 2.5px district outline and 0.6px roads had been reading ~2× too heavy; the preview now matches the Share image's finer, cleaner weight.
+- The Share and Post images now use the actual "Daily District" wordmark instead of plain text. Landscape Share: the wordmark replaces the small text watermark, larger and semi-transparent (adapts to the map — near-black on light, white on dark) so it reads even where it overlaps the district. Portrait Post: a much larger white wordmark replaces the "DAILY DISTRICT" caps text (white reads well on both the red "won" and dark-navy "lost" panels), and the `daily-district.com` url is enlarged.
+- `post-daily-tweet.mjs` carries the same wordmark watermark into the server-side (resvg) daily-tweet image, so all three renders share one treatment.
+
 ## v2.13.48 — Fix unresponsive state map when playing an archive after a state-phase loss
 
 - Fixed archive puzzles launching with a completely unresponsive state map (no state could be tapped/clicked) whenever the previous game — the daily or another archive — ended without the state being found. A state-phase loss latches the `_guessLocked` guard to lock the finished board, and `startServerArchive()` reset every other game global except that lock, so every state tap on the fresh archive board died silently in `submitStateGuess()`. The archive reset now clears `_guessLocked`/`_distLocked` and any stale tap-to-confirm selection. Reproduced and verified end-to-end with touch taps under iPhone emulation.

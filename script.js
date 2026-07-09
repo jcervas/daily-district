@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.49';
+const VERSION_NUMBER = '2.13.50';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -198,6 +198,40 @@ async function getStateSvg(stateAbbr) {
   } catch (e) {
     return null;
   }
+}
+
+// "Daily District" wordmark, fetched once and cached, for embedding into the share images.
+// Returns { node, vbW, vbH } where node is the parsed <svg> whose children (a currentColor
+// path) are cloned into each share render — never inserted directly, so it stays reusable.
+let _wordmarkTpl = null;
+async function getWordmark() {
+  if (_wordmarkTpl) return _wordmarkTpl;
+  try {
+    const raw = await (await fetch('wordmark.svg')).text();
+    const svg = new DOMParser().parseFromString(raw, 'image/svg+xml').documentElement;
+    if (!svg || svg.nodeName.toLowerCase() !== 'svg') return null;
+    const vb = (svg.getAttribute('viewBox') || '0 0 260 56').split(/\s+/).map(Number);
+    _wordmarkTpl = { node: svg, vbW: vb[2] || 260, vbH: vb[3] || 56 };
+    return _wordmarkTpl;
+  } catch (e) { return null; }
+}
+
+// Append the "Daily District" wordmark into a share-image SVG selection `sel`, scaled to
+// `width` px with its top-left at (x, y), tinted `fill` at `opacity`. The wordmark's paths
+// use fill="currentColor", so we set `color` on the group for them to inherit. Returns the
+// rendered height (width × aspect) so callers can lay out around it.
+function _appendWordmark(sel, mark, x, y, width, fill, opacity = 1) {
+  if (!mark) return 0;
+  const scale = width / mark.vbW;
+  const g = sel.append('g')
+    .attr('transform', `translate(${x},${y}) scale(${scale})`)
+    .attr('color', fill)
+    .style('opacity', opacity);
+  const gn = g.node();
+  for (const child of mark.node.childNodes) {
+    if (child.nodeType === 1) gn.appendChild(document.importNode(child, true));
+  }
+  return width * mark.vbH / mark.vbW;
 }
 
 // State-level ACS clue data (QuickFacts-style), loaded once from state-acs.json.
@@ -5309,8 +5343,8 @@ function _buildRichMapLayers(sel, projection, W, H) {
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
 }
 
-// Landscape share image (800×450) — richer style + watermark.
-function _renderDistrictToBlob() {
+// Landscape share image (800×450) — richer style + wordmark watermark.
+async function _renderDistrictToBlob() {
   if (!todayDistrict || !window.d3) return Promise.reject('no district');
   const W = 800, H = 450, pad = 40;
   const dark = isDarkMode();
@@ -5323,19 +5357,19 @@ function _renderDistrictToBlob() {
   svg.append('rect').attr('width', W).attr('height', H)
     .attr('fill', dark ? '#252526' : '#f3f4f6');
   _buildRichMapLayers(svg, projection, W, H);
-  // Watermark bottom-right
-  svg.append('text')
-    .attr('x', W - 12).attr('y', H - 12)
-    .attr('text-anchor', 'end').attr('dominant-baseline', 'auto')
-    .attr('font-family', 'system-ui, sans-serif').attr('font-size', 13).attr('font-weight', '600')
-    .attr('fill', dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)')
-    .text('Daily District');
+  // Wordmark watermark, bottom-right — the actual "Daily District" wordmark, large and
+  // semi-transparent so it reads as a watermark even where it overlaps the district.
+  const mark = await getWordmark();
+  const wmW = 240;
+  const wmH = mark ? wmW * mark.vbH / mark.vbW : 0;
+  _appendWordmark(svg, mark, W - wmW - 20, H - wmH - 16, wmW,
+    dark ? '#ffffff' : '#000000', dark ? 0.5 : 0.4);
 
   return _svgToBlob(svg.node(), W, H);
 }
 
 // Portrait share image (1080×1350) — map top 60%, details panel bottom 40%.
-function _renderShareBlob() {
+async function _renderShareBlob() {
   if (!todayDistrict || !window.d3) return Promise.reject('no district');
   const W = 1080, H = 1350, mapH = 810, panelH = 540, pad = 60;
   const dark = isDarkMode();
@@ -5378,10 +5412,16 @@ function _renderShareBlob() {
       .attr('fill', `rgba(255,255,255,${opacity})`)
       .text(text);
 
-  txt(W/2, mapH + 100, 'DAILY DISTRICT',  32, '800', 0.65);
-  txt(W/2, mapH + 230, outcome,           52, '700', 1);
-  txt(W/2, mapH + 340, grid,              40, '400', 1);
-  txt(W/2, mapH + 490, 'daily-district.com', 22, '400', 0.45);
+  // Large "Daily District" wordmark instead of plain caps text — always white, which reads
+  // well on both the red (won) and dark-navy (lost) panels in either theme.
+  const mark = await getWordmark();
+  const wmW = 640;
+  const wmH = mark ? wmW * mark.vbH / mark.vbW : 0;
+  _appendWordmark(svg, mark, (W - wmW) / 2, mapH + 50, wmW, '#ffffff', 1);
+
+  txt(W/2, mapH + 300, outcome,           52, '700', 1);
+  txt(W/2, mapH + 400, grid,              40, '400', 1);
+  txt(W/2, mapH + 505, 'daily-district.com', 36, '600', 0.6);
 
   return _svgToBlob(svg.node(), W, H);
 }
@@ -5391,11 +5431,19 @@ function renderDistrictPreview(containerId = 'result-district-preview') {
   if (!container || !todayDistrict || !window.d3) return;
   container.innerHTML = '';
 
-  const pad = 20;
-  // Use the content box (clientWidth/Height) — offsetWidth/Height include the 1px
-  // border, which skews the viewBox aspect ratio and letterboxes a thin gap.
-  const W = Math.max(container.clientWidth  || 440, 100);
-  const H = Math.max(container.clientHeight || 180, 100);
+  // Read the on-screen box size (content box — offsetWidth/Height include the 1px border,
+  // which skews the aspect ratio and letterboxes a thin gap) only to get its ASPECT RATIO.
+  const boxW = Math.max(container.clientWidth  || 440, 100);
+  const boxH = Math.max(container.clientHeight || 180, 100);
+  // Render into the same 800-wide reference viewBox the Share image uses, keeping the box's
+  // aspect ratio, then let the SVG scale down to fit. Stroke widths are absolute in viewBox
+  // units, so drawing at the box's own (~414px) size made the 2.5px district outline and
+  // 0.6px roads read ~2× heavier than the Share image (which draws them into an 800-wide
+  // frame). Matching the reference width makes the two renders visually identical.
+  const REF = 800;
+  const W = REF;
+  const H = Math.round(REF * boxH / boxW);
+  const pad = Math.round(REF * 0.05);
   const dark = isDarkMode();
   const projection = _previewProjection(W, H, pad);
   const pathGen = d3.geoPath(projection);
