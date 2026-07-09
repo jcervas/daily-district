@@ -65,6 +65,13 @@ a:hover { color: var(--dd-red); }
 }
 .dd-header-inner .dd-play:hover { background: var(--dd-red-dark); color:#fff; }
 
+@media (max-width: 560px) {
+  .dd-header-inner { padding: 10px 14px; gap: 8px; }
+  .dd-header-inner img { width: 26px; height: 26px; }
+  .dd-wordmark { font-size: 19px; white-space: nowrap; }
+  .dd-header-inner .dd-play { padding: 7px 12px; font-size: 13px; }
+}
+
 main.dd-main {
   max-width: 860px;
   margin: 0 auto;
@@ -278,13 +285,14 @@ footer.dd-footer a { color: var(--dd-muted); margin: 0 8px; }
 .dd-map-back:hover { border-color: var(--dd-red); color: var(--dd-red); }
 .dd-map-title {
   position: absolute;
-  top: 12px;
-  right: 14px;
+  bottom: 10px;
+  left: 14px;
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
   font-weight: 800;
   text-transform: uppercase;
-  font-size: 18px;
-  color: var(--dd-muted);
+  font-size: 20px;
+  color: var(--dd-ink);
+  opacity: .7;
   pointer-events: none;
 }
 .dd-map-tip {
@@ -310,7 +318,6 @@ path.dd-d {
   stroke: #b6bcc7;
   stroke-width: 0.5;
   vector-effect: non-scaling-stroke;
-  cursor: pointer;
   transition: fill .1s;
 }
 path.dd-d.hot {
@@ -318,6 +325,8 @@ path.dd-d.hot {
   stroke: var(--dd-red);
   stroke-width: 1.8;
 }
+/* Districts are only clickable once a state is selected. */
+path.dd-d.live { cursor: pointer; }
 path.dd-d.dim {
   fill: #eceef2;
   stroke: #d6dae1;
@@ -331,12 +340,53 @@ path.dd-s {
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
+/* Transparent per-state hit layer — the click/hover target in the national view. */
+path.dd-statehit { fill: transparent; stroke: none; cursor: pointer; }
+
+/* Zoom controls — reused from the game (.map-zoom-btns / .mzb). */
+.dd-map-wrap .map-zoom-btns {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 5;
+}
+.dd-map-wrap .mzb {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  background: rgba(255, 255, 255, .92);
+  color: var(--dd-ink);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.dd-map-wrap .mzb:hover { background: #fff; border-color: var(--dd-red); color: var(--dd-red); }
+.dd-map-wrap .mzb-icon { width: 15px; height: 15px; }
 
 @media (max-width: 560px) {
   .dd-map-title { font-size: 14px; }
+  .dd-map-wrap .mzb { width: 34px; height: 34px; }
 }
 
 /* Browse index */
+.dd-browse-all { margin: 6px 0 10px; }
+.dd-browse-all > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--dd-red);
+  padding: 8px 0;
+  list-style: revert;
+}
+.dd-browse-all[open] > summary { margin-bottom: 16px; }
 .dd-browse-state { margin: 0 0 26px; }
 .dd-browse-state h2 {
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
@@ -379,4 +429,6 @@ path.dd-s {
   path.dd-s { stroke: #6b7382; }
   .dd-map-back { background: #23272e; color: var(--dd-ink); }
   .dd-map-back:hover { border-color: #ff5069; color: #ff5069; }
+  .dd-map-wrap .mzb { background: rgba(35, 39, 46, .92); border-color: rgba(255, 255, 255, .14); color: var(--dd-ink); }
+  .dd-map-wrap .mzb:hover { background: #23272e; border-color: #ff5069; color: #ff5069; }
 }

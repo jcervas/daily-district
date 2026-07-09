@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SITE = 'https://daily-district.com';
-const CSS_V = 2; // bump when district-pages.css changes
+const CSS_V = 4; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 
 const STATE_NAMES = {
@@ -383,6 +383,9 @@ function browsePage() {
   const canonical = `${SITE}/districts/`;
   const states = Object.keys(byState).sort((a, b) =>
     (STATE_NAMES[a] || a).localeCompare(STATE_NAMES[b] || b));
+  // Text index of every district. Collapsed by default (the map is the primary
+  // way to browse) but kept in the DOM so it stays a crawlable internal-link hub
+  // — the district pages' discoverability, and the AdSense case, lean on this.
   const blocks = states.map((st) => {
     const ids = byState[st].slice().sort();
     const atLarge = ids.length === 1;
@@ -395,10 +398,17 @@ function browsePage() {
       <h2>${esc(STATE_NAMES[st] || st)} <span style="font-weight:400;font-size:14px;color:var(--dd-muted)">(${ids.length})</span></h2>
       <div class="dd-browse-links">${links}</div>
     </div>`;
-  }).join('\n    ');
+  }).join('\n      ');
 
+  // Zoom cluster reuses the game's markup/classes (.map-zoom-btns / .mzb); the
+  // fit button uses a maximize icon to frame the whole country.
   const mapFigure = `    <figure class="dd-map-wrap" style="margin:0 0 6px">
       <div id="dd-map"><p style="padding:44px 12px;text-align:center;color:var(--dd-muted)">Loading map…</p></div>
+      <div class="map-zoom-btns" role="group" aria-label="Map zoom">
+        <button type="button" class="mzb" data-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" class="mzb" data-zoom="out" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="mzb" data-zoom="fit" aria-label="Fit the whole country" title="Fit"><svg class="mzb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+      </div>
       <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
       <div id="dd-map-title" class="dd-map-title"></div>
       <div id="dd-map-tip" class="dd-map-tip"></div>
@@ -409,7 +419,10 @@ function browsePage() {
     <h1 class="dd-title">All U.S. House Districts</h1>
     <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
 ${mapFigure}
-    ${blocks}`;
+    <details class="dd-browse-all">
+      <summary>Or browse all ${records.length} districts as a list</summary>
+      ${blocks}
+    </details>`;
 
   return shell({
     title: 'All U.S. Congressional Districts — Representatives & Demographics | Daily District',
@@ -427,6 +440,7 @@ function mapScripts() {
   var el=document.getElementById('dd-map');
   if(!el||typeof d3==='undefined'||typeof topojson==='undefined'){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); return; }
   var W=960,H=600;
+  var wrap=el.parentNode;
   var back=document.getElementById('dd-map-back');
   var titleEl=document.getElementById('dd-map-title');
   var tip=document.getElementById('dd-map-tip');
@@ -439,33 +453,85 @@ function mapScripts() {
     var path=d3.geoPath(proj);
     var svg=d3.select(el).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('class','dd-map-svg').attr('role','img').attr('aria-label','Map of U.S. congressional districts');
     var g=svg.append('g');
+    // Layers, bottom to top: districts, state borders, transparent state hit-targets.
+    var districtsLayer=g.append('g');
+    var bordersLayer=g.append('g');
+    var hitLayer=g.append('g');
     var stateFeat={}; states.forEach(function(f){stateFeat[f.properties.st]=f;});
     var counts={}; districts.forEach(function(f){counts[f.properties.st]=(counts[f.properties.st]||0)+1;});
-    var dSel=g.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path);
-    var sg=g.append('g'); sg.selectAll('path.dd-s').data(states).enter().append('path').attr('class','dd-s').attr('d',path);
+    var dSel=districtsLayer.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path);
+    bordersLayer.selectAll('path.dd-s').data(states).enter().append('path').attr('class','dd-s').attr('d',path);
+    var hitSel=hitLayer.selectAll('path.dd-statehit').data(states).enter().append('path').attr('class','dd-statehit').attr('d',path);
     var selected=null;
+
     function labelFor(f){
       var st=f.properties.st, num=f.properties.sd.split('-')[1], name=STATE_NAMES[st]||st;
       return counts[st]===1 ? (name+' \\u2014 At-large') : (name+' '+ord(parseInt(num,10))+' District');
     }
     function showTip(ev,text){ var r=el.getBoundingClientRect(); tip.textContent=text; tip.style.left=(ev.clientX-r.left)+'px'; tip.style.top=(ev.clientY-r.top)+'px'; tip.classList.add('show'); }
     function hideTip(){ tip.classList.remove('show'); }
-    dSel.on('mousemove',function(ev,d){ showTip(ev,labelFor(d)); })
-        .on('mouseenter',function(ev,d){ d3.select(this).raise().classed('hot',true); })
-        .on('mouseleave',function(){ d3.select(this).classed('hot',false); hideTip(); })
-        .on('click',function(ev,d){ if(!selected){ zoomTo(d.properties.st); } else { window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; } });
-    function updateDim(){ dSel.classed('dim',function(d){ return selected && d.properties.st!==selected; }); }
-    function zoomTo(st){
-      selected=st;
-      var b=path.bounds(stateFeat[st]);
-      var bw=b[1][0]-b[0][0], bh=b[1][1]-b[0][1], cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2;
-      var k=Math.min(14, 0.92*Math.min(W/bw, H/bh));
-      g.transition().duration(650).attr('transform','translate('+(W/2-k*cx)+','+(H/2-k*cy)+') scale('+k+')');
-      updateDim(); back.classList.add('show'); titleEl.textContent=(STATE_NAMES[st]||st); hideTip();
+    function setStateHot(st,on){ dSel.filter(function(d){return d.properties.st===st;}).classed('hot',on); }
+
+    // Which layer receives pointer events depends on the mode: pick a state
+    // first (hit layer), then pick a district within it (districts layer).
+    function applyMode(){
+      if(selected){
+        dSel.classed('dim',function(d){return d.properties.st!==selected;})
+            .classed('live',function(d){return d.properties.st===selected;});
+        hitLayer.style('pointer-events','none');
+        districtsLayer.style('pointer-events','all');
+      } else {
+        dSel.classed('dim',false).classed('live',false).classed('hot',false);
+        hitLayer.style('pointer-events','all');
+        districtsLayer.style('pointer-events','none');
+      }
     }
-    function reset(){ selected=null; g.transition().duration(650).attr('transform','translate(0,0) scale(1)'); updateDim(); back.classList.remove('show'); titleEl.textContent=''; hideTip(); }
-    back.addEventListener('click',reset);
+
+    // National view: hover highlights a whole state, click zooms to it.
+    hitSel.on('mousemove',function(ev,d){ showTip(ev, STATE_NAMES[d.properties.st]||d.properties.st); })
+          .on('mouseenter',function(ev,d){ setStateHot(d.properties.st,true); })
+          .on('mouseleave',function(ev,d){ setStateHot(d.properties.st,false); hideTip(); })
+          .on('click',function(ev,d){ zoomToState(d.properties.st); });
+
+    // State view: hover highlights one district, click opens its profile.
+    dSel.on('mousemove',function(ev,d){ if(selected===d.properties.st) showTip(ev,labelFor(d)); })
+        .on('mouseenter',function(ev,d){ if(selected===d.properties.st) d3.select(this).raise().classed('hot',true); })
+        .on('mouseleave',function(ev,d){ d3.select(this).classed('hot',false); hideTip(); })
+        .on('click',function(ev,d){ if(selected===d.properties.st) window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; });
+
+    // Zoom/pan via d3.zoom; wheel disabled so the page still scrolls over the map.
+    var zoom=d3.zoom().scaleExtent([1,40]).on('zoom',function(ev){ g.attr('transform',ev.transform); });
+    svg.call(zoom).on('wheel.zoom',null).on('dblclick.zoom',null);
+
+    function transformFor(b){
+      var bw=b[1][0]-b[0][0], bh=b[1][1]-b[0][1], cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2;
+      var k=Math.max(1, Math.min(40, 0.9*Math.min(W/bw, H/bh)));
+      return d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-cx,-cy);
+    }
+    function zoomToState(st){
+      selected=st; setStateHot(st,false); applyMode();
+      back.classList.add('show'); titleEl.textContent=STATE_NAMES[st]||st; hideTip();
+      svg.transition().duration(650).call(zoom.transform, transformFor(path.bounds(stateFeat[st])));
+    }
+    function fit(){
+      selected=null; applyMode();
+      back.classList.remove('show'); titleEl.textContent=''; hideTip();
+      svg.transition().duration(650).call(zoom.transform, d3.zoomIdentity);
+    }
+    back.addEventListener('click',fit);
     el.addEventListener('mouseleave',hideTip);
+
+    // Zoom buttons (reused from the game).
+    Array.prototype.forEach.call(wrap.querySelectorAll('.mzb'),function(b){
+      b.addEventListener('click',function(){
+        var z=b.getAttribute('data-zoom');
+        if(z==='in') svg.transition().duration(200).call(zoom.scaleBy,1.6);
+        else if(z==='out') svg.transition().duration(200).call(zoom.scaleBy,1/1.6);
+        else fit();
+      });
+    });
+
+    applyMode();
   }).catch(function(){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); });
 })();`;
   return `  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
