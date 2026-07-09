@@ -32,7 +32,7 @@ const SITE = 'https://daily-district.com';
 const CSS_V = 5; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
-const MAP_JS_V = 3; // bump when the emitted district-map.js changes
+const MAP_JS_V = 5; // bump when the emitted district-map.js changes
 
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
@@ -483,6 +483,7 @@ function mapClientJs() {
     var bordersLayer=g.append('g');
     var hitLayer=g.append('g');
     var stateFeat={}; states.forEach(function(f){stateFeat[f.properties.st]=f;});
+    var distFeat={}; districts.forEach(function(f){distFeat[f.properties.sd]=f;});
     var counts={}; districts.forEach(function(f){counts[f.properties.st]=(counts[f.properties.st]||0)+1;});
     var dSel=districtsLayer.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path)
       .classed('current',function(d){ return focusDistrict && d.properties.sd===focusDistrict; });
@@ -526,12 +527,15 @@ function mapClientJs() {
         .on('click',function(ev,d){ if(selected===d.properties.st && d.properties.sd!==focusDistrict) window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; });
 
     // Zoom/pan via d3.zoom; wheel disabled so the page still scrolls over the map.
-    var zoom=d3.zoom().scaleExtent([1,40]).on('zoom',function(ev){ g.attr('transform',ev.transform); });
+    var zoom=d3.zoom().scaleExtent([1,160]).on('zoom',function(ev){ g.attr('transform',ev.transform); });
     svg.call(zoom).on('wheel.zoom',null).on('dblclick.zoom',null);
 
-    function transformFor(b){
+    // fill = fraction of the viewport the bbox should occupy (states get more
+    // context, a single district is framed tighter).
+    function transformFor(b, fill){
+      fill=fill||0.9;
       var bw=b[1][0]-b[0][0], bh=b[1][1]-b[0][1], cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2;
-      var k=Math.max(1, Math.min(40, 0.9*Math.min(W/bw, H/bh)));
+      var k=Math.max(1, Math.min(160, fill*Math.min(W/bw, H/bh)));
       return d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-cx,-cy);
     }
     // Swap in unsimplified per-state geometry the first time we zoom to a state,
@@ -548,32 +552,53 @@ function mapClientJs() {
         bordersLayer.selectAll('path.dd-s').filter(function(d){return d.properties.st===st;}).attr('d', path(outline));
       }).catch(function(){ detailDone[st]=false; });
     }
-    function zoomToState(st){
+    // Programmatic zoom is applied instantly (svg.call(zoom.transform)): d3's
+    // own zoom transitions stall unpredictably when mixed with an instant set on
+    // mount, so we snap rather than animate — reliable and predictable.
+    function applyZoom(T){ svg.call(zoom.transform, T); }
+    function zoomToState(st, instant){
       selected=st; setStateHot(st,false); applyMode(); upgradeDetail(st);
       back.classList.add('show'); titleEl.textContent=STATE_NAMES[st]||st; hideTip();
-      svg.transition().duration(650).call(zoom.transform, transformFor(path.bounds(stateFeat[st])));
+      applyZoom(transformFor(path.bounds(stateFeat[st])), instant);
+    }
+    // Frame a single district (used on profile pages): its state's districts
+    // stay selectable, but the view opens on the district's own extent.
+    function zoomToDistrict(sd, instant){
+      var f=distFeat[sd]; if(!f){ return; }
+      var st=f.properties.st;
+      selected=st; setStateHot(st,false); applyMode(); upgradeDetail(st);
+      back.classList.add('show'); titleEl.textContent=STATE_NAMES[st]||st; hideTip();
+      applyZoom(transformFor(path.bounds(f), 0.72), instant);
     }
     function fit(){
       selected=null; applyMode();
       back.classList.remove('show'); titleEl.textContent=''; hideTip();
-      svg.transition().duration(650).call(zoom.transform, d3.zoomIdentity);
+      applyZoom(d3.zoomIdentity);
     }
     back.addEventListener('click',fit);
     el.addEventListener('mouseleave',hideTip);
 
+    // Zoom in/out around the viewport centre, respecting the scale extent.
+    function zoomBy(f){
+      var c=d3.zoomTransform(svg.node()), nk=Math.max(1,Math.min(160,c.k*f));
+      var cx=(W/2-c.x)/c.k, cy=(H/2-c.y)/c.k;
+      applyZoom(d3.zoomIdentity.translate(W/2-nk*cx, H/2-nk*cy).scale(nk));
+    }
     // Zoom buttons (reused from the game).
     Array.prototype.forEach.call(wrap.querySelectorAll('.mzb'),function(b){
       b.addEventListener('click',function(){
         var z=b.getAttribute('data-zoom');
-        if(z==='in') svg.transition().duration(200).call(zoom.scaleBy,1.6);
-        else if(z==='out') svg.transition().duration(200).call(zoom.scaleBy,1/1.6);
+        if(z==='in') zoomBy(1.6);
+        else if(z==='out') zoomBy(1/1.6);
         else fit();
       });
     });
 
     applyMode();
-    // On a district profile the map opens zoomed to that district's state.
-    if(focusState && stateFeat[focusState]){ zoomToState(focusState); }
+    // A district profile opens framed on its own district; falls back to the
+    // whole state (e.g. at-large) if the district isn't found.
+    if(focusDistrict && distFeat[focusDistrict]){ zoomToDistrict(focusDistrict, true); }
+    else if(focusState && stateFeat[focusState]){ zoomToState(focusState, true); }
   }).catch(function(){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); });
   }
   // Only load geometry + render once the map is near the viewport (profile maps
