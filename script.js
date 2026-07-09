@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.48';
+const VERSION_NUMBER = '2.13.49';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -1527,8 +1527,9 @@ async function submitDistrictTileServer(dist) {
       tileCircle.classList.add('tile-correct-pop');
       const ns = 'http://www.w3.org/2000/svg';
       const checkEl = document.createElementNS(ns, 'text');
+      // Vertically centered via a measured numeric dy (see _centerTileLabel), not
+      // dominant-baseline — iOS Safari ignores the latter and left the ✓ sitting high.
       checkEl.setAttribute('text-anchor', 'middle');
-      checkEl.setAttribute('dominant-baseline', 'central');
       const svgEl = tilesEl.querySelector('svg');
       const curK = svgEl ? d3.zoomTransform(svgEl).k : 1;
       checkEl.setAttribute('font-size', String(10 / Math.max(curK, 1)));
@@ -1538,6 +1539,7 @@ async function submitDistrictTileServer(dist) {
       checkEl.setAttribute('class', 'tile-correct-check');
       checkEl.textContent = '✓';
       clickedTile.appendChild(checkEl);
+      _centerTileLabel(checkEl);   // measure after it's in the DOM
     }
     setTimeout(() => { _distLocked = false; processDistrictGuessServer(dist, fullGuess, resp); }, 380);
   } else {
@@ -4320,6 +4322,20 @@ function _refreshFitBtnState() {
   if (off) btn.setAttribute('disabled', ''); else btn.removeAttribute('disabled');
 }
 
+// Vertically center an SVG <text> on its (0,0) origin by measuring the rendered glyph
+// box and setting a concrete numeric dy. This is immune to both quirks the older
+// approaches hit: iOS Safari silently ignoring dominant-baseline (leaving the number on
+// the alphabetic baseline, sitting high in the circle) AND flaky em-resolution for
+// dy="0.35em" under heavy zoom. Must be re-run whenever the font-size changes, since the
+// glyph box — and thus the offset — scales with it.
+function _centerTileLabel(textNode) {
+  textNode.setAttribute('dy', '0');
+  let bbox;
+  try { bbox = textNode.getBBox(); } catch { return; }   // detached/zero-size — skip
+  if (!bbox.height) return;
+  textNode.setAttribute('dy', String(-(bbox.y + bbox.height / 2)));
+}
+
 function _applyTileZoomScaling(g, k) {
   const targetCirclePx = 14, densityScale = _effDensity(k), cssScale = _districtCssScale || 1, W = _districtW;
   const rk = targetCirclePx / (k * cssScale * densityScale);
@@ -4348,6 +4364,7 @@ function _applyTileZoomScaling(g, k) {
     if (this.parentNode && this.parentNode.querySelector('rect')) return; // skip badge text
     const baseSize = Math.min(this.textContent.length > 2 ? 8 : 9, targetCirclePx);
     d3.select(this).attr('font-size', `${baseSize / (k * cssScale * densityScale)}px`);
+    _centerTileLabel(this);   // re-center: the glyph box scales with the new font-size
   });
   g.select('.dist-connectors').selectAll('line').attr('stroke-width', 0.8 / k);
   g.select('.dist-connectors').attr('display', k > 1.5 ? 'none' : null);
@@ -4727,15 +4744,16 @@ function _drawGameplayTiles(ctx) {
       .style('opacity', opacity);
     grp.append('circle').attr('r', R)
       .attr('fill', fillColor).attr('stroke', dark ? '#222' : '#fff').attr('stroke-width', 1.5 / zoomK);
-    grp.append('text')
-      // Center the number with the browser-native baseline (well-supported across all
-      // current browsers, and consistent with the callout/badge labels). It scales cleanly
-      // as the font-size changes with zoom. The older dy="0.35em" hack mis-centered the
-      // label in Safari (which appears to mishandle a sub-pixel em dy under heavy zoom).
-      .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+    const labelEl = grp.append('text')
+      // Vertically center via a measured numeric dy (see _centerTileLabel) rather than
+      // dominant-baseline — iOS Safari ignores dominant-baseline on <text>, which left the
+      // number sitting high on the alphabetic baseline. text-anchor:middle still handles
+      // the horizontal centering.
+      .attr('text-anchor', 'middle')
       .attr('font-size', `${Math.min(d.label.length > 2 ? 8 : 9, targetCirclePx) / (zoomK * cssScale * effDensity)}px`)
       .attr('font-weight', '700').attr('fill', textColor).attr('pointer-events', 'none')
       .text(d.label);
+    _centerTileLabel(labelEl.node());
     if (!disabled) {
       grp.on('mouseover', function() { d3.select(this).select('circle').attr('fill', c.hover); })
          .on('mouseout',  function() { d3.select(this).select('circle').attr('fill', fillColor); })
