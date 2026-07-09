@@ -280,6 +280,27 @@ function districtPage(r) {
       <p class="dd-source">Current U.S. House member (source: house.gov).</p>
     </section>`);
 
+  // geography — placed right after the representative
+  if (geo.area) {
+    S.push(`<section class="dd-card">
+      <h2>Geography</h2>
+${mapFigure({
+      focusState: r.state,
+      focusDistrict: r.id,
+      fallback: `<img src="/state-svgs/${r.state.toLowerCase()}.svg" alt="Map of ${esc(r.stateName)}" width="200" height="200" />`,
+      hint: r.atLarge
+        ? `${esc(r.stateName)} elects a single at-large representative. Zoom out to explore other states.`
+        : `${esc(r.id)} is shown in red. Click a neighboring district to open it, or zoom out to explore the country.`,
+    })}
+      <div class="dd-grid" style="margin-top:12px">
+        ${statBox(fmt(geo.area) + ' mi²', 'Land area')}
+        ${density != null ? statBox(fmt(density) + '/mi²', 'Pop. density') : ''}
+        ${geo.pp != null ? statBox(geo.pp.toFixed(2), 'Compactness (Polsby-Popper)') : ''}
+      </div>
+      ${ppLabel ? `<p style="margin:10px 0 0">By the Polsby-Popper measure, ${r.id} is ${ppLabel} compared with other districts.</p>` : ''}
+    </section>`);
+  }
+
   if (lean24 || lean20) {
     const stack = (p.dem24 != null && p.rep24 != null) ? stackBar([
       { frac: p.dem24 / 100, cls: 'seg-dem' },
@@ -330,27 +351,6 @@ function districtPage(r) {
         ${statBox(pctS(c.uninsuredPct), 'Uninsured')}
       </div>
       <p class="dd-source">U.S. Census Bureau, American Community Survey (5-year estimates).</p>
-    </section>`);
-  }
-
-  // geography
-  if (geo.area) {
-    S.push(`<section class="dd-card">
-      <h2>Geography</h2>
-${mapFigure({
-      focusState: r.state,
-      focusDistrict: r.id,
-      fallback: `<img src="/state-svgs/${r.state.toLowerCase()}.svg" alt="Map of ${esc(r.stateName)}" width="200" height="200" />`,
-      hint: r.atLarge
-        ? `${esc(r.stateName)} elects a single at-large representative. Zoom out to explore other states.`
-        : `${esc(r.id)} is shown in red. Click a neighboring district to open it, or zoom out to explore the country.`,
-    })}
-      <div class="dd-grid" style="margin-top:12px">
-        ${statBox(fmt(geo.area) + ' mi²', 'Land area')}
-        ${density != null ? statBox(fmt(density) + '/mi²', 'Pop. density') : ''}
-        ${geo.pp != null ? statBox(geo.pp.toFixed(2), 'Compactness (Polsby-Popper)') : ''}
-      </div>
-      ${ppLabel ? `<p style="margin:10px 0 0">By the Polsby-Popper measure, ${r.id} is ${ppLabel} compared with other districts.</p>` : ''}
     </section>`);
   }
 
