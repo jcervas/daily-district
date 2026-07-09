@@ -5,7 +5,9 @@
   "description": "Daily District — deps are only for automation scripts (post-daily-tweet.mjs); the site itself is static and dependency-free.",
   "scripts": {
     "tweet": "node post-daily-tweet.mjs",
-    "tweet:dry": "DRY_RUN=1 node post-daily-tweet.mjs"
+    "tweet:dry": "DRY_RUN=1 node post-daily-tweet.mjs",
+    "build:pages": "node build-district-pages.mjs",
+    "social": "node generate-social-graphics.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

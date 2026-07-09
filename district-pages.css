@@ -1,0 +1,278 @@
+/* Daily District — static district reference pages.
+   Self-contained; intentionally independent of the game's style.css so these
+   crawlable content pages stay lightweight and stable. On-brand with the game
+   (CMU red #C41230, Barlow). */
+
+:root {
+  --dd-red: #C41230;
+  --dd-red-dark: #9d0e26;
+  --dd-ink: #1a1a1a;
+  --dd-muted: #5a5f6b;
+  --dd-line: #e3e5ea;
+  --dd-bg: #ffffff;
+  --dd-panel: #f7f8fa;
+  --dd-dem: #2166ac;
+  --dd-rep: #b2182b;
+  --dd-oth: #9aa0ab;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--dd-ink);
+  background: var(--dd-bg);
+  line-height: 1.55;
+}
+
+a { color: var(--dd-red-dark); }
+a:hover { color: var(--dd-red); }
+
+.dd-header {
+  border-bottom: 3px solid var(--dd-red);
+  background: #fff;
+}
+.dd-header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dd-header-inner img { width: 34px; height: 34px; }
+.dd-wordmark {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: .3px;
+  color: var(--dd-red);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.dd-header-inner .dd-play {
+  margin-left: auto;
+  background: var(--dd-red);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+.dd-header-inner .dd-play:hover { background: var(--dd-red-dark); color:#fff; }
+
+main.dd-main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 22px 20px 64px;
+}
+
+.dd-crumbs {
+  font-size: 13.5px;
+  color: var(--dd-muted);
+  margin: 4px 0 18px;
+}
+.dd-crumbs a { color: var(--dd-muted); text-decoration: none; }
+.dd-crumbs a:hover { color: var(--dd-red); text-decoration: underline; }
+.dd-crumbs span { margin: 0 6px; opacity: .5; }
+
+h1.dd-title {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 900;
+  font-size: clamp(30px, 6vw, 46px);
+  line-height: 1.05;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+.dd-sub {
+  font-size: 17px;
+  color: var(--dd-muted);
+  margin: 0 0 22px;
+}
+
+.dd-lede {
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0 0 26px;
+  padding-left: 16px;
+  border-left: 4px solid var(--dd-red);
+}
+
+section.dd-card {
+  border: 1px solid var(--dd-line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 0 0 18px;
+  background: #fff;
+}
+section.dd-card h2 {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-size: 15px;
+  color: var(--dd-red);
+  margin: 0 0 14px;
+}
+
+.dd-rep {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dd-rep .dd-rep-name { font-size: 22px; font-weight: 700; }
+.dd-pill {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: #fff;
+}
+.dd-pill.D { background: var(--dd-dem); }
+.dd-pill.R { background: var(--dd-rep); }
+.dd-pill.I, .dd-pill.V { background: var(--dd-oth); }
+
+.dd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 20px;
+}
+.dd-stat .dd-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.dd-stat .dd-stat-lbl {
+  font-size: 12.5px;
+  color: var(--dd-muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.dd-bar {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+  background: var(--dd-panel);
+}
+.dd-bar > span { display: block; height: 100%; }
+.seg-white { background: #7db3d8; }
+.seg-black { background: #d98b5f; }
+.seg-hisp  { background: #86c98a; }
+.seg-asian { background: #c99ad8; }
+.seg-other { background: #c2c7d0; }
+.seg-dem   { background: var(--dd-dem); }
+.seg-rep   { background: var(--dd-rep); }
+.seg-oth   { background: var(--dd-oth); }
+.dd-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13.5px;
+  color: var(--dd-muted);
+}
+.dd-legend i {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: baseline;
+}
+
+.dd-locator { text-align: center; }
+.dd-locator img {
+  max-width: 200px;
+  width: 100%;
+  height: auto;
+  opacity: .85;
+}
+
+.dd-neighbors { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dd-neighbors a {
+  display: inline-block;
+  border: 1px solid var(--dd-line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  font-weight: 600;
+  background: var(--dd-panel);
+}
+
+.dd-source {
+  font-size: 12.5px;
+  color: var(--dd-muted);
+  margin-top: 4px;
+}
+
+.dd-cta {
+  text-align: center;
+  margin: 30px 0 8px;
+}
+.dd-cta a {
+  display: inline-block;
+  background: var(--dd-red);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 18px;
+  padding: 13px 30px;
+  border-radius: 999px;
+}
+.dd-cta a:hover { background: var(--dd-red-dark); color: #fff; }
+
+footer.dd-footer {
+  border-top: 1px solid var(--dd-line);
+  margin-top: 40px;
+  padding: 22px 20px 60px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--dd-muted);
+}
+footer.dd-footer a { color: var(--dd-muted); margin: 0 8px; }
+
+/* Browse index */
+.dd-browse-state { margin: 0 0 26px; }
+.dd-browse-state h2 {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 20px;
+  margin: 0 0 10px;
+  border-bottom: 2px solid var(--dd-line);
+  padding-bottom: 4px;
+}
+.dd-browse-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.dd-browse-links a {
+  display: inline-block;
+  border: 1px solid var(--dd-line);
+  border-radius: 8px;
+  padding: 5px 11px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--dd-panel);
+}
+.dd-browse-links a:hover { border-color: var(--dd-red); }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dd-ink: #eceef2;
+    --dd-muted: #a2a8b4;
+    --dd-line: #2c313a;
+    --dd-bg: #14161a;
+    --dd-panel: #1d2027;
+  }
+  body { background: var(--dd-bg); }
+  .dd-header, section.dd-card { background: #191c22; }
+  a { color: #ff6b81; }
+  a:hover { color: #ff9aa8; }
+  .dd-crumbs a:hover, .dd-browse-links a:hover { color: #ff6b81; }
+}

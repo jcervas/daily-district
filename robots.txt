@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /globe-playground.html
+Disallow: /globe-css-playground.html
+
+Sitemap: https://daily-district.com/sitemap.xml
