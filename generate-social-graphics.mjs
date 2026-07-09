@@ -37,7 +37,6 @@ const RED = '#C41230';
 const INK = '#1a1a1a';
 const LIGHT_BG = '#f5f5f3';
 const CARD_BG = '#E0E0E0';
-const MAP_BG = '#d5d5d5';
 
 const FONT_FILES = ['SemiBold', 'Bold', 'ExtraBold', 'Black']
   .map(w => path.join(DIR, 'social', 'fonts', `Barlow-${w}.ttf`));
@@ -121,60 +120,31 @@ async function pill(str, x, y, { size, weight = 800, padX, height, bg = RED, fil
   return { w, svg: rect + text(str, cx, cy, { size, weight, fill, anchor: 'middle', spacing }) };
 }
 
-// ── Map / silhouette layers ──────────────────────────────────────────────────
-function mapLayers(district, overlay, projection, W, H, strokeW) {
-  const pathGen = geoPath(projection);
-  const [[bx0, by0], [bx1, by1]] = geoPath(projection).bounds(district);
-  const inView = f => {
-    try { const [[x0, y0], [x1, y1]] = pathGen.bounds(f);
-      return x1 >= bx0 - 40 && x0 <= bx1 + 40 && y1 >= by0 - 40 && y0 <= by1 + 40; }
-    catch { return false; }
-  };
-  const parts = [];
-  const layer = (features, attrs) => {
-    parts.push('<g>');
-    for (const f of features.filter(inView)) { const d = pathGen(f); if (d) parts.push(`<path d="${d}" ${attrs}/>`); }
-    parts.push('</g>');
-  };
-  if (overlay.urban) layer(overlay.urban.features, 'fill="rgba(0,0,0,0.10)" stroke="none"');
-  if (overlay.roads) layer(overlay.roads.features, 'fill="none" stroke="#9c9c9c" stroke-width="1.1"');
-  const dPath = pathGen(district);
-  // Fade the surrounding map (everything OUTSIDE the district) so the district
-  // reads as one distinct region instead of blending into the background.
-  parts.push(`<path d="M0,0L${W},0L${W},${H}L0,${H}Z ${dPath}" fill="${LIGHT_BG}" fill-opacity="0.6" fill-rule="evenodd"/>`);
-  // District: light red wash + strong outline.
-  parts.push(`<path d="${dPath}" fill="${RED}" fill-opacity="0.16"/>`);
-  parts.push(`<path d="${dPath}" fill="none" stroke="${RED}" stroke-width="${strokeW}" stroke-linejoin="round"/>`);
-  return parts.join('');
-}
-
 // ── 1a — 16:9 promo (1600×900) ────────────────────────────────────────────────
-async function build16x9(district, overlay) {
+// Same flat treatment as the 9:16: a solid-red district silhouette (no roads or
+// urban areas) on the light background, laid out two-column — text left, the
+// silhouette in a rounded card on the right.
+async function build16x9(district) {
   const W = 1600, H = 900;
-  // Contain the whole district (slight bleed) so its full shape is visible and
-  // not cropped — this is the puzzle, after all.
-  const proj = containProjection(district, W, H, -70);
   const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`];
-  parts.push('<defs>'
-    + `<linearGradient id="scrim" x1="0" y1="1" x2="0" y2="0">`
-    + `<stop offset="0" stop-color="${LIGHT_BG}" stop-opacity="0.94"/>`
-    + `<stop offset="1" stop-color="${LIGHT_BG}" stop-opacity="0"/></linearGradient></defs>`);
-  parts.push(`<rect width="${W}" height="${H}" fill="${MAP_BG}"/>`);
-  parts.push(mapLayers(district, overlay, proj, W, H, 5));
-  // Light scrim rising from the bottom so the headline + CTA always read.
-  parts.push(`<rect x="0" y="${H - 380}" width="${W}" height="380" fill="url(#scrim)"/>`);
+  parts.push(`<rect width="${W}" height="${H}" fill="${LIGHT_BG}"/>`);
 
-  const badge = await pill('A DAILY GEOGRAPHY GAME', 60, 52, { size: 26, weight: 800, padX: 22, height: 46, spacing: 2.6 });
+  // Right: silhouette card.
+  const cardW = 660, cardH = 660, cardX = W - 60 - cardW, cardY = (H - cardH) / 2;
+  parts.push(`<rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="40" fill="${CARD_BG}"/>`);
+  const box = 520;
+  const proj = containProjection(district, box, box, 0);
+  const [dx, dy] = [cardX + (cardW - box) / 2, cardY + (cardH - box) / 2];
+  parts.push(`<g transform="translate(${dx},${dy})"><path d="${geoPath(proj)(district)}" fill="${RED}"/></g>`);
+
+  // Left column: wordmark, badge, headline, CTA.
+  const x = 70;
+  parts.push(wordmark(x, 215, 360, RED));
+  const badge = await pill('A DAILY GEOGRAPHY GAME', x, 320, { size: 26, weight: 800, padX: 22, height: 46, spacing: 2.6 });
   parts.push(badge.svg);
-
-  // Bottom-left headline (two lines, 84px) + CTA, stacked up from the bottom.
-  parts.push(text('Can you identify', 60, H - 234, { size: 84, weight: 900, fill: INK }));
-  parts.push(text('this district?', 60, H - 150, { size: 84, weight: 900, fill: INK }));
-  parts.push(text(`Play free at ${SITE}`, 60, H - 58, { size: 34, weight: 700, fill: RED }));
-
-  // Bottom-right wordmark (dark).
-  const wmW = 420;
-  parts.push(wordmark(W - wmW - 56, H - (wmW * 56 / 260) - 56, wmW, INK));
+  parts.push(text('Can you identify', x, 470, { size: 78, weight: 900, fill: INK }));
+  parts.push(text('this district?', x, 552, { size: 78, weight: 900, fill: INK }));
+  parts.push(text(`Play free at ${SITE}`, x, 632, { size: 34, weight: 700, fill: RED }));
 
   parts.push('</svg>');
   return parts.join('');
@@ -232,11 +202,6 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
 
   const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
-  const ovTopo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-overlay.topojson'), 'utf8'));
-  const overlay = {
-    roads: ovTopo.objects.roads ? topojson.feature(ovTopo, ovTopo.objects.roads) : null,
-    urban: ovTopo.objects.urban ? topojson.feature(ovTopo, ovTopo.objects.urban) : null,
-  };
   const features = topojson.feature(topo, topo.objects.districts).features;
   const byId = id => features.find(f => f.properties['state-district'] === id);
 
@@ -259,7 +224,7 @@ async function main() {
     const district = byId(id);
     if (!district) { console.warn(`  skip ${id} — no geometry`); continue; }
     // Render at 2× the design dimensions for crisp, high-resolution output.
-    const png16 = await renderPng(await build16x9(district, overlay), 3200);
+    const png16 = await renderPng(await build16x9(district), 3200);
     const png9 = await renderPng(await build9x16(district), 2160);
     fs.writeFileSync(path.join(outDir, `${id}-16x9.png`), png16);
     fs.writeFileSync(path.join(outDir, `${id}-9x16.png`), png9);
