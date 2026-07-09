@@ -6,6 +6,7 @@
   "scripts": {
     "tweet": "node post-daily-tweet.mjs",
     "tweet:dry": "DRY_RUN=1 node post-daily-tweet.mjs",
+    "build:map": "node build-districts-map.mjs",
     "build:pages": "node build-district-pages.mjs",
     "social": "node generate-social-graphics.mjs"
   },

@@ -238,6 +238,104 @@ footer.dd-footer {
 }
 footer.dd-footer a { color: var(--dd-muted); margin: 0 8px; }
 
+/* Interactive map (browse index) */
+.dd-map-wrap {
+  position: relative;
+  margin: 0 0 10px;
+  border: 1px solid var(--dd-line);
+  border-radius: 12px;
+  background: var(--dd-panel);
+  overflow: hidden;
+}
+.dd-map-wrap.dd-map-failed { display: none; }
+.dd-map-svg { display: block; width: 100%; height: auto; }
+#dd-map { min-height: 60px; }
+.dd-map-hint {
+  font-size: 13.5px;
+  color: var(--dd-muted);
+  margin: 0 0 22px;
+  text-align: center;
+}
+.dd-map-back {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: none;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  color: var(--dd-ink);
+  border: 1px solid var(--dd-line);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
+}
+.dd-map-back.show { display: inline-flex; }
+.dd-map-back:hover { border-color: var(--dd-red); color: var(--dd-red); }
+.dd-map-title {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 18px;
+  color: var(--dd-muted);
+  pointer-events: none;
+}
+.dd-map-tip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--dd-ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  transform: translate(-50%, -140%);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .1s;
+  z-index: 5;
+}
+.dd-map-tip.show { opacity: 1; }
+
+/* district + state paths */
+path.dd-d {
+  fill: #dfe3ea;
+  stroke: #b6bcc7;
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill .1s;
+}
+path.dd-d.hot {
+  fill: rgba(196, 18, 48, .18);
+  stroke: var(--dd-red);
+  stroke-width: 1.8;
+}
+path.dd-d.dim {
+  fill: #eceef2;
+  stroke: #d6dae1;
+  pointer-events: none;
+  opacity: .55;
+}
+path.dd-s {
+  fill: none;
+  stroke: #7f8797;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .dd-map-title { font-size: 14px; }
+}
+
 /* Browse index */
 .dd-browse-state { margin: 0 0 26px; }
 .dd-browse-state h2 {
@@ -275,4 +373,10 @@ footer.dd-footer a { color: var(--dd-muted); margin: 0 8px; }
   a { color: #ff6b81; }
   a:hover { color: #ff9aa8; }
   .dd-crumbs a:hover, .dd-browse-links a:hover { color: #ff6b81; }
+  path.dd-d { fill: #2b3038; stroke: #444b57; }
+  path.dd-d.hot { fill: rgba(196, 18, 48, .32); stroke: #ff5069; }
+  path.dd-d.dim { fill: #23272e; stroke: #333944; }
+  path.dd-s { stroke: #6b7382; }
+  .dd-map-back { background: #23272e; color: var(--dd-ink); }
+  .dd-map-back:hover { border-color: #ff5069; color: #ff5069; }
 }

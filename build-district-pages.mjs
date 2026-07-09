@@ -29,7 +29,8 @@ import { dirname, join } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SITE = 'https://daily-district.com';
-const CSS_V = 1; // bump when district-pages.css changes
+const CSS_V = 2; // bump when district-pages.css changes
+const MAP_V = 1; // bump when districts-map.topojson changes
 
 const STATE_NAMES = {
   AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
@@ -149,7 +150,7 @@ for (const [state, dists] of Object.entries(districtNames)) {
 records.sort((a, b) => a.id.localeCompare(b.id));
 
 // ---- page renderers --------------------------------------------------------
-function shell({ title, description, canonical, body }) {
+function shell({ title, description, canonical, body, scripts = '' }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,7 +193,7 @@ ${body}
     <p>Daily District — a daily game about U.S. congressional districts.<br>
     Demographics from the U.S. Census Bureau (ACS 5-year); presidential results via The Downballot.</p>
   </footer>
-</body>
+${scripts}</body>
 </html>`;
 }
 
@@ -396,16 +397,81 @@ function browsePage() {
     </div>`;
   }).join('\n    ');
 
+  const mapFigure = `    <figure class="dd-map-wrap" style="margin:0 0 6px">
+      <div id="dd-map"><p style="padding:44px 12px;text-align:center;color:var(--dd-muted)">Loading map…</p></div>
+      <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
+      <div id="dd-map-title" class="dd-map-title"></div>
+      <div id="dd-map-tip" class="dd-map-tip"></div>
+    </figure>
+    <p class="dd-map-hint">Click a state to zoom in, then click a district to open its profile.</p>`;
+
   const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>Districts</nav>
     <h1 class="dd-title">All U.S. House Districts</h1>
     <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
+${mapFigure}
     ${blocks}`;
 
   return shell({
     title: 'All U.S. Congressional Districts — Representatives & Demographics | Daily District',
     description: `Directory of all ${records.length} U.S. House districts with representatives, Census demographics, and election results. Explore any district, then play the daily game.`,
-    canonical, body,
+    canonical, body, scripts: mapScripts(),
   });
+}
+
+// Interactive national map for /districts/. Client code avoids template
+// literals and ${} so it can be embedded verbatim in this generator.
+function mapScripts() {
+  const client = `(function(){
+  var STATE_NAMES=` + JSON.stringify(STATE_NAMES) + `;
+  var ord=function(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
+  var el=document.getElementById('dd-map');
+  if(!el||typeof d3==='undefined'||typeof topojson==='undefined'){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); return; }
+  var W=960,H=600;
+  var back=document.getElementById('dd-map-back');
+  var titleEl=document.getElementById('dd-map-title');
+  var tip=document.getElementById('dd-map-tip');
+  d3.json('/districts-map.topojson?v=` + MAP_V + `').then(function(topo){
+    el.innerHTML='';
+    var dcol=topojson.feature(topo,topo.objects.districts);
+    var districts=dcol.features;
+    var states=topojson.feature(topo,topo.objects.states).features;
+    var proj=d3.geoAlbersUsa().fitSize([W,H],dcol);
+    var path=d3.geoPath(proj);
+    var svg=d3.select(el).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('class','dd-map-svg').attr('role','img').attr('aria-label','Map of U.S. congressional districts');
+    var g=svg.append('g');
+    var stateFeat={}; states.forEach(function(f){stateFeat[f.properties.st]=f;});
+    var counts={}; districts.forEach(function(f){counts[f.properties.st]=(counts[f.properties.st]||0)+1;});
+    var dSel=g.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path);
+    var sg=g.append('g'); sg.selectAll('path.dd-s').data(states).enter().append('path').attr('class','dd-s').attr('d',path);
+    var selected=null;
+    function labelFor(f){
+      var st=f.properties.st, num=f.properties.sd.split('-')[1], name=STATE_NAMES[st]||st;
+      return counts[st]===1 ? (name+' \\u2014 At-large') : (name+' '+ord(parseInt(num,10))+' District');
+    }
+    function showTip(ev,text){ var r=el.getBoundingClientRect(); tip.textContent=text; tip.style.left=(ev.clientX-r.left)+'px'; tip.style.top=(ev.clientY-r.top)+'px'; tip.classList.add('show'); }
+    function hideTip(){ tip.classList.remove('show'); }
+    dSel.on('mousemove',function(ev,d){ showTip(ev,labelFor(d)); })
+        .on('mouseenter',function(ev,d){ d3.select(this).raise().classed('hot',true); })
+        .on('mouseleave',function(){ d3.select(this).classed('hot',false); hideTip(); })
+        .on('click',function(ev,d){ if(!selected){ zoomTo(d.properties.st); } else { window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; } });
+    function updateDim(){ dSel.classed('dim',function(d){ return selected && d.properties.st!==selected; }); }
+    function zoomTo(st){
+      selected=st;
+      var b=path.bounds(stateFeat[st]);
+      var bw=b[1][0]-b[0][0], bh=b[1][1]-b[0][1], cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2;
+      var k=Math.min(14, 0.92*Math.min(W/bw, H/bh));
+      g.transition().duration(650).attr('transform','translate('+(W/2-k*cx)+','+(H/2-k*cy)+') scale('+k+')');
+      updateDim(); back.classList.add('show'); titleEl.textContent=(STATE_NAMES[st]||st); hideTip();
+    }
+    function reset(){ selected=null; g.transition().duration(650).attr('transform','translate(0,0) scale(1)'); updateDim(); back.classList.remove('show'); titleEl.textContent=''; hideTip(); }
+    back.addEventListener('click',reset);
+    el.addEventListener('mouseleave',hideTip);
+  }).catch(function(){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); });
+})();`;
+  return `  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script>${client}</script>
+`;
 }
 
 // ---- write output ----------------------------------------------------------

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/district-pages.css?v=1" />
+  <link rel="stylesheet" href="/district-pages.css?v=2" />
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2164002681613672" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -32,6 +32,13 @@
     <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>Districts</nav>
     <h1 class="dd-title">All U.S. House Districts</h1>
     <p class="dd-lede">Browse profiles for all 435 U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
+    <figure class="dd-map-wrap" style="margin:0 0 6px">
+      <div id="dd-map"><p style="padding:44px 12px;text-align:center;color:var(--dd-muted)">Loading map…</p></div>
+      <button type="button" id="dd-map-back" class="dd-map-back" aria-label="Back to all states">&lsaquo; All states</button>
+      <div id="dd-map-title" class="dd-map-title"></div>
+      <div id="dd-map-tip" class="dd-map-tip"></div>
+    </figure>
+    <p class="dd-map-hint">Click a state to zoom in, then click a district to open its profile.</p>
     <div class="dd-browse-state">
       <h2>Alabama <span style="font-weight:400;font-size:14px;color:var(--dd-muted)">(7)</span></h2>
       <div class="dd-browse-links"><a href="/district/al-01/">1st</a><a href="/district/al-02/">2nd</a><a href="/district/al-03/">3rd</a><a href="/district/al-04/">4th</a><a href="/district/al-05/">5th</a><a href="/district/al-06/">6th</a><a href="/district/al-07/">7th</a></div>
@@ -242,5 +249,54 @@
     <p>Daily District — a daily game about U.S. congressional districts.<br>
     Demographics from the U.S. Census Bureau (ACS 5-year); presidential results via The Downballot.</p>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script>(function(){
+  var STATE_NAMES={"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"Washington D.C."};
+  var ord=function(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
+  var el=document.getElementById('dd-map');
+  if(!el||typeof d3==='undefined'||typeof topojson==='undefined'){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); return; }
+  var W=960,H=600;
+  var back=document.getElementById('dd-map-back');
+  var titleEl=document.getElementById('dd-map-title');
+  var tip=document.getElementById('dd-map-tip');
+  d3.json('/districts-map.topojson?v=1').then(function(topo){
+    el.innerHTML='';
+    var dcol=topojson.feature(topo,topo.objects.districts);
+    var districts=dcol.features;
+    var states=topojson.feature(topo,topo.objects.states).features;
+    var proj=d3.geoAlbersUsa().fitSize([W,H],dcol);
+    var path=d3.geoPath(proj);
+    var svg=d3.select(el).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('class','dd-map-svg').attr('role','img').attr('aria-label','Map of U.S. congressional districts');
+    var g=svg.append('g');
+    var stateFeat={}; states.forEach(function(f){stateFeat[f.properties.st]=f;});
+    var counts={}; districts.forEach(function(f){counts[f.properties.st]=(counts[f.properties.st]||0)+1;});
+    var dSel=g.selectAll('path.dd-d').data(districts).enter().append('path').attr('class','dd-d').attr('d',path);
+    var sg=g.append('g'); sg.selectAll('path.dd-s').data(states).enter().append('path').attr('class','dd-s').attr('d',path);
+    var selected=null;
+    function labelFor(f){
+      var st=f.properties.st, num=f.properties.sd.split('-')[1], name=STATE_NAMES[st]||st;
+      return counts[st]===1 ? (name+' \u2014 At-large') : (name+' '+ord(parseInt(num,10))+' District');
+    }
+    function showTip(ev,text){ var r=el.getBoundingClientRect(); tip.textContent=text; tip.style.left=(ev.clientX-r.left)+'px'; tip.style.top=(ev.clientY-r.top)+'px'; tip.classList.add('show'); }
+    function hideTip(){ tip.classList.remove('show'); }
+    dSel.on('mousemove',function(ev,d){ showTip(ev,labelFor(d)); })
+        .on('mouseenter',function(ev,d){ d3.select(this).raise().classed('hot',true); })
+        .on('mouseleave',function(){ d3.select(this).classed('hot',false); hideTip(); })
+        .on('click',function(ev,d){ if(!selected){ zoomTo(d.properties.st); } else { window.location.href='/district/'+d.properties.sd.toLowerCase()+'/'; } });
+    function updateDim(){ dSel.classed('dim',function(d){ return selected && d.properties.st!==selected; }); }
+    function zoomTo(st){
+      selected=st;
+      var b=path.bounds(stateFeat[st]);
+      var bw=b[1][0]-b[0][0], bh=b[1][1]-b[0][1], cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2;
+      var k=Math.min(14, 0.92*Math.min(W/bw, H/bh));
+      g.transition().duration(650).attr('transform','translate('+(W/2-k*cx)+','+(H/2-k*cy)+') scale('+k+')');
+      updateDim(); back.classList.add('show'); titleEl.textContent=(STATE_NAMES[st]||st); hideTip();
+    }
+    function reset(){ selected=null; g.transition().duration(650).attr('transform','translate(0,0) scale(1)'); updateDim(); back.classList.remove('show'); titleEl.textContent=''; hideTip(); }
+    back.addEventListener('click',reset);
+    el.addEventListener('mouseleave',hideTip);
+  }).catch(function(){ if(el&&el.parentNode)el.parentNode.classList.add('dd-map-failed'); });
+})();</script>
 </body>
 </html>
