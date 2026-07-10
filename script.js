@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.59';
+const VERSION_NUMBER = '2.13.60';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -4887,13 +4887,14 @@ function endGame(won, { skipAnims = false } = {}) {
 //  RESULT & SHARE
 // ============================================================
 
-function _previewProjection(W, H, pad, { centerOnCentroid = false } = {}) {
+function _previewProjection(W, H, pad, { centerOnCentroid = false, fitWhole = false } = {}) {
   // Use AlbersUSA so the district shape matches the district tile map and ref map.
-  // For MultiPolygon, fit to the largest sub-polygon so small islands don't
-  // blow out the extent.
+  // For MultiPolygon, fit to the largest sub-polygon so small islands don't blow out
+  // the extent — EXCEPT when fitWhole is set (share images), where the entire district
+  // must be framed so no part spills off the edge.
   const geom = todayDistrict && todayDistrict.geometry;
   let fitFeature = todayDistrict;
-  if (geom && geom.type === 'MultiPolygon') {
+  if (!fitWhole && geom && geom.type === 'MultiPolygon') {
     const largest = geom.coordinates.reduce((best, poly) => {
       const a = d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: poly } });
       const b = d3.geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: best } });
@@ -5349,7 +5350,8 @@ async function _renderDistrictToBlob() {
   const W = 800, H = 450, pad = 40;
   const dark = isDarkMode();
   const answerKey = todayDistrict.properties['state-district'] || '';
-  const projection = _previewProjection(W, H, pad);
+  // fitWhole so the entire district is framed (no clipped edges on wide/multi-part districts).
+  const projection = _previewProjection(W, H, pad, { fitWhole: true });
 
   const svg = d3.create('svg')
     .attr('xmlns', 'http://www.w3.org/2000/svg')
@@ -5368,10 +5370,12 @@ async function _renderDistrictToBlob() {
   return _svgToBlob(svg.node(), W, H);
 }
 
-// Portrait share image (1080×1350) — map top 60%, details panel bottom 40%.
+// Portrait share image — 4:5, exported at 1440×1800. Layout is authored in a 1080×1350
+// viewBox (map top 60%, details panel bottom 40%) and scaled up on export.
 async function _renderShareBlob() {
   if (!todayDistrict || !window.d3) return Promise.reject('no district');
   const W = 1080, H = 1350, mapH = 810, panelH = 540, pad = 60;
+  const OUT_W = 1440, OUT_H = 1800;   // 4:5, higher-res export
   const dark = isDarkMode();
   const answerKey  = todayDistrict.properties['state-district'] || '';
   const stateName  = todayDistrict.properties['state-name'] || todayDistrict.properties['NAME'] || '';
@@ -5384,11 +5388,13 @@ async function _renderShareBlob() {
     g.correct && g.phase === 'district' ? '✓' : g.correct && g.phase === 'state' ? '○' : '✗');
   const grid = usedSlots.join('  ');   // only the guesses made — no empty-slot padding
 
-  const projection = _previewProjection(W, mapH, pad);
+  // fitWhole so the entire district is framed (no clipped edges on wide/multi-part districts).
+  const projection = _previewProjection(W, mapH, pad, { fitWhole: true });
 
   const svg = d3.create('svg')
     .attr('xmlns', 'http://www.w3.org/2000/svg')
-    .attr('width', W).attr('height', H);
+    .attr('width', OUT_W).attr('height', OUT_H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
 
   // Map area
   svg.append('rect').attr('width', W).attr('height', mapH)
@@ -5423,7 +5429,7 @@ async function _renderShareBlob() {
   txt(W/2, mapH + 400, grid,              40, '400', 1);
   txt(W/2, mapH + 505, 'daily-district.com', 36, '600', 0.6);
 
-  return _svgToBlob(svg.node(), W, H);
+  return _svgToBlob(svg.node(), OUT_W, OUT_H);
 }
 
 function renderDistrictPreview(containerId = 'result-district-preview') {
@@ -5841,7 +5847,8 @@ async function shareResultText() {
 async function shareResultImage() {
   try {
     const blob = await _renderShareBlob();
-    const fname = `daily-district-${todayDistrict?.properties['state-district'] || 'share'}.png`;
+    // Keep the district out of the filename — it would spoil the answer for whoever it's shared with.
+    const fname = 'daily-district.png';
     const file = new File([blob], fname, { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
     const a = document.createElement('a');

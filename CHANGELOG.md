@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.13.60 — Share images: frame the whole district + higher-res Post + non-spoiler filename
+
+- All share graphics now frame the **entire** district instead of just its largest sub-polygon, so wide / multi-part districts (e.g. Michigan's two peninsulas) are no longer clipped at the edges. Added an opt-in `fitWhole` flag to `_previewProjection` (used by the Post and Share images) and simplified the auto-tweet's `previewProjection` to match; the in-game preview keeps the largest-sub-polygon fit so tiny far islands don't zoom it out.
+- The portrait **Post** image now exports at **1440×1800** (4:5) — the layout is authored in a 1080×1350 viewBox and scaled up on export.
+- The Post image's download/share **filename no longer includes the district code** (`daily-district-WV-01.png` → `daily-district.png`), which was spoiling the answer for whoever received it.
+
 ## v2.13.51 — Randomized share-text tagline
 
 - The shared result text now picks its call-to-action line at random from a 12-line pool (`SHARE_TAGLINES`) instead of always saying "Can you identify it?", so the message varies from share to share. All taglines are addressed to the recipient, so they read naturally whether the sharer won or lost.

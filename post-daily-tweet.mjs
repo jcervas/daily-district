@@ -19,7 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { geoAlbersUsa, geoPath, geoArea, geoBounds } from 'd3-geo';
+import { geoAlbersUsa, geoPath, geoBounds } from 'd3-geo';
 import * as topojson from 'topojson-client';
 import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
 
@@ -83,19 +83,11 @@ function wordmarkGroup(x, y, width, fill, opacity) {
   return `<g transform="translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.toFixed(4)})" opacity="${opacity}">${inner}</g>`;
 }
 
-// AlbersUSA fit to the largest sub-polygon so small islands don't blow out the extent.
+// AlbersUSA fit to the whole district so no part spills off the frame (mirrors
+// _previewProjection with fitWhole in script.js — the share image must show the
+// entire district, unlike the in-game view which fits the largest sub-polygon).
 function previewProjection(feature, W, H, pad) {
-  let fitFeature = feature;
-  const geom = feature.geometry;
-  if (geom && geom.type === 'MultiPolygon') {
-    const largest = geom.coordinates.reduce((best, poly) => {
-      const a = geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: poly } });
-      const b = geoArea({ type: 'Feature', geometry: { type: 'Polygon', coordinates: best } });
-      return a > b ? poly : best;
-    });
-    fitFeature = { type: 'Feature', geometry: { type: 'Polygon', coordinates: largest } };
-  }
-  return geoAlbersUsa().fitExtent([[pad, pad], [W - pad, H - pad]], fitFeature);
+  return geoAlbersUsa().fitExtent([[pad, pad], [W - pad, H - pad]], feature);
 }
 
 function buildSvg(district, overlay) {
