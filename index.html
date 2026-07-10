@@ -106,14 +106,17 @@
       .mp-scene[data-scene="intro"] { opacity: 1; }
       .mp-scene[data-scene="intro"] [data-anim] { opacity: 1; transform: none; }
     }
-    .teaser-cta {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: #c41230; color: #fff; text-decoration: none; font-weight: 700;
+    /* Selector is specific enough (0,2,1) to override style.css's global
+       `a:not(.got-it-btn):not(.donate-modal-cta)` link rule, which otherwise forces
+       padding-bottom, color, and background onto this pill. */
+    .teaser-card a.teaser-cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: #c41230; color: #fff; text-decoration: none; font-weight: 700; line-height: 1;
       font-family: "Barlow", system-ui, sans-serif; font-size: 16px;
-      padding: 13px 22px; border-radius: 999px; box-shadow: 0 4px 14px -4px rgba(196,18,48,.6);
+      padding: 14px 22px; border-radius: 999px; box-shadow: 0 4px 14px -4px rgba(196,18,48,.6);
       transition: filter .15s ease;
     }
-    .teaser-cta:hover { filter: brightness(1.07); }
+    .teaser-card a.teaser-cta:hover { filter: brightness(1.07); color: #fff; }
     .teaser-follow { margin: 16px 0 0; font-size: 14px; color: var(--muted, #565a63); }
     .teaser-follow a { color: #c41230; text-decoration: none; font-weight: 600; }
     .teaser-follow a:hover { text-decoration: underline; }
