@@ -5,3 +5,5 @@ daily-tweet-preview.png
 data/output/
 social/out/
 social/*.mp4
+social/promo/out/
+social/promo/promo-video*.html
