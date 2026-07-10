@@ -18,6 +18,13 @@ import { fileURLToPath } from 'node:url';
 const DIR = dirname(fileURLToPath(import.meta.url));
 let html = readFileSync(join(DIR, 'index.html'), 'utf8');
 
+// Guard: while the pre-launch teaser is live, index.html is NOT the game — regenerating
+// demo.html from it would produce a broken demo. Restore the game index.html first.
+if (html.includes('TEMPORARY pre-launch teaser')) {
+  process.stderr.write('index.html is the pre-launch teaser, not the game — restore the game index.html before regenerating demo.html. Aborting.\n');
+  process.exit(1);
+}
+
 // 1. Flag + noindex, injected right after <head> so the classic inline script runs
 //    before the deferred backend.js/script.js execute.
 const headInject =
