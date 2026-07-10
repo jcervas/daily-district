@@ -6,6 +6,40 @@
 - The portrait **Post** image now exports at **1440×1800** (4:5) — the layout is authored in a 1080×1350 viewBox and scaled up on export.
 - The Post image's download/share **filename no longer includes the district code** (`daily-district-WV-01.png` → `daily-district.png`), which was spoiling the answer for whoever received it.
 
+## v2.13.59 — Profile map opens on the district; reliable zoom
+
+- District profile maps now open framed on the district's own extent instead of the whole state, so the seat fills the view and its detailed geometry reads clearly rather than looking like a tiny simplified blob. Two-level select is confirmed (click a state via a transparent hit layer to pan/zoom in, then pick a district; the focused district itself is inert), and max zoom was raised (`scaleExtent` 160) so small urban districts can fill the frame.
+- Programmatic zoom (fit, state select, district frame, +/−) now applies the transform instantly — `d3.zoom` transitions stalled unpredictably once an instant transform had been set on mount, so it snaps rather than animates.
+
+## v2.13.58 — Load unsimplified per-state geometry on zoom
+
+- The national map stays on the heavily-simplified `districts-map.topojson`, but zooming into a state now fetches a full-detail per-state slice (`districts-detail/<st>.topojson`) and swaps the crisp boundaries in, so district lines are no longer coarse up close. Loaded once per state on demand; the state outline is re-merged from the detail arcs (`topojson.merge`) so it matches. `build-districts-map.mjs` now also emits `districts-detail/` (50 files, ~1.6 MB total, largest AK 285 KB).
+
+## v2.13.57 — Social graphics generator (16:9 + 9:16 promo cards)
+
+- New `generate-social-graphics.mjs` renders the two Social Graphics templates to PNG for any district (`--district=IL-3` / `--date=YYYY-MM-DD` / `--all`), drawn from the district topojson via d3-geo + resvg — mirroring `post-daily-tweet.mjs`. The design font (Barlow) is bundled in `social/fonts/`; output goes to the gitignored `social/out/`.
+
+## v2.13.56 — Move Geography section directly below Representative
+
+- Reordered the district profile sections so the map/geography card sits right under the representative, ahead of presidential results and demographics.
+
+## v2.13.55 — Interactive map on every district profile page
+
+- Each profile's Geography section now shows the interactive map opened zoomed to that district's state, with the district itself in red (non-clickable) and its neighbors clickable through to their own profiles; zoom out to browse the whole country. The map client is factored out of the browse page into a shared, cached `/district-map.js` that reads its target from the `#dd-map` element's data attributes (no focus = national browse map; focus = a specific district) and lazy-initialises via IntersectionObserver, so a profile page only fetches the 191 KB geometry once the map scrolls into view. The static state-outline SVG stays as the no-JS fallback.
+
+## v2.13.54 — District map: two-level select, game zoom buttons, mobile fixes
+
+- The browse map now requires selecting a state before a district: a transparent per-state hit layer drives the national view (hover highlights the whole state, click zooms), and districts only become hover/click targets once zoomed in.
+- Added the game's +/−/fit zoom cluster (reusing the `.map-zoom-btns`/`.mzb` markup) wired to `d3.zoom`; fixed the cramped mobile header (wordmark no longer wraps); collapsed the per-district tile list into a `<details>` ("browse all as a list") so the page is map-first while preserving the crawlable link hub; moved the zoomed state label to bottom-left so it no longer collides with the zoom buttons.
+
+## v2.13.53 — Interactive clickable district map on /districts/
+
+- Added a D3 + TopoJSON national map to the browse hub: all 435 districts render with a light stroke; clicking a state zooms to its bbox and dims the rest, hovering a district highlights it in CMU red, and clicking a district opens its profile (Back returns to the national view). Geometry ships as a separate property-stripped, mapshaper-simplified `districts-map.topojson` (191 KB) built by `build-districts-map.mjs`, kept apart from the game's `districts-core.topojson`.
+
+## v2.13.52 — Static district reference pages for AdSense content requirements
+
+- Generated 435 crawlable district profile pages (`/district/<slug>/`) plus a browse hub (`/districts/`), `sitemap.xml` and `robots.txt` from existing repo data (`census_out.json`, `reps_out.json`, `compactness_out.csv`, `downballot_2024.csv`). Each page carries the current representative, ACS demographics, 2024/2020 presidential results, geography/compactness, neighbor links and unique prose — converting the single-page game into a substantial content site to clear AdSense's "low value content" rejection. Linked from the homepage About modal.
+
 ## v2.13.51 — Randomized share-text tagline
 
 - The shared result text now picks its call-to-action line at random from a 12-line pool (`SHARE_TAGLINES`) instead of always saying "Can you identify it?", so the message varies from share to share. All taglines are addressed to the recipient, so they read naturally whether the sharer won or lost.
