@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.15.0';
+const VERSION_NUMBER = '1.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -24,7 +24,7 @@ const GAME_VERSION = (() => {
   const day = String(d.getDate()).padStart(2, '0');
   const h = String(d.getHours()).padStart(2, '0');
   const min = String(d.getMinutes()).padStart(2, '0');
-  return `Beta ${VERSION_NUMBER} (${y}-${m}-${day} ${h}:${min})`;
+  return `${VERSION_NUMBER} (${y}-${m}-${day} ${h}:${min})`;
 })();
 document.querySelectorAll('.beta-version').forEach(el => { el.textContent = VERSION_NUMBER; });
 
