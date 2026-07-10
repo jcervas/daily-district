@@ -115,7 +115,14 @@
     if (opts.reset) body.reset = true;
     if (Array.isArray(opts.history)) body.history = opts.history;
     const { data, error } = await client().functions.invoke('today', { body });
-    if (error) throw error;
+    if (error) {
+      // The `today` function returns 404 { error:'no_puzzle' } when no puzzle is
+      // seeded for the current date (e.g. before launch). Surface that as a typed
+      // error so the UI can show the "launching soon" screen instead of a generic
+      // failure alert. Any other status is a real error and rethrows unchanged.
+      if (error?.context?.status === 404) { const e = new Error('no_puzzle'); e.code = 'no_puzzle'; throw e; }
+      throw error;
+    }
     return data; // { date, puzzleNumber, clues, cluesTotal, result, answer, tester, didReset }
   }
   async function guess(phase, value, seconds, opts = {}) {

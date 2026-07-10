@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.13.60';
+const VERSION_NUMBER = '2.14.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -470,6 +470,10 @@ let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
 let _dailySnapshot      = null;   // daily game state captured when an archive launches, for no-reload return
+// The archive only holds puzzles dated strictly before today. On day one (puzzle No. 1)
+// there is nothing to replay yet, so the archive stays disabled until puzzle No. 2 —
+// i.e. once at least one past puzzle exists. Set from the server's puzzle number.
+let archiveAvailable    = false;
 
 // ── Server-authoritative daily ────────────────────────────────────────────────
 // The daily puzzle's shape, clues, guess validation and once-per-day all come from
@@ -643,6 +647,9 @@ async function initServer() {
     resp = await window.DistrictBackend.today({ reset: devReset, history: loadAnonGame()?.guessHistory });
   } catch (err) {
     console.error('today() failed:', err);
+    // No puzzle seeded for the current date yet (pre-launch) → show the branded
+    // "launching soon" screen with the promo video instead of an error alert.
+    if (err && err.code === 'no_puzzle') { showLaunchScreen(); return; }
     alert("Could not load today's puzzle. Please refresh.");
     return;
   }
@@ -655,6 +662,10 @@ async function initServer() {
     const numLine = document.getElementById('welcome-puzzle-num');
     if (numLine) numLine.textContent = `No. ${resp.puzzleNumber}`;
   }
+  // Archive is only playable once a past puzzle exists (No. > 1). Reflect that on the
+  // static entry-point buttons; the welcome-screen archive button is gated separately.
+  archiveAvailable = (resp.puzzleNumber || 0) > 1;
+  updateArchiveAvailability();
   todayDistrict = serverMysteryFeature(resp.geometry);
 
   initMap();
@@ -1016,6 +1027,15 @@ function showBuildLoader(text = 'Loading...') {
   document.body.appendChild(ov);
 }
 function hideBuildLoader() { document.getElementById('build-loader')?.remove(); }
+
+// Pre-launch: the server has no puzzle for the current date yet. Swap the loading
+// splash for the branded "launching soon" screen (promo video + launch date). No
+// map or game is initialised; the game unlocks on its own once /today returns a puzzle.
+function showLaunchScreen() {
+  hideBuildLoader();
+  document.getElementById('welcome-modal')?.classList.add('hidden');
+  document.getElementById('launch-modal')?.classList.remove('hidden');
+}
 
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
@@ -6126,7 +6146,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let _archiveByDate = {};      // 'YYYY-MM-DD' -> { date, puzzleNumber }
   let _archiveMonths = [];      // ['YYYY-MM', ...] newest first
 
+  // Show/hide the static "Play Archive" entry points (game-over banner + postgame
+  // ribbon) based on whether any past puzzle exists. Called once the server puzzle
+  // number is known. The welcome-screen archive button is gated at creation time.
+  function updateArchiveAvailability() {
+    ['banner-new-map-btn', 'gameover-new-map-btn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.toggle('hidden', !archiveAvailable);
+    });
+  }
+
   async function openArchive() {
+    if (!archiveAvailable) return;   // no past puzzles yet — archive stays disabled
     const list = document.getElementById('archive-list');
     list.innerHTML = loadingBlock();
     document.getElementById('result-modal')?.classList.add('hidden');
@@ -6328,8 +6359,8 @@ document.addEventListener('DOMContentLoaded', () => {
       container.appendChild(btnResult);
 
       // Signed-in players who've finished today's puzzle can jump straight into the
-      // archive from the welcome screen.
-      if (!isAnonymousPlayer) {
+      // archive from the welcome screen — but only once a past puzzle exists to replay.
+      if (!isAnonymousPlayer && archiveAvailable) {
         const btnArchive = document.createElement('button');
         btnArchive.className = 'welcome-action-btn secondary';
         btnArchive.textContent = 'Play Archive';
@@ -6492,6 +6523,8 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.addEventListener('click', e => {
       if (e.target !== modal) return;
       if (modal.id === 'welcome-modal') return;
+      // The pre-launch screen has no game behind it to reveal — never dismiss it.
+      if (modal.id === 'launch-modal') return;
       modal.classList.add('hidden');
       if (modal.id === 'result-modal' && gameOver) revealGameoverFromResult();
     });

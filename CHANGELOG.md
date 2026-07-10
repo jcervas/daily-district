@@ -1,5 +1,12 @@
 # District Guess — Changelog
 
+## v2.14.0 — Launch: puzzle No. 1 restart, archive gating, X link
+
+- **Renumbered the schedule for launch.** Wiped the live database (puzzles, results, and telemetry — the existing accounts were kept) and reseeded a full 436-day non-repeating cycle starting at **puzzle No. 1 on 2026-07-13**. The seed epoch in `seed-puzzles.mjs` moved from the old `2026-06-22` dev epoch to `2026-07-13`.
+- **Archive stays disabled until there's a past puzzle to replay.** The archive only serves dates strictly before today, so on launch day (No. 1) there is nothing to play. The "Play Archive" entry points (game-over banner, postgame ribbon, and the welcome-screen button) now stay hidden until the daily is past No. 1, and `openArchive()` no-ops while unavailable.
+- **Pre-launch screen.** When the server has no puzzle for the current date yet (i.e. before 2026-07-13), the client now shows a branded "Launching Monday, July 13, 2026" screen with the promo video (`daily-district-promo.mp4`) and an X follow link, instead of the old "Could not load today's puzzle" alert. `backend.today()` surfaces the server's 404 as a typed `no_puzzle` error; the screen can't be dismissed by a backdrop click and the game unlocks on its own once `/today` returns a puzzle.
+- **About modal** now links to [@daily_district_ on X (Twitter)](https://x.com/daily_district_).
+
 ## v2.13.60 — Share images: frame the whole district + higher-res Post + non-spoiler filename
 
 - All share graphics now frame the **entire** district instead of just its largest sub-polygon, so wide / multi-part districts (e.g. Michigan's two peninsulas) are no longer clipped at the edges. Added an opt-in `fitWhole` flag to `_previewProjection` (used by the Post and Share images) and simplified the auto-tweet's `previewProjection` to match; the in-game preview keeps the largest-sub-polygon fit so tiny far islands don't zoom it out.

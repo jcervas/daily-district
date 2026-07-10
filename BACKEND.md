@@ -136,7 +136,9 @@ Exercised with a real signed-in JWT against the live functions:
 - ✅ `today` + `guess` Edge Functions (verified above; 401 without auth).
 - ✅ Puzzle-seeding loader `seed-puzzles.mjs` — replicates the client schedule
   (`seededIndex/dateSeed`) + FACT_DEFS clue text exactly by extracting the real
-  maps from `script.js`. **26 days seeded** (2026-06-21 … 2026-07-16).
+  maps from `script.js`. **Launch reseed (v2.14.0):** DB wiped (puzzles/results/
+  telemetry; accounts kept) and refilled with a full 436-day non-repeating cycle,
+  **puzzle No. 1 = 2026-07-13 … No. 436 = 2027-09-21**. Seed epoch is now `2026-07-13`.
 - ✅ Client auth foundation: `backend.js` (Supabase client + auth + `today`/`guess`
   wrappers) and `login.js` + `#login-modal`. Gated by `DistrictBackend.ENABLED`
   (currently **false** → legacy client-only mode; loads clean, game unaffected).
@@ -159,6 +161,6 @@ Exercised with a real signed-in JWT against the live functions:
      `localStorage` gate (server is now authoritative).
 3. **Extend the puzzle runway** — re-run `node seed-puzzles.mjs <startDate> <days>`
    periodically (or as a scheduled job) so `puzzles` always has upcoming dates.
-   Currently filled through **2026-07-16**.
+   Currently filled through **2027-09-21** (No. 436).
 4. **Move the Census API key** in `acs_by_state.R` / `acs_by_district.R` to the
    `CENSUS_API_KEY` env var before any public push.

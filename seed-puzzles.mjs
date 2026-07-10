@@ -10,7 +10,7 @@
 //
 //   node seed-puzzles.mjs [startDate] [days]  > puzzles.sql
 //   defaults: startDate = today (UTC), days = 63 (yesterday .. +61)
-//   For a full non-repeating cycle: node seed-puzzles.mjs 2026-06-22 436
+//   For a full non-repeating cycle: node seed-puzzles.mjs 2026-07-14 436
 //
 // Then run puzzles.sql against the daily-district Supabase project.
 // ============================================================
@@ -178,7 +178,9 @@ function buildCensus(p) {
 }
 
 // ── Schedule math ───────────────────────────────────────────────────────────────
-const EPOCH_UTC = Date.UTC(2026, 5, 22);
+// Launch epoch: puzzle No. 1 = 2026-07-13 (America/New_York). Bumped from the old
+// 2026-06-22 dev epoch when the DB was wiped and renumbered for launch.
+const EPOCH_UTC = Date.UTC(2026, 6, 13);
 function puzzleNumber(y, m, d) {
   return Math.floor((Date.UTC(y, m - 1, d) - EPOCH_UTC) / 86400000) + 1;
 }
