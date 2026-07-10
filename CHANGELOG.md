@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.15.0 — Demo mode at /demo.html
+
+- **New `/demo.html`** — a standalone practice version of the game for testing. It loads a **random district** (via a new `demo` Edge Function, mirroring the archive's full-data path) and plays it through the unofficial archive-replay flow: local guess validation, no `/guess`, no saved result. A "New district" control (in the fixed demo bar and on the game-over ribbon) fetches another random district. It demonstrates the full gameplay loop, the district profile, and the game-over screen.
+- **Nothing is recorded in demo mode.** `window.DD_DEMO` (set by `/demo.html`, or `?demo=1`) makes `backend.js` disable **all telemetry** (`logTelemetry`, `reportControl`, and the on-load `session_start`) and skip `/today`; the sign-in UI is hidden. No writes hit the database.
+- `demo.html` is **generated** from `index.html` by `build-demo.mjs` (re-run after editing `index.html`) so the two never drift; it carries `noindex`.
+
 ## v2.14.0 — Launch: puzzle No. 1 restart, archive gating, X link
 
 - **Renumbered the schedule for launch.** Wiped the live database (puzzles, results, and telemetry — the existing accounts were kept) and reseeded a full 436-day non-repeating cycle starting at **puzzle No. 1 on 2026-07-13**. The seed epoch in `seed-puzzles.mjs` moved from the old `2026-06-22` dev epoch to `2026-07-13`.

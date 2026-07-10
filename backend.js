@@ -17,6 +17,12 @@
   // Login required for everyone. (Google + email providers are configured.)
   const ENABLED = true;
 
+  // Demo mode (/demo.html sets window.DD_DEMO, or ?demo=1): a throwaway practice
+  // round served by the `demo` Edge Function. NOTHING is recorded — no results and
+  // no telemetry — so guard every write path below on this flag.
+  const DEMO = (typeof window !== 'undefined')
+    && (window.DD_DEMO === true || /(?:^|[?&])demo=1(?:&|$)/.test(location.search));
+
   let _client = null;
   function client() {
     if (_client) return _client;
@@ -156,6 +162,13 @@
   async function archivePuzzle(date) {
     const { data, error } = await client().functions.invoke('archive', { body: { date } });
     if (error) throw error;
+    return data; // { date, puzzleNumber, districtId, state, geometry, clues, census, districts }
+  }
+  // Demo mode: a RANDOM district's full data (answer + shapes + clues + census),
+  // same shape as archivePuzzle. Read-only; nothing is recorded.
+  async function demoPuzzle() {
+    const { data, error } = await client().functions.invoke('demo', { body: {} });
+    if (error) throw error;
     return data; // { date, puzzleNumber, districtId, state, geometry, clues, census, districts:[…] }
   }
 
@@ -196,6 +209,7 @@
   }
   // event: one of session_start|game_start|game_guess|game_complete|share|error|settings|ui_control
   async function logTelemetry(event, opts = {}) {
+    if (DEMO) return;   // demo mode never records
     try {
       const { data } = await client().auth.getUser();
       await client().from('telemetry').insert({
@@ -221,7 +235,7 @@
   let _controlBuffer = [];
   let _controlFlushTimer = null;
   function reportControl(name) {
-    if (!name) return;
+    if (DEMO || !name) return;   // demo mode never records
     _controlBuffer.push({ name, ts: Date.now() });
     if (!_controlFlushTimer) _controlFlushTimer = setTimeout(flushControls, 15000);
   }
@@ -381,17 +395,20 @@
   }
 
   window.DistrictBackend = {
-    ENABLED,
+    ENABLED, DEMO,
     SUPABASE_URL,
     client,
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword, resendConfirmation,
-    today, guess, stateShapes, archiveList, archivePuzzle, leaderboard,
+    today, guess, stateShapes, archiveList, archivePuzzle, demoPuzzle, leaderboard,
     logTelemetry, reportControl, getProfile, updateProfile, deleteAccount,
     pushSupported, isIOS, isStandalone, browserName, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
   };
 
-  // Best-effort session telemetry on load (no PII). Runs for everyone.
-  if (document.readyState !== 'loading') logTelemetry('session_start');
-  else document.addEventListener('DOMContentLoaded', () => logTelemetry('session_start'));
+  // Best-effort session telemetry on load (no PII). Runs for everyone — except demo
+  // mode, which records nothing.
+  if (!DEMO) {
+    if (document.readyState !== 'loading') logTelemetry('session_start');
+    else document.addEventListener('DOMContentLoaded', () => logTelemetry('session_start'));
+  }
 })();

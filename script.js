@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '2.14.0';
+const VERSION_NUMBER = '2.15.0';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -469,6 +469,12 @@ let _tileZoomInAnimating    = false;  // true during 700ms entry zoom-in so hand
 let username            = '';
 let replayCount         = 0;      // increments each "Play Again" to pick a fresh district
 let isArchiveGame       = false;  // true while playing a past puzzle from the archive — unofficial, not saved or counted
+let isDemoGame          = false;  // true while playing a /demo.html random practice district — nothing recorded, no DB writes
+// Demo mode: /demo.html sets window.DD_DEMO (or ?demo=1). Reuses the archive-replay
+// path (local validation, no /guess, no saved result) but with a RANDOM district from
+// the `demo` endpoint and telemetry fully disabled (see backend.js DEMO guard).
+const DEMO_MODE = (typeof window !== 'undefined')
+  && (window.DD_DEMO === true || new URLSearchParams(location.search).get('demo') === '1');
 let _dailySnapshot      = null;   // daily game state captured when an archive launches, for no-reload return
 // The archive only holds puzzles dated strictly before today. On day one (puzzle No. 1)
 // there is nothing to replay yet, so the archive stays disabled until puzzle No. 2 —
@@ -633,6 +639,14 @@ async function initServer() {
     console.error('Server asset load failed:', err);
     alert(`Failed to load map data (${err.message}). Please refresh.`);
     return;
+  }
+
+  // Demo mode: skip the daily entirely (no /today, no result restore, no telemetry)
+  // and launch a random practice district instead. Decorative overlays are still needed
+  // for the game-over / district maps.
+  if (DEMO_MODE) {
+    loadDecorativeOverlays();
+    return startDemoGame();
   }
 
   // 2. Today's puzzle from the server (answer withheld).
@@ -1039,17 +1053,21 @@ function showLaunchScreen() {
 
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
-async function startServerArchive(date, num, label) {
+async function startServerArchive(date, num, label, opts = {}) {
+  const demo = !!opts.demo;   // demo mode: random practice district, nothing recorded
   showBuildLoader();   // CSS loader animates through the whole fetch + build (no freeze)
-  let data;
-  try { data = await window.DistrictBackend.archivePuzzle(date); }
-  catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
+  let data = opts.data;
+  if (!data) {
+    try { data = await window.DistrictBackend.archivePuzzle(date); }
+    catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
+  }
 
   // Snapshot the daily so we can return to it WITHOUT a reload. The resets below replace
   // these globals with fresh objects (new arrays/Sets), so the snapshot keeps the daily's
   // references intact and untouched by archive play. Capture once: an archive→archive jump
   // must preserve the ORIGINAL daily, so only snapshot when leaving a non-archive game.
-  if (!isArchiveGame) {
+  // Demo has no daily behind it to return to, so never snapshot in demo mode.
+  if (!isArchiveGame && !demo) {
     _dailySnapshot = {
       serverPuzzle, serverAnswer, serverState,
       guessHistory, guessCount, elapsedSeconds,
@@ -1059,7 +1077,8 @@ async function startServerArchive(date, num, label) {
     };
   }
 
-  // Reset to a fresh, unofficial archive session.
+  // Reset to a fresh, unofficial archive/demo session.
+  isDemoGame         = demo;
   isArchiveGame      = true;
   serverArchive      = { date, puzzleNumber: data.puzzleNumber, answer: { districtId: data.districtId, state: data.state, census: data.census }, clues: data.clues || {} };
   {
@@ -1098,7 +1117,8 @@ async function startServerArchive(date, num, label) {
   // Swap modals → game view.
   ['archive-modal', 'result-modal', 'welcome-modal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
   destroyGameoverDiv();
-  document.getElementById('archive-badge')?.classList.remove('hidden');
+  const _badge = document.getElementById('archive-badge');
+  if (_badge) { _badge.textContent = demo ? 'Demo' : 'Archive'; _badge.classList.remove('hidden'); }
   document.getElementById('game-section')?.remove();
   buildGameSection();
 
@@ -1125,6 +1145,18 @@ async function startServerArchive(date, num, label) {
   renderGuessHistory();
   document.getElementById('guess-remaining').textContent = `${MAX_GUESSES} guesses`;
 }
+
+// Demo mode: fetch a RANDOM district from the `demo` endpoint and launch it through the
+// same unofficial-replay path as the archive (local validation, no /guess, no saved
+// result). Nothing is recorded; safe to call repeatedly for a fresh practice district.
+async function startDemoGame() {
+  let data;
+  showBuildLoader();
+  try { data = await window.DistrictBackend.demoPuzzle(); }
+  catch (err) { hideBuildLoader(); console.error('demo load failed:', err); alert('Could not load a demo district.'); return; }
+  return startServerArchive(data.date || 'demo', data.puzzleNumber, 'Demo', { data, demo: true });
+}
+if (typeof window !== 'undefined') window.startDemoGame = startDemoGame;
 
 // Return from an archive to today's daily WITHOUT a reload, by restoring the snapshot
 // taken when the archive launched and rebuilding the daily game-over screen. If the
@@ -5251,7 +5283,21 @@ async function showGameoverModal() {
     reportClientError('gameover_modal_content', e);
   }
 
-  if (isArchiveGame) {
+  if (isDemoGame) {
+    // Demo game-over: a random practice district, nothing recorded. Show a demo label,
+    // hide the sign-in CTA, relabel the ribbon button to "New District" (wired to
+    // startDemoGame), and hide share/post so practice rounds aren't shared as real results.
+    const main = document.querySelector('#gameover-next .gameover-next-main');
+    if (main) {
+      main.innerHTML = `<span class="gameover-next-title">Demo district</span>` +
+        `<span class="gameover-next-sub">Practice round — nothing is recorded.</span>`;
+    }
+    document.getElementById('gameover-next-cta')?.classList.add('hidden');
+    _setResultRibbonBtnLabel('New District', 'New');
+    document.getElementById('gameover-share-btn')?.classList.add('hidden');
+    document.getElementById('gameover-post-btn')?.classList.add('hidden');
+    document.getElementById('gameover-new-map-btn')?.classList.add('hidden');
+  } else if (isArchiveGame) {
     // Archive game-over: this is a PAST puzzle, not today's. Swap the "today's district"
     // countdown block for archive context, hide the sign-in CTA, relabel "View Results"
     // → "Today's Results", and don't run the daily countdown.
@@ -6229,7 +6275,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('archive-close').addEventListener('click', () => {
     document.getElementById('archive-modal').classList.add('hidden');
   });
-  document.getElementById('banner-new-map-btn').addEventListener('click', openArchive);
+  document.getElementById('banner-new-map-btn').addEventListener('click', () => {
+    if (isDemoGame) { startDemoGame(); return; }   // demo: fresh practice district
+    openArchive();
+  });
 
   // Game-over modal controls — delegated from document so they survive div recreation.
   // The ribbon's own buttons (#gameover-result-btn/-share-btn/-post-btn/-new-map-btn) are
@@ -6242,6 +6291,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // this one button toggles the result modal open/closed (label already reflects
       // which — "View Results" vs "District Profile" — via openResultModal/
       // revealGameoverFromResult).
+      if (isDemoGame) { startDemoGame(); return; }   // "New District" — fresh practice round
       if (isArchiveGame) { returnToTodayDaily(true); return; }
       const resultModal = document.getElementById('result-modal');
       if (resultModal.classList.contains('hidden')) openResultModal();
@@ -6250,7 +6300,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (e.target.closest('#gameover-share-btn')) { shareResultText(); return; }
     if (e.target.closest('#gameover-post-btn')) { shareResultImage(); return; }
-    if (e.target.closest('#gameover-new-map-btn')) { openArchive(); return; }
+    if (e.target.closest('#gameover-new-map-btn')) { if (isDemoGame) { startDemoGame(); return; } openArchive(); return; }
     const btn = e.target.closest('#gameover-modal .mzb-go');
     if (!btn || !_goZoom) return;
     const svgSel = d3.select('#gameover-map svg');

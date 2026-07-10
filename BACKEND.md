@@ -103,6 +103,14 @@ Body: `{ "phase":"state"|"district", "value":"NV"|"NV-02", "seconds":123 }`
 ```
 `409 already_completed` if the day is already finished.
 
+### `POST /functions/v1/demo`
+Backs `/demo.html`. Returns a **random** puzzle's FULL data (answer shape + the
+state's district shapes + clues + census + answer), regardless of date — the same
+payload shape as the archive's get-mode. Read-only, `verify_jwt` disabled, anon-callable.
+Used only for throwaway practice rounds, so returning the answer up front is fine and the
+daily's anti-cheat is unaffected. The client (`DistrictBackend.demoPuzzle()`) plays it via
+the unofficial archive-replay path and records nothing (demo mode disables all telemetry).
+
 ### `POST /functions/v1/send-daily-push`
 Sends the opt-in daily Web Push reminder to every row in `push_subscriptions`.
 
