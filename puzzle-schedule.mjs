@@ -34,7 +34,7 @@ export const LAUNCH_EPOCH_UTC = Date.UTC(_ey, _em - 1, _ed);
 // above (pencil in a provisional one), but the teaser only SHOWS a date when
 // this is true. Set false while the date is undecided → build-teaser.mjs renders
 // a dateless "Coming soon" page; flip to true once you've committed to LAUNCH_EPOCH.
-export const LAUNCH_ANNOUNCED = true;
+export const LAUNCH_ANNOUNCED = false;
 
 // Puzzle number (1-based) for a 'YYYY-MM-DD' calendar date; N = 1 on LAUNCH_EPOCH.
 export function puzzleNumberFor(dateStr) {
