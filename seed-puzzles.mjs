@@ -174,6 +174,12 @@ function buildCensus(p) {
     pop: num(p.pop), income: num(p.income), whiteNH: num(p.whiteNH),
     black: num(p.black), asian: num(p.asian), hispanic: num(p.hispanic),
     medianHome: num(p.medianHome), bach: num(p.bach), master: num(p.master),
+    // 2024 presidential result (drives the profile's "2024 Presidential Vote" card and
+    // the political clue in clues_update.sql). census_update.sql preserves these on
+    // refresh; without them here they'd be dropped on a re-seed. See data/margins_update.sql.
+    Margin2024Pres: num(p.Margin2024Pres),
+    DemPct2024Pres: num(p.DemPct2024Pres),
+    RepPct2024Pres: num(p.RepPct2024Pres),
   };
 }
 

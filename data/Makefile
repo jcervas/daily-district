@@ -13,8 +13,9 @@
 #   make lang             person-level non-English (C16001) -> lang_update.sql
 #   make plan-year        latest congressional plan year per state -> plan_year_update.sql
 #   make build            everything above except lang (map + all District Profile data)
-#   make push             push ALL generated SQL files to the database
+#   make push             push ALL generated SQL files to the database (in dependency order)
 #   make push-census / push-reps / push-clues / push-pop2020 / push-lang / push-plan-year / push-compactness
+#   make push-margins      backfill 2024-presidential fields (margins_update.sql, generated from the topojson)
 #   make push-derived      recompute percentile ranks (run after census/compactness changes)
 #   make all              build + push
 #   make clean             delete generated artifacts
@@ -38,7 +39,7 @@ export DD_DISTRICTS
 
 .PHONY: all build normalize national acs-district acs-state map compactness \
         census reps clues pop2020 lang plan-year \
-        push push-census push-reps push-clues push-derived push-pop2020 push-lang push-plan-year push-compactness \
+        push push-census push-reps push-clues push-derived push-pop2020 push-lang push-plan-year push-compactness push-margins \
         clean help guard-db
 
 help:
@@ -87,11 +88,19 @@ plan-year:            ## latest congressional plan year per state -> plan_year_u
 	$(RSCRIPT) plan_year.R
 
 # ---- push to the database (needs DATABASE_URL + psql) ---------------
-push: push-census push-reps push-clues push-pop2020 push-plan-year push-compactness push-derived
+# Order matters: census rebuilds the census object (resetting the preserved geo/vote/rep
+# fields to null), so the additive steps must follow it, and clues/derived read those
+# fields so they run last. margins backfills the 2024-presidential fields census.R only
+# preserves (see margins_update.sql); lang refines nonEnglishPct.
+push: push-census push-compactness push-margins push-pop2020 push-plan-year push-lang push-reps push-clues push-derived
 
 push-census: census_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f census_update.sql
 	@echo "census pushed."
+
+push-margins: margins_update.sql guard-db
+	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f margins_update.sql
+	@echo "margins (2024 presidential) pushed."
 
 push-reps: reps_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f reps_update.sql
