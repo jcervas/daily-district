@@ -42,7 +42,24 @@ Functions read it with `service_role` and return only what the player has earned
   `neighbors`/`state_neighbors` drive hot/cold without shipping the adjacency graph.
 - `results(user_id, puzzle_date) PK, won, completed, guesses, seconds,
   guess_history, started_at, completed_at` — RLS: read own only; writes via the
-  Edge Function (service_role).
+  Edge Function (service_role). **Signed-in players only.**
+- `anon_results(id PK, puzzle_date, won, completed, guesses, seconds, session_id,
+  created_at)` — one row per **completed anonymous (not-signed-in) game**, so player
+  count + win/loss are measurable without a profile id. Written by the `guess` Edge
+  Function (service_role) when an anon game completes; a partial unique index on
+  `(session_id, puzzle_date)` makes it idempotent. **Deny-all RLS (no policies)** — no
+  client read/write. Throwaway: `truncate public.anon_results` anytime you only want
+  signed-in stats. DDL:
+  ```sql
+  create table public.anon_results (
+    id uuid primary key default gen_random_uuid(), puzzle_date date not null,
+    won boolean not null, completed boolean not null default true,
+    guesses integer not null default 0, seconds integer not null default 0,
+    session_id text, created_at timestamptz not null default now());
+  create unique index anon_results_session_date_uidx
+    on public.anon_results (session_id, puzzle_date) where session_id is not null;
+  alter table public.anon_results enable row level security;
+  ```
 - `profiles` also carries optional standard fields: `email, display_name, phone,
   city, region, country, marketing_opt_in, updated_at`. `email`/`display_name`
   are captured from auth on signup; the rest are user-entered via the profile

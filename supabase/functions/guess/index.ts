@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
   const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
   const { data: { user } } = await userClient.auth.getUser();
 
-  let body: { phase?: string; value?: string; seconds?: number; history?: Array<{ phase?: string; value?: string }> };
+  let body: { phase?: string; value?: string; seconds?: number; session_id?: string; history?: Array<{ phase?: string; value?: string }> };
   try { body = await req.json(); } catch { return json(400, { error: "bad_json" }); }
   const phase = body.phase;
   const value = String(body.value ?? "").toUpperCase();
@@ -130,6 +130,23 @@ Deno.serve(async (req) => {
     const guesses = countGuesses(newHistory);
     const won = phase === "district" && cur.correct;
     const completed = won || guesses >= MAX_GUESSES;
+
+    // Record anonymous outcomes (player count + win/loss) with no profile id. Written
+    // once per completed game; the partial unique index on (session_id, puzzle_date)
+    // makes retries idempotent. Best-effort — a logging failure never breaks the guess.
+    if (completed) {
+      const sid = (typeof body.session_id === "string" && body.session_id) ? body.session_id.slice(0, 64) : null;
+      const secs = Number(body.seconds);
+      await admin.from("anon_results").insert({
+        puzzle_date: date,
+        won,
+        completed: true,
+        guesses,
+        seconds: Number.isFinite(secs) ? Math.max(0, Math.min(86400, Math.round(secs))) : 0,
+        session_id: sid,
+      }); // returned error (e.g. duplicate session/day) intentionally ignored
+    }
+
     const { unlocked, total: cluesTotal } = revealClues(puzzle.clues, newHistory, completed, freeClue);
     return json(200, {
       correct: cur.correct,

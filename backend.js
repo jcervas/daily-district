@@ -135,7 +135,7 @@
     // opts.history (anonymous only): the player's prior guesses as [{ phase, value }].
     // The server (verify_jwt off) recomputes correctness from these values and persists
     // nothing — signed-in callers omit it and the server uses the stored result instead.
-    const body = { phase, value, seconds };
+    const body = { phase, value, seconds, session_id: sessionId() };
     if (Array.isArray(opts.history)) body.history = opts.history;
     const { data, error } = await client().functions.invoke('guess', { body });
     if (error) throw error;
