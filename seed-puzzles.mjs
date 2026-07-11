@@ -17,7 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = fs.readFileSync(path.join(DIR, 'script.js'), 'utf8');
@@ -177,15 +177,8 @@ function buildCensus(p) {
   };
 }
 
-// ── Schedule math ───────────────────────────────────────────────────────────────
-// Launch epoch: puzzle No. 1 = 2026-07-13 (America/New_York). Bumped from the old
-// 2026-06-22 dev epoch when the DB was wiped and renumbered for launch.
-const EPOCH_UTC = Date.UTC(2026, 6, 13);
-function puzzleNumber(y, m, d) {
-  return Math.floor((Date.UTC(y, m - 1, d) - EPOCH_UTC) / 86400000) + 1;
-}
-
 // ── Emit upsert SQL for the window ───────────────────────────────────────────────
+// Launch epoch (puzzle No. 1 date) is LAUNCH_EPOCH in puzzle-schedule.mjs.
 const argStart = process.argv[2];
 const days = parseInt(process.argv[3] || '63', 10);
 const start = argStart ? new Date(argStart + 'T00:00:00Z') : new Date();
@@ -197,7 +190,7 @@ for (let i = 0; i < days; i++) {
   dt.setUTCDate(start.getUTCDate() + i);
   const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1, d = dt.getUTCDate();
   const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const num = puzzleNumber(y, m, d);
+  const num = puzzleNumberFor(dateStr);
   const p = byId[districtIdForPuzzle(num, SCHED_IDS)];
   records.push({
     date: dateStr,

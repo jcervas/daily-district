@@ -4,6 +4,7 @@ node_modules/
 daily-tweet-preview.png
 data/output/
 social/out/
+social/card/
 social/*.mp4
 social/promo/out/
 social/promo/promo-video*.html

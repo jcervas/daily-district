@@ -20,6 +20,28 @@
 export const BASE_SEED = 0x05D15784;
 export const CYCLE_LEN = 435;
 
+// ── Launch epoch ─────────────────────────────────────────────────────────────
+// Calendar date (America/New_York) of puzzle No. 1 — the SINGLE SOURCE OF TRUTH
+// for every date→puzzle-number conversion (seed-puzzles, the tweet/social
+// generators, daily-recap all import puzzleNumberFor below). To move the launch
+// date, change this ONE line and reseed the puzzles table; the schedule itself
+// (which district maps to a given puzzle number) is independent and does not shift.
+export const LAUNCH_EPOCH = '2026-07-13';
+const [_ey, _em, _ed] = LAUNCH_EPOCH.split('-').map(Number);
+export const LAUNCH_EPOCH_UTC = Date.UTC(_ey, _em - 1, _ed);
+
+// Is the launch date public yet? The schedule always needs a concrete epoch
+// above (pencil in a provisional one), but the teaser only SHOWS a date when
+// this is true. Set false while the date is undecided → build-teaser.mjs renders
+// a dateless "Coming soon" page; flip to true once you've committed to LAUNCH_EPOCH.
+export const LAUNCH_ANNOUNCED = true;
+
+// Puzzle number (1-based) for a 'YYYY-MM-DD' calendar date; N = 1 on LAUNCH_EPOCH.
+export function puzzleNumberFor(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return Math.floor((Date.UTC(y, m - 1, d) - LAUNCH_EPOCH_UTC) / 86400000) + 1;
+}
+
 // Distinct, deterministic seed per cycle (odd golden-ratio step → no short period).
 export function cycleSeed(cycle) {
   return (BASE_SEED + cycle * 0x9E3779B1) >>> 0;

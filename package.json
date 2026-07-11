@@ -8,7 +8,10 @@
     "tweet:dry": "DRY_RUN=1 node post-daily-tweet.mjs",
     "build:map": "node build-districts-map.mjs",
     "build:pages": "node build-district-pages.mjs",
-    "social": "node generate-social-graphics.mjs"
+    "social": "node generate-social-graphics.mjs",
+    "teaser": "node build-teaser.mjs",
+    "card": "node build-social-card.mjs",
+    "recap:dry": "DRY_RUN=1 node daily-recap.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

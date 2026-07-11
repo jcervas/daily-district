@@ -27,7 +27,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SITE = 'daily-district.com';
@@ -41,17 +41,11 @@ const CARD_BG = '#E0E0E0';
 const FONT_FILES = ['SemiBold', 'Bold', 'ExtraBold', 'Black']
   .map(w => path.join(DIR, 'social', 'fonts', `Barlow-${w}.ttf`));
 
-// ── Date / district resolution (mirrors post-daily-tweet.mjs) ─────────────────
-const EPOCH_UTC = Date.UTC(2026, 5, 22); // puzzle No. 1 on 2026-06-22
-
+// ── Date / district resolution (puzzleNumberFor + epoch live in puzzle-schedule.mjs)
 function todayEastern() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
-}
-function puzzleNumberFor(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return Math.floor((Date.UTC(y, m - 1, d) - EPOCH_UTC) / 86400000) + 1;
 }
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

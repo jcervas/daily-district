@@ -21,13 +21,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoBounds } from 'd3-geo';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const SITE_URL = 'https://daily-district.com';
-
-// Same epoch as seed-puzzles.mjs: puzzle No. 1 on 2026-06-22.
-const EPOCH_UTC = Date.UTC(2026, 5, 22);
 
 // Rotating teaser messages — one is picked at random each day.
 const MESSAGES = [
@@ -52,11 +49,6 @@ function puzzleDate() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
-}
-
-function puzzleNumberFor(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return Math.floor((Date.UTC(y, m - 1, d) - EPOCH_UTC) / 86400000) + 1;
 }
 
 // ── Rendering (mirrors _renderDistrictToBlob / _buildRichMapLayers in script.js,
