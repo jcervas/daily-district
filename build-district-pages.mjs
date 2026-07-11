@@ -633,7 +633,6 @@ const today = new Date().toISOString().slice(0, 10);
 const urls = [
   { loc: `${SITE}/`, pri: '1.0' },
   { loc: `${SITE}/districts/`, pri: '0.9' },
-  { loc: `${SITE}/press/`, pri: '0.3' },
   { loc: `${SITE}/privacy.html`, pri: '0.2' },
   ...records.map((r) => ({ loc: `${SITE}${districtUrl(r.id)}`, pri: '0.7' })),
 ];
