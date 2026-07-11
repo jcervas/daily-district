@@ -9,12 +9,14 @@
 // 9am ET during DST). Needs the same four X app secrets as post-daily-tweet.mjs:
 //   X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 //
-// Launch guard: nothing is posted for recap dates before LAUNCH_DATE, so this is
-// safe to enable ahead of go-live (it simply no-ops until then).
+// Launch guard: nothing is posted for recap dates before LAUNCH_EPOCH (the game's
+// day 1, from puzzle-schedule.mjs), so this is safe to enable ahead of go-live —
+// it no-ops until then. The first recap posts the day AFTER launch (recapping
+// launch day), so there's just one launch date to set, in puzzle-schedule.mjs.
 //
 // Usage:
 //   DRY_RUN=1 node daily-recap.mjs            # build + print plan, post nothing
-//   node daily-recap.mjs                      # post yesterday's recap (if >= LAUNCH_DATE)
+//   node daily-recap.mjs                      # post yesterday's recap (if >= LAUNCH_EPOCH)
 //   node daily-recap.mjs --date=2026-07-20    # recap a specific date (testing)
 //   node daily-recap.mjs --force              # bypass the launch-date guard
 // ============================================================
@@ -24,14 +26,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor, LAUNCH_EPOCH } from './puzzle-schedule.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const flag = k => process.argv.includes(`--${k}`);
-
-// ── Go-live guard: no recap is posted for a date before this (America/New_York).
-const LAUNCH_DATE = '2026-07-14';
 
 // Public Supabase project (anon key is safe to embed — see BACKEND.md).
 const SUPABASE_URL = 'https://itbpvqkunfeaimuxposx.supabase.co';
@@ -98,8 +97,8 @@ async function xClient() {
 async function main() {
   const date = arg('date') || easternDate(-1); // default: yesterday (Eastern)
 
-  if (!flag('force') && date < LAUNCH_DATE) {
-    console.log(`Recap date ${date} is before launch (${LAUNCH_DATE}) — nothing posted.`);
+  if (!flag('force') && date < LAUNCH_EPOCH) {
+    console.log(`Recap date ${date} is before launch (${LAUNCH_EPOCH}) — nothing posted.`);
     return;
   }
 
