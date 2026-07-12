@@ -101,11 +101,12 @@ body.clean #stage{border-radius:0;box-shadow:none}
 /* ── Hot/cold panel ────────────────────────────────────── */
 .hc{display:flex;gap:44px;align-items:center}
 .hc-left{display:flex;flex-direction:column;gap:20px;width:520px}
-.counter{display:flex;align-items:center;gap:18px;font-weight:900}
-.counter .big{font-size:84px;color:var(--ink);line-height:1}
-.counter .arrow{font-size:46px;color:var(--red)}
-.counter .now{font-size:84px;color:var(--red);line-height:1}
-.counter small{display:block;font-size:15px;font-weight:800;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
+.funnel{display:flex;align-items:flex-start;gap:14px}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:3px}
+.fbig{font-weight:900;font-size:64px;line-height:.9;color:var(--ink)}
+.fbig.red{color:var(--red)}
+.flab{font-weight:800;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.farrow{font-size:40px;font-weight:900;color:var(--red);line-height:1;margin-top:8px}
 .hintbar{display:flex;align-items:center;gap:14px;background:var(--card);border:2px solid var(--red);
   border-radius:14px;padding:15px 20px;box-shadow:0 18px 40px rgba(196,18,48,.13)}
 .hintbar .ic{width:42px;height:42px;flex:0 0 auto;border-radius:11px;background:rgba(196,18,48,.1);
@@ -162,8 +163,10 @@ body[data-aspect="9x16"] .tag{font-size:24px}
 body[data-aspect="9x16"] .board{width:1000px;transform:scale(1.02)}
 body[data-aspect="9x16"] .hc{flex-direction:column;gap:46px}
 body[data-aspect="9x16"] .hc-left{width:auto;align-items:center}
-body[data-aspect="9x16"] .counter .big,body[data-aspect="9x16"] .counter .now{font-size:120px}
-body[data-aspect="9x16"] .counter .arrow{font-size:64px}
+body[data-aspect="9x16"] .funnel{gap:22px}
+body[data-aspect="9x16"] .fbig{font-size:96px}
+body[data-aspect="9x16"] .flab{font-size:19px}
+body[data-aspect="9x16"] .farrow{font-size:58px;margin-top:14px}
 body[data-aspect="9x16"] #chips-narrow{width:640px!important;justify-content:center}
 body[data-aspect="9x16"] #pick-map{width:760px;height:566px}
 body[data-aspect="9x16"] .win-title{font-size:150px}
@@ -232,10 +235,12 @@ body[data-aspect="1x1"] .cap{bottom:72px}
     <div class="wrap">
       <div class="hc">
         <div class="hc-left">
-          <div class="counter" data-anim="pop" data-d="0.05">
-            <div><span class="big">50</span><small>states in play</small></div>
-            <span class="arrow">→</span>
-            <div><span class="now">{{NARROW_COUNT}}</span><small>&nbsp;</small></div>
+          <div class="funnel" data-anim="pop" data-d="0.05">
+            <div class="fnode"><span class="fbig">50</span><span class="flab">States</span></div>
+            <span class="farrow">→</span>
+            <div class="fnode"><span class="fbig red">{{STATE_ABBR}}</span><span class="flab">{{STATE_NAME}}</span></div>
+            <span class="farrow">→</span>
+            <div class="fnode"><span class="fbig red">{{STATE_COUNT}}</span><span class="flab">Districts</span></div>
           </div>
           <div class="hintbar" data-anim="rise" data-d="0.30"><span class="ic">$</span><div><div class="lab">Median Household Income</div><div class="val">{{INCOME}} / yr</div></div></div>
         </div>
