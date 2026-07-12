@@ -13,16 +13,21 @@ social/
 ├─ out/                           ← static graphics output  (git-ignored)
 │    <DISTRICT>-16x9.png
 │    <DISTRICT>-9x16.png
-└─ promo/                         ← animated promo video
-     promo.template.html          source template (edit copy / motion here)
-     promo-video.html             built 16:9 page  (git-ignored)
-     promo-video-9x16.html        built 9:16 page  (git-ignored)
-     promo-video-1x1.html         built 1:1 page   (git-ignored)
-     out/                         ← rendered MP4s  (git-ignored)
-       daily-district-<DISTRICT>-16x9.mp4
+└─ promo/                         ← animated promo + teaser videos
+     promo.template.html          gameplay-promo template (edit copy / motion)
+     teaser.template.html         teaser #3 template (District Profile showcase)
+     promo-video*.html            built promo pages  (git-ignored)
+     teaser-3*.html               built teaser pages (git-ignored)
+     out/                         ← rendered MP4s    (git-ignored)
+       daily-district-<DISTRICT>-16x9.mp4      (gameplay promo)
        daily-district-<DISTRICT>-9x16.mp4
        daily-district-<DISTRICT>-1x1.mp4
+       daily-district-teaser-3-1x1.mp4         (teaser #3)
 ```
+
+**Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
+`build-promo.mjs` (gameplay promo), `build-profile-teaser.mjs` (teaser #3),
+`render-mp4.mjs` (HTML → MP4).
 
 > The generated files (`social/out/`, `social/promo/promo-video*.html`,
 > `social/promo/out/`) are **git-ignored** — they're regenerable, so only the
@@ -132,25 +137,57 @@ node render-mp4.mjs social/promo/promo-video-1x1.html  social/promo/out/daily-di
 
 ---
 
-## 4. Alternative: record the promo in the browser (no render deps)
+## 4. Teaser #3 — District Profile showcase (standalone, for X)
 
-Every built `promo-video*.html` can export a video itself — no `render-mp4.mjs`,
-no ffmpeg:
+A separate, standalone promo that showcases the **District Profile** feature
+(not gameplay): the wordmark, then a fast montage of several real districts —
+each drawing its boundary **lines** and flashing its profile cards
+(representative, 2024 vote, and a distinctive "hero" stat) — then the wordmark
++ CTA. ~18 s, **1:1** by default (built for X).
 
-1. Open the built HTML (e.g. `social/promo/promo-video.html`) in **Chrome**.
+> Built by **`build-profile-teaser.mjs`** — note this is *not* `build-teaser.mjs`,
+> which is unrelated (it manages the launch-date text in the pre-launch
+> `index.html`).
+
+```bash
+node build-profile-teaser.mjs                      # default line-up, 1:1
+node render-mp4.mjs social/promo/teaser-3.html \
+  social/promo/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9`. Output is `teaser-3.html`
+  (1:1) or `teaser-3-<aspect>.html`; render with matching `cssW cssH` (and `1.5`
+  dsf for 16:9, `1` otherwise).
+- `--districts=IL-04,NY-13,AK-01,GA-05,WY-01` overrides the line-up. Each
+  district's "hero" card (the distinctive stat it highlights — shape, area,
+  demographics, …) is curated in `DEFAULT_LINEUP` at the top of the script.
+
+The built `teaser-3.html` also has the same in-browser **● Record video** button
+(§5) if you'd rather not render from the CLI.
+
+---
+
+## 5. Alternative: record a video in the browser (no render deps)
+
+Every built page (`promo-video*.html`, `teaser-3.html`) can export a video
+itself — no `render-mp4.mjs`, no ffmpeg:
+
+1. Open the built HTML (e.g. `social/promo/teaser-3.html`) in **Chrome**.
 2. Click **● Record video** and share **“This Tab.”**
 3. It records exactly one clean loop at the stage's native size and downloads the
    file. (Also: **Hide UI** hides the controls; **↻ Restart** restarts the loop.)
 
 ---
 
-## 5. Editing the promo
+## 6. Editing the videos
 
-- **Copy, timing, scenes, motion** → `social/promo/promo.template.html`
-  (a single deterministic JS timeline; scene windows are in the `SCENES` array).
-  Rebuild with `build-promo.mjs` to apply.
-- **Per-district data / new fields** → `build-promo.mjs` (reads the topojson +
-  `data/reps_out.json`, computes the stats, and injects `{{PLACEHOLDER}}`s).
+- **Gameplay promo** — copy/timing/motion in `social/promo/promo.template.html`
+  (`SCENES` array); per-district data in `build-promo.mjs`. Rebuild with
+  `build-promo.mjs`.
+- **Teaser #3** — copy/timing/motion in `social/promo/teaser.template.html`;
+  the district line-up + each "hero" stat in `build-profile-teaser.mjs`
+  (`DEFAULT_LINEUP`). Rebuild with `build-profile-teaser.mjs`.
 
-After any template/script change, re-run the build (and re-render if you need
-fresh MP4s).
+Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
+JSON into the template. After any template/script change, re-run the build (and
+re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these pages.

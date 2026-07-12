@@ -27,7 +27,9 @@ await page.setViewport({ width: cssW, height: cssH, deviceScaleFactor: dsf });
 await page.goto(url, { waitUntil: 'load' });
 await page.evaluate(() => document.fonts.ready);
 await page.evaluate(() => { document.body.classList.add('clean'); fit(); });
-const loop = await page.evaluate(() => (window.__promo ? window.__promo.loop() : null)) || LOOP_GUESS;
+// The promo exposes window.__promo; teasers expose window.__teaser — accept either.
+await page.evaluate(() => { window.__anim = window.__promo || window.__teaser; });
+const loop = await page.evaluate(() => (window.__anim ? window.__anim.loop() : null)) || LOOP_GUESS;
 
 const stage = await page.$('#stage');
 const total = Math.round(loop * fps);
@@ -35,7 +37,7 @@ process.stdout.write(`  ${path.basename(inFile)} → ${total} frames @ ${cssW*ds
 
 for (let i = 0; i < total; i++) {
   const t = i / fps;
-  await page.evaluate(tt => window.__promo.seek(tt), t);
+  await page.evaluate(tt => window.__anim.seek(tt), t);
   // let the rAF loop apply the seeked frame before capturing
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   await stage.screenshot({ path: path.join(frameDir, `f${String(i).padStart(4,'0')}.png`), type: 'png' });
