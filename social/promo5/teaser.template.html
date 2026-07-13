@@ -78,6 +78,10 @@ body.clean #stage{border-radius:0;box-shadow:none}
 .cap{position:absolute;left:0;right:0;bottom:64px;text-align:center;font-weight:800;font-size:29px;color:var(--ink);z-index:15}
 .cap .redword{color:var(--red)}
 
+/* end-card confetti */
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:12;opacity:0}
+.cf{position:absolute;left:0;top:0;will-change:transform,opacity}
+
 #controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
   align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
   border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
@@ -126,6 +130,7 @@ body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
 
 <div id="stage">
   <div id="bg"></div>
+  <div id="confetti"></div>
 
   <!-- 1 · INTRO -->
   <section class="scene" data-scene="intro">
@@ -155,9 +160,9 @@ body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
   <section class="scene" data-scene="fact">
     <div class="wrap">
       <div class="fact" data-anim="pop" data-d="0.08">
-        <div class="f-big" data-anim="rise" data-d="0.20">Redrawn every <b>10&nbsp;years</b></div>
-        <div class="f-sub" data-anim="rise" data-d="0.36">after each census — by legislatures, commissions &amp; courts</div>
-        <div class="f-note" data-anim="rise" data-d="0.56">Where the lines fall shapes <b>who represents you.</b></div>
+        <div class="f-big" data-anim="rise" data-d="0.20">The lines <b>never stop moving</b></div>
+        <div class="f-sub" data-anim="rise" data-d="0.36">not just every 10 years — mid-decade redraws, lawsuits &amp; court-ordered maps</div>
+        <div class="f-note" data-anim="rise" data-d="0.56">Always in play — and they decide <b>who represents you.</b></div>
       </div>
     </div>
   </section>
@@ -228,15 +233,63 @@ const DISTS=[];
   });
 })();
 
+// ── Learn scene: accelerating rotation through the district silhouettes.
+//    Starts on CO-03 held ~1.1s, then each swap comes 12% sooner than the
+//    last, so by the end it's an indecipherable blur. ~30 shapes over ~9s. ──
+const SIL_PATHS={{SIL_PATHS_JSON}};
+const SIL_EL=document.querySelector('#sil-svg path');
+const SIL_STOPS=(()=>{const s=[];let tt=0.5,iv=1.1;for(let i=0;i<SIL_PATHS.length;i++){s.push(tt);tt+=iv;iv*=0.88;}return s;})();
+let SIL_CUR=-1;
+
+// ── End-card confetti: fires part-way into the (held) CTA scene and keeps
+//    falling through the hold, so the final frame is logo + confetti. ────────
+const SW={{STAGE_W}}, SH={{STAGE_H}};
+const CONF_FIRE=2.0;                                   // s into the CTA scene
+const CONF_COLORS=['#C41230','#2b6cb0','#2f9e44','#FDB515','#1a1a1a','#e64980','#ffffff'];
+const confettiLayer=document.getElementById('confetti');
+const CONFETTI=(function(){
+  const arr=[]; let seed=1337; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=0;i<72;i++){
+    const el=document.createElement('div'); el.className='cf';
+    const w=8+rnd()*12, h=8+rnd()*14;
+    el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+    el.style.width=w.toFixed(1)+'px'; el.style.height=h.toFixed(1)+'px';
+    el.style.borderRadius=(rnd()<0.3?'50%':'2px');
+    confettiLayer.appendChild(el);
+    arr.push({el, x0:-0.05*SW+rnd()*1.10*SW, y0:-0.12*SH-rnd()*0.10*SH,
+      dist:SH*1.20+rnd()*0.1*SH, delay:rnd()*1.4, fall:2.0+rnd()*1.3,
+      damp:12+rnd()*60, dfreq:1.4+rnd()*2.4, phase:rnd()*6.283,
+      rot0:rnd()*360, spin:(rnd()-0.5)*720});
+  }
+  return arr;
+})();
+// Run the end card until every piece has landed, then hold the logo +3s more.
+const CONF_END = CONF_FIRE + Math.max(...CONFETTI.map(c=>c.delay+c.fall));
+const CTA_DUR = CONF_END + 3;
+function renderConfetti(active, elapsed){
+  if(!active){ if(confettiLayer.style.opacity!=='0') confettiLayer.style.opacity='0'; return; }
+  confettiLayer.style.opacity='1';
+  for(const c of CONFETTI){
+    if(elapsed<c.delay){ c.el.style.opacity='0'; continue; }
+    const p=clamp((elapsed-c.delay)/c.fall,0,1);
+    const y=c.y0+c.dist*(0.35*p+0.65*p*p);
+    const x=c.x0+Math.sin(elapsed*c.dfreq+c.phase)*c.damp;
+    const rot=c.rot0+elapsed*c.spin;
+    const op = p<0.12 ? p/0.12 : p>0.9 ? (1-p)/0.1 : 1;
+    c.el.style.opacity=op.toFixed(2);
+    c.el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(1)}deg)`;
+  }
+}
+
 // Calmer pacing than the other teasers: longer holds, gentler whips.
 // The map scene runs long so the mosaic can breathe.
 const DEF=[
   {name:'intro',  dur:3.2, ax:'y', dir: 1},
-  {name:'map',    dur:5.8, ax:'x', dir: 1, count:true, dists:true},
+  {name:'map',    dur:5.8, ax:'x', dir: 1, count:true, dists:true, fadeOut:true},
   {name:'fact',   dur:3.4, ax:'x', dir:-1},
-  {name:'learn',  dur:3.6, ax:'x', dir: 1},
+  {name:'learn',  dur:10,  ax:'x', dir: 1, sils:true},
   {name:'makers', dur:2.6, ax:'y', dir: 1},
-  {name:'cta',    dur:2.8, ax:'x', dir:-1},
+  {name:'cta',    dur:CTA_DUR, ax:'x', dir:-1, hold:true},   // holds on the logo through the confetti, then +3s, no swipe-out
 ];
 let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
 const LOOP=acc;
@@ -247,6 +300,7 @@ SCENES.forEach(s=>{
   s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0}));
   if(s.count) s.cu=[...s.el.querySelectorAll('.countup')].map(n=>({n,to:parseFloat(n.dataset.to)||0}));
 });
+const CTA=SCENES.find(s=>s.name==='cta');
 
 function revealKids(s,lt){
   for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
@@ -266,6 +320,8 @@ function frame(ts){
     let x=0,y=0,sc=1,bl=0,op=1,ry=0;
     if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=(1-p)*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1.06-0.06*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*6*(1-p):0; }
+    else if(s.hold){ /* settle and hold — static logo, never swipes out */ }
+    else if(s.fadeOut && lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); op=clamp(1-p*1.4,0,1); }  // no slide — just fade
     else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.04*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*7*p:0; }
     else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.022*hp; y=-5*hp; }
@@ -282,8 +338,16 @@ function frame(ts){
         if(lt>=d.delay) filled++;
         d.el.style.opacity=(d.tint*p).toFixed(3); }
       if(s.cu) for(const c of s.cu) c.n.textContent=filled;
+    } else if(s.sils){
+      // Show the latest silhouette whose scheduled time has passed.
+      let idx=0; for(let i=0;i<SIL_STOPS.length;i++){ if(lt>=SIL_STOPS[i]) idx=i; else break; }
+      if(idx!==SIL_CUR){ SIL_CUR=idx; if(SIL_EL&&SIL_PATHS[idx]) SIL_EL.setAttribute('d',SIL_PATHS[idx]); }
     } else if(s.cu){ for(const c of s.cu){ const p=easeOut(clamp((lt-0.25)/1.3,0,1)); c.n.textContent=Math.round(c.to*p); } }
   }
+  // End-card confetti — driven purely by the CTA scene's local time (so it's
+  // deterministic under render-mp4's frame-by-frame seek).
+  const ctaLt=t-CTA.t0, ctaOn=(t>=CTA.t0-0.02 && t<CTA.t1+0.02);
+  renderConfetti(ctaOn && ctaLt>=CONF_FIRE, ctaLt-CONF_FIRE);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -312,7 +376,7 @@ document.getElementById('btn-rec').onclick=async ()=>{
       a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-5.'+(mime.includes('mp4')?'mp4':'webm');a.click();
       document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
     rec.start();
-    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    const total=Math.round(LOOP*1000)-200; let left=Math.ceil(total/1000);
     statusEl.textContent='● Recording '+left+'s…';
     const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
     setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);

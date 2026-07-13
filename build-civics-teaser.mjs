@@ -3,10 +3,11 @@
 //
 // A standalone promo with a calmer, mission-driven tone: why districts
 // matter. The wordmark, then the real U.S. map with all 435 district lines
-// ("435 districts · each ≈ 761,000 people"), the redistricting fact
-// ("redrawn every 10 years"), the learn-by-playing beat, the makers line
-// (Carnegie Mellon University · Redistrict Network), then wordmark + CTA.
-// ~19 s. 1:1 by default.
+// ("435 districts · each ≈ 761,000 people"), the redistricting fact (the lines
+// never stop moving — mid-decade redraws, lawsuits, court-ordered maps), the
+// learn-by-playing beat (an accelerating rotation through ~30 district
+// silhouettes, starting on CO-03), the makers line (Carnegie Mellon
+// University · Redistrict Network), then wordmark + CTA. ~28 s. 1:1 by default.
 //
 // The U.S. map (national outline + state borders + all district lines) is
 // generated from districts-map.topojson — the same simplified geometry the
@@ -51,11 +52,13 @@ const US_STATES  = round(gp(topojson.mesh(tm, stObj, (a, b) => a !== b)), 1);
 const US_DIST_FILLS = topojson.feature(tm, dObj).features
   .map(f => round(gp(f), 1)).filter(Boolean);
 
-// ── "Learn" beat: one handsome silhouette (largest polygon, fit to a box) ───
+// ── "Learn" beat: an accelerating rotation through ~30 district silhouettes,
+//    starting on CO-03 (slow) and speeding up into an indecipherable blur. ────
 const LEARN_ID = (arg('learn') || 'CO-03').toUpperCase();
+const SIL_COUNT = parseInt(arg('sils') || '30', 10);
 const core = JSON.parse(read('districts-core.topojson'));
-const dFeat = topojson.feature(core, core.objects.districts).features
-  .find(f => f.properties['state-district'] === LEARN_ID);
+const allDist = topojson.feature(core, core.objects.districts).features;
+const dFeat = allDist.find(f => f.properties['state-district'] === LEARN_ID);
 if (!dFeat) throw new Error(`No geometry for ${LEARN_ID}`);
 function fitFeatureOf(feature) {
   const g = feature.geometry;
@@ -70,8 +73,19 @@ function fitFeatureOf(feature) {
   return feature;
 }
 const SIL_BOX = 400;
-const SIL_PATH = round(geoPath(geoAlbersUsa()
-  .fitExtent([[18, 18], [SIL_BOX - 18, SIL_BOX - 18]], fitFeatureOf(dFeat)))(dFeat), 1);
+const silPathOf = f => round(geoPath(geoAlbersUsa()
+  .fitExtent([[18, 18], [SIL_BOX - 18, SIL_BOX - 18]], fitFeatureOf(f)))(f), 1);
+// CO-03 first (recognisable while slow), then the most irregular real districts
+// — striking shapes for the clear early beats — excluding at-large whole states.
+const AT_LARGE = new Set(['AK', 'DE', 'ND', 'SD', 'VT', 'WY']);
+const others = allDist
+  .filter(f => { const id = f.properties['state-district'];
+    return id && id !== LEARN_ID && !AT_LARGE.has(id.slice(0, 2)) && !id.startsWith('DC')
+      && typeof f.properties.polsby_popper === 'number'; })
+  .sort((a, b) => a.properties.polsby_popper - b.properties.polsby_popper)
+  .slice(0, Math.max(0, SIL_COUNT - 1));
+const SIL_PATHS = [dFeat, ...others].map(silPathOf);
+const SIL_PATH = SIL_PATHS[0];
 
 // ── Fonts + wordmark ─────────────────────────────────────────────────────────
 const FONT_WEIGHTS = { SemiBold:600, Bold:700, ExtraBold:800, Black:900 };
@@ -88,7 +102,7 @@ const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   MAP_W: String(MAP_W), MAP_H: String(MAP_H),
   US_OUTLINE, US_STATES, US_DIST_FILLS_JSON: JSON.stringify(US_DIST_FILLS),
-  SIL_BOX: String(SIL_BOX), SIL_PATH, LEARN_ID,
+  SIL_BOX: String(SIL_BOX), SIL_PATH, SIL_PATHS_JSON: JSON.stringify(SIL_PATHS), LEARN_ID,
 };
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
