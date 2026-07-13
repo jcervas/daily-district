@@ -26,10 +26,14 @@ social/
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-3*.html               built pages  (git-ignored)
 │    out/daily-district-teaser-3-<aspect>[-2160].mp4   (git-ignored)
-└─ promo4/                        ← teaser #4 (Compete — stats/leaderboard)
+├─ promo4/                        ← teaser #4 (Compete — stats/leaderboard)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-4*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
+└─ promo5/                        ← teaser #5 (Civics — education mission)
      teaser.template.html         template (edit copy / motion)
-     teaser-4*.html               built pages  (git-ignored)
-     out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
+     teaser-5*.html               built pages  (git-ignored)
+     out/daily-district-teaser-5-<aspect>[-2160].mp4   (git-ignored)
 ```
 
 Every video ships in all three aspects — **16:9** (X timeline / YouTube),
@@ -38,7 +42,8 @@ Every video ships in all three aspects — **16:9** (X timeline / YouTube),
 
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-promo.mjs` (gameplay promo), `build-profile-teaser.mjs` (teaser #3),
-`build-competitive-teaser.mjs` (teaser #4), `render-mp4.mjs` (HTML → MP4).
+`build-competitive-teaser.mjs` (teaser #4), `build-civics-teaser.mjs`
+(teaser #5), `render-mp4.mjs` (HTML → MP4).
 
 ## TL;DR — the commands
 
@@ -67,6 +72,9 @@ npm run teaser4                                   # 1:1
 npm run teaser4 -- --aspect=9x16                  # 9:16
 npm run teaser4 -- --aspect=16x9                  # 16:9
 
+# ── Teaser #5 (Civics — education mission) → social/promo5/teaser-5*.html ──
+npm run teaser5                                   # 1:1 (also --aspect=9x16 | 16x9)
+
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 # args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
 npm run render -- social/promo3/teaser-3.html social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
@@ -90,6 +98,11 @@ All renders are H.264 `crf 18` — already near-lossless; dsf only adds pixels.
 > **Note:** flag notation like `--aspect=9x16` is a real flag; if you ever see
 > docs write `[--aspect=…]`, the square brackets just mean "optional" — don't
 > type them (zsh treats `[…]` as a glob and errors).
+>
+> **Pasting blocks with `#` comments:** macOS zsh chokes on `#` lines by default
+> (`unknown file attribute` errors). Either paste commands one at a time without
+> the comment lines, or enable comments once:
+> `echo 'setopt interactive_comments' >> ~/.zshrc && source ~/.zshrc`
 
 > The generated files (`social/out/`, `social/promo/promo-video*.html`,
 > `social/promo/out/`) are **git-ignored** — they're regenerable, so only the
@@ -250,9 +263,33 @@ node render-mp4.mjs social/promo4/teaser-4.html \
 
 ---
 
+## 4c. Teaser #5 — Civics / education mission (standalone)
+
+The mission-driven teaser, with calmer pacing: the wordmark, then the **real
+U.S. map with all 435 district lines** (count-up + "each ≈ 761,000 people"),
+the redistricting fact ("redrawn every 10 years"), the learn-by-playing beat
+(silhouette + by shape / by place / by the people), the makers line (Carnegie
+Mellon University · Redistrict Network), then wordmark + CTA. ~20 s, **1:1**
+by default.
+
+```bash
+node build-civics-teaser.mjs                       # 1:1
+node render-mp4.mjs social/promo5/teaser-5.html \
+  social/promo5/out/daily-district-teaser-5-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- `--learn=CO-03` swaps the silhouette in the learn-by-playing beat.
+- The U.S. map is generated from `districts-map.topojson` (national outline +
+  state borders + all district lines); copy lives in
+  `social/promo5/teaser.template.html`.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`promo-video*.html`, `teaser-3.html`, `teaser-4.html`) can
+Every built page (`promo-video*.html`, `teaser-3/4/5.html`) can
 export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/promo3/teaser-3.html`) in **Chrome**.
@@ -273,6 +310,9 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
 - **Teaser #4** — copy/timing/motion **and** the sample stats/histogram/
   leaderboard numbers all live in `social/promo4/teaser.template.html`. Rebuild
   with `build-competitive-teaser.mjs`.
+- **Teaser #5** — copy/timing/motion in `social/promo5/teaser.template.html`;
+  the learn-beat silhouette via `--learn=`. Rebuild with
+  `build-civics-teaser.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and

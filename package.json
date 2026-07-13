@@ -13,6 +13,7 @@
     "promo": "node build-promo.mjs",
     "teaser3": "node build-profile-teaser.mjs",
     "teaser4": "node build-competitive-teaser.mjs",
+    "teaser5": "node build-civics-teaser.mjs",
     "render": "node render-mp4.mjs",
     "card": "node build-social-card.mjs",
     "recap:dry": "DRY_RUN=1 node daily-recap.mjs"

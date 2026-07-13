@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily District — Teaser #5 (Civics)</title>
+<style>
+/*{{FONTS_CSS}}*/
+
+:root{
+  --red:#C41230; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
+  --line:#e7e4e0; --chip:#f6eef0;
+  --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
+  font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0e0e11;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+
+#stage{position:relative;width:var(--stageW);height:var(--stageH);background:var(--bg);
+  overflow:hidden;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5);
+  transform-origin:center center;perspective:1500px}
+body.clean{background:#f4f3f1}
+body.clean #stage{border-radius:0;box-shadow:none}
+
+#bg{position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% -12%, #ffffff 0%, rgba(255,255,255,0) 52%),
+    radial-gradient(70% 70% at 8% 6%, rgba(196,18,48,.08) 0%, rgba(196,18,48,0) 46%),
+    radial-gradient(70% 70% at 94% 96%, rgba(196,18,48,.10) 0%, rgba(196,18,48,0) 50%),
+    linear-gradient(160deg,#f8f6f4 0%,#efece8 100%)}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  will-change:transform,filter,opacity;backface-visibility:hidden;opacity:0}
+.scene .wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+[data-anim]{opacity:0;will-change:transform,opacity}
+
+.wordmark{color:var(--red);display:block}
+.wordmark svg{display:block;width:100%;height:auto}
+.eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:84%;line-height:1.25}
+.redword{color:var(--red)}
+.cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+
+/* map scene */
+.count-line{display:flex;align-items:baseline;gap:18px;margin-bottom:6px}
+.count-line .big{font-weight:900;font-size:120px;line-height:.95;color:var(--red);letter-spacing:-3px}
+.count-line .rest{font-weight:900;font-size:44px;color:var(--ink);letter-spacing:-.5px}
+.usmap{filter:drop-shadow(0 18px 36px rgba(40,20,25,.12))}
+.usmap .outline{fill:#ffffff;stroke:var(--ink);stroke-width:1.8}
+.usmap .states{fill:none;stroke:#b9b3ad;stroke-width:1.1}
+.usmap .dfill{fill:var(--red);stroke:#ffffff;stroke-width:.35;opacity:0;will-change:opacity}
+
+/* fact scene */
+.fact{background:var(--card);border:1px solid var(--line);border-radius:24px;
+  box-shadow:0 40px 90px rgba(40,20,25,.16);padding:44px 56px;text-align:center;max-width:860px}
+.fact .f-big{font-weight:900;font-size:84px;color:var(--ink);letter-spacing:-2px;line-height:1}
+.fact .f-big b{color:var(--red)}
+.fact .f-sub{font-weight:700;font-size:28px;color:var(--muted);margin-top:12px}
+.fact .f-note{font-weight:800;font-size:24px;color:var(--ink);margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.fact .f-note b{color:var(--red)}
+
+/* learn scene */
+.sil path{fill:var(--red)}
+.sil{filter:drop-shadow(0 20px 36px rgba(196,18,48,.20))}
+.learn-chips{display:flex;gap:14px;margin-top:16px}
+.lchip{background:var(--card);border:1px solid var(--line);border-radius:999px;
+  font-weight:800;font-size:22px;color:var(--ink);padding:12px 26px;box-shadow:0 12px 26px rgba(40,20,25,.08)}
+.lchip b{color:var(--red)}
+
+/* makers scene */
+.makers{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.makers .rule{width:64px;height:6px;border-radius:3px;background:var(--red);margin-bottom:14px}
+.makers .m-name{font-weight:900;font-size:40px;color:var(--ink);letter-spacing:-.5px}
+.makers .m-org{font-weight:700;font-size:24px;color:var(--muted);margin-top:-4px}
+
+.cap{position:absolute;left:0;right:0;bottom:64px;text-align:center;font-weight:800;font-size:29px;color:var(--ink);z-index:15}
+.cap .redword{color:var(--red)}
+
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
+  border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
+body.clean #controls{display:none}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button.primary{background:var(--red)}
+#controls button:hover{filter:brightness(1.12)}
+#controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
+#hint-cue{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
+body.clean #hint-cue{display:none}
+
+/* portrait tuning */
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+body[data-aspect="9x16"] .count-line .big{font-size:150px}
+body[data-aspect="9x16"] .count-line .rest{font-size:52px}
+body[data-aspect="9x16"] .fact{max-width:920px;padding:54px 60px}
+body[data-aspect="9x16"] .fact .f-big{font-size:96px}
+body[data-aspect="9x16"] .makers .m-name{font-size:48px}
+body[data-aspect="9x16"] .makers .m-org{font-size:28px}
+body[data-aspect="9x16"] .cap{bottom:180px;font-size:38px}
+body[data-aspect="9x16"] .cta-url{font-size:72px}
+body[data-aspect="9x16"] #sil-svg{width:560px;height:560px}
+
+/* landscape tuning (1280×720) */
+body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .eyebrow{font-size:17px}
+body[data-aspect="16x9"] .sub{font-size:24px}
+body[data-aspect="16x9"] .count-line .big{font-size:76px}
+body[data-aspect="16x9"] .count-line .rest{font-size:30px}
+body[data-aspect="16x9"] #usmap-svg{width:640px;height:397px}
+body[data-aspect="16x9"] .fact{padding:30px 44px}
+body[data-aspect="16x9"] .fact .f-big{font-size:58px}
+body[data-aspect="16x9"] .fact .f-sub{font-size:22px}
+body[data-aspect="16x9"] .fact .f-note{font-size:19px;margin-top:14px;padding-top:14px}
+body[data-aspect="16x9"] #sil-svg{width:290px;height:290px}
+body[data-aspect="16x9"] .lchip{font-size:17px;padding:9px 20px}
+body[data-aspect="16x9"] .makers .m-name{font-size:32px}
+body[data-aspect="16x9"] .makers .m-org{font-size:19px}
+body[data-aspect="16x9"] .cta-url{font-size:48px}
+body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
+</style>
+</head>
+<body data-aspect="{{ASPECT}}">
+
+<div id="stage">
+  <div id="bg"></div>
+
+  <!-- 1 · INTRO -->
+  <section class="scene" data-scene="intro">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="pop" data-d="0.05">A civic education project</span>
+      <div class="wordmark" data-anim="pop" data-d="0.20" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.46">The map of American democracy — <b class="redword">learned one day at a time.</b></div>
+    </div>
+  </section>
+
+  <!-- 2 · THE MAP -->
+  <section class="scene" data-scene="map">
+    <div class="wrap">
+      <div class="count-line" data-anim="pop" data-d="0.08">
+        <span class="big countup" data-to="435">0</span><span class="rest">congressional districts</span>
+      </div>
+      <svg id="usmap-svg" class="usmap" data-anim="rise" data-d="0.16" viewBox="0 0 {{MAP_W}} {{MAP_H}}" width="880" height="546" aria-hidden="true">
+        <path class="outline" d="{{US_OUTLINE}}"/>
+        <g id="us-fills"></g>
+        <path class="states" d="{{US_STATES}}"/>
+      </svg>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.6">Each one represents <span class="redword">≈ 761,000 people.</span></div>
+  </section>
+
+  <!-- 3 · REDRAWN -->
+  <section class="scene" data-scene="fact">
+    <div class="wrap">
+      <div class="fact" data-anim="pop" data-d="0.08">
+        <div class="f-big" data-anim="rise" data-d="0.20">Redrawn every <b>10&nbsp;years</b></div>
+        <div class="f-sub" data-anim="rise" data-d="0.36">after each census — by legislatures, commissions &amp; courts</div>
+        <div class="f-note" data-anim="rise" data-d="0.56">Where the lines fall shapes <b>who represents you.</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · LEARN BY PLAYING -->
+  <section class="scene" data-scene="learn">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="rise" data-d="0.06" style="margin-bottom:14px">Learn by playing</span>
+      <svg id="sil-svg" class="sil" data-anim="pop" data-d="0.14" viewBox="0 0 {{SIL_BOX}} {{SIL_BOX}}" width="380" height="380" aria-hidden="true"><path d="{{SIL_PATH}}"/></svg>
+      <div class="learn-chips">
+        <span class="lchip" data-anim="rise" data-d="0.36">by <b>shape</b></span>
+        <span class="lchip" data-anim="rise" data-d="0.46">by <b>place</b></span>
+        <span class="lchip" data-anim="rise" data-d="0.56">by the <b>people</b></span>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.62">One district a day — <span class="redword">all 435 of them.</span></div>
+  </section>
+
+  <!-- 5 · MAKERS -->
+  <section class="scene" data-scene="makers">
+    <div class="wrap">
+      <div class="makers">
+        <span class="rule" data-anim="pop" data-d="0.06"></span>
+        <span class="eyebrow" data-anim="rise" data-d="0.12" style="margin-bottom:10px">Created by</span>
+        <span class="m-name" data-anim="rise" data-d="0.26">Dr. Jonathan Cervas</span>
+        <span class="m-org" data-anim="rise" data-d="0.34">Carnegie Mellon University</span>
+        <span class="m-name" data-anim="rise" data-d="0.50" style="margin-top:18px">Jason Fierman</span>
+        <span class="m-org" data-anim="rise" data-d="0.58">Redistrict Network</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · CTA -->
+  <section class="scene" data-scene="cta">
+    <div class="wrap">
+      <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="color:var(--ink)">Free, daily &amp; built for <b class="redword">curious people of all backgrounds.</b></div>
+      <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
+    </div>
+  </section>
+</div>
+
+<div id="hint-cue">▶ Teaser #5 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="controls">
+  <button class="primary" id="btn-rec">● Record video</button>
+  <button id="btn-restart">↻ Restart</button>
+  <button id="btn-clean">Hide UI</button>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #5</span>
+</div>
+
+<script>
+const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+
+// ── The 435-district mosaic: every district polygon, filling in one by one
+//    in deterministic-random order across the fill window. ─────────────────
+const FILL_START=0.55, FILL_SPAN=2.9, FILL_FADE=0.45;   // s into the map scene
+const DISTS=[];
+(function(){
+  const paths={{US_DIST_FILLS_JSON}};
+  const g=document.getElementById('us-fills');
+  paths.forEach((d,i)=>{
+    const el=document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('class','dfill'); el.setAttribute('d',d);
+    g.appendChild(el);
+    const h=(i*2654435761)>>>0;                          // deterministic shuffle
+    DISTS.push({el, delay:FILL_START+((h%997)/997)*FILL_SPAN, tint:0.42+((h>>>10)%100)/100*0.38});
+  });
+})();
+
+// Calmer pacing than the other teasers: longer holds, gentler whips.
+// The map scene runs long so the mosaic can breathe.
+const DEF=[
+  {name:'intro',  dur:3.2, ax:'y', dir: 1},
+  {name:'map',    dur:5.8, ax:'x', dir: 1, count:true, dists:true},
+  {name:'fact',   dur:3.4, ax:'x', dir:-1},
+  {name:'learn',  dur:3.6, ax:'x', dir: 1},
+  {name:'makers', dur:2.6, ax:'y', dir: 1},
+  {name:'cta',    dur:2.8, ax:'x', dir:-1},
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
+const ENTER=0.6, EXIT=0.5, TRAVEL=420, BLURMAX=14, CHILD=0.55;
+
+SCENES.forEach(s=>{
+  s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0}));
+  if(s.count) s.cu=[...s.el.querySelectorAll('.countup')].map(n=>({n,to:parseFloat(n.dataset.to)||0}));
+});
+
+function revealKids(s,lt){
+  for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
+    let tf=''; if(k.type==='pop')tf=`scale(${lerp(.78,1,p)})`; else if(k.type==='rise')tf=`translateY(${lerp(26,0,p)}px)`;
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf; }
+}
+
+let startTs=null, paused=false, pauseAt=0;
+window.__teaser={seek:t=>{paused=true;pauseAt=((t%LOOP)+LOOP)%LOOP;},play:()=>{paused=false;startTs=null;},loop:()=>LOOP};
+
+function frame(ts){
+  if(startTs===null) startTs=ts;
+  const t = paused ? pauseAt : ((ts-startTs)/1000)%LOOP;
+  for(const s of SCENES){
+    const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
+    if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
+    let x=0,y=0,sc=1,bl=0,op=1,ry=0;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=(1-p)*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1.06-0.06*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*6*(1-p):0; }
+    else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.04*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*7*p:0; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.022*hp; y=-5*hp; }
+    el.style.opacity=op.toFixed(3);
+    el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
+    el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
+    revealKids(s,lt);
+    if(s.dists){
+      // Mosaic: each district fades to its own tint at its own randomized time;
+      // the counter reads the number of districts filled so far → lands on 435
+      // exactly as the map completes.
+      let filled=0;
+      for(const d of DISTS){ const p=easeOut(clamp((lt-d.delay)/FILL_FADE,0,1));
+        if(lt>=d.delay) filled++;
+        d.el.style.opacity=(d.tint*p).toFixed(3); }
+      if(s.cu) for(const c of s.cu) c.n.textContent=filled;
+    } else if(s.cu){ for(const c of s.cu){ const p=easeOut(clamp((lt-0.25)/1.3,0,1)); c.n.textContent=Math.round(c.to*p); } }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Controls + record ───────────────────────────────────────────────────────
+const statusEl=document.getElementById('status');
+document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
+document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); if(paused){paused=false;startTs=performance.now()-pauseAt*1000;} else {paused=true;pauseAt=((performance.now()-(startTs||performance.now()))/1000)%LOOP;}}
+  if(e.key==='r'||e.key==='R'){startTs=null;paused=false;}
+  if(e.key==='h'||e.key==='H'){document.body.classList.toggle('clean');fit();}
+});
+
+let rec, chunks=[];
+document.getElementById('btn-rec').onclick=async ()=>{
+  try{
+    statusEl.textContent='Choose “This Tab”…';
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:{{STAGE_W}},height:{{STAGE_H}}},audio:false,preferCurrentTab:true});
+    document.body.classList.add('clean'); fit(); startTs=null; paused=false; chunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12_000_000});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-5.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
+    rec.start();
+    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    statusEl.textContent='● Recording '+left+'s…';
+    const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
+    setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);
+    stream.getVideoTracks()[0].onended=()=>{if(rec&&rec.state!=='inactive')rec.stop();};
+  }catch(err){statusEl.textContent='Record cancelled';document.body.classList.remove('clean');fit();}
+};
+
+function fit(){
+  const pad=document.body.classList.contains('clean')?0:56;
+  const s=Math.min(1,(window.innerWidth-pad)/{{STAGE_W}},(window.innerHeight-pad)/{{STAGE_H}});
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+</script>
+</body>
+</html>
