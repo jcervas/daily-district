@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily District — Teaser #4 (Compete)</title>
+<style>
+/*{{FONTS_CSS}}*/
+
+:root{
+  --red:#C41230; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
+  --line:#e7e4e0; --blue:#2f6fd0; --green:#1f7a3d; --gold:#F4B733; --chip:#f6eef0;
+  --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
+  font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0e0e11;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+
+#stage{position:relative;width:var(--stageW);height:var(--stageH);background:var(--bg);
+  overflow:hidden;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5);
+  transform-origin:center center;perspective:1500px}
+body.clean{background:#f4f3f1}
+body.clean #stage{border-radius:0;box-shadow:none}
+
+#bg{position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% -12%, #ffffff 0%, rgba(255,255,255,0) 52%),
+    radial-gradient(70% 70% at 8% 6%, rgba(196,18,48,.10) 0%, rgba(196,18,48,0) 46%),
+    radial-gradient(70% 70% at 94% 96%, rgba(196,18,48,.12) 0%, rgba(196,18,48,0) 50%),
+    linear-gradient(160deg,#f8f6f4 0%,#eeeae6 100%)}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  will-change:transform,filter,opacity;backface-visibility:hidden;opacity:0}
+.scene .wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+[data-anim]{opacity:0;will-change:transform,opacity}
+
+/* wordmark scenes */
+.wordmark{color:var(--red);display:block}
+.wordmark svg{display:block;width:100%;height:auto}
+.eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:82%}
+.redword{color:var(--red)}
+.cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+
+/* caption */
+.cap{position:absolute;left:0;right:0;bottom:70px;text-align:center;font-weight:800;font-size:30px;color:var(--ink);z-index:15}
+.cap .redword{color:var(--red)}
+
+/* results-modal-style panel */
+.panel{width:840px;background:var(--card);border:1px solid var(--line);border-radius:26px;
+  box-shadow:0 44px 100px rgba(40,20,25,.20);padding:30px 34px 34px}
+.panel-head{font-weight:900;font-size:26px;color:var(--ink);letter-spacing:-.4px;margin-bottom:20px;
+  display:flex;align-items:center;gap:12px}
+.panel-head::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--red)}
+
+/* Guesses */
+.solved-line{font-weight:800;font-size:24px;color:var(--muted);margin-bottom:16px}
+.solved-line b{font-weight:900;font-size:34px;color:var(--green)}
+.guess-row{display:flex;align-items:center;gap:16px;padding:14px 18px;border:1px solid var(--line);
+  border-radius:14px;margin-bottom:12px;background:#fbfafa}
+.guess-row .gn{width:34px;height:34px;border-radius:9px;background:var(--chip);color:var(--red);
+  font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.guess-row .gname{font-weight:800;font-size:26px;color:var(--ink);flex:1}
+.gpill{font-weight:900;font-size:16px;letter-spacing:.5px;padding:6px 16px;border-radius:999px;text-transform:uppercase}
+.gpill.cold{background:#e7eef7;color:#2f6fd0}
+.gpill.hot{background:#fdeaa6;color:#8a6a00}
+.gpill.win{background:#e3f3e8;color:var(--green)}
+.guess-row.win{border-color:var(--green);background:#f3faf5}
+.gmap{width:46px;height:46px;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(40,20,25,.16))}
+.gmap path{fill:#c9c2bd}
+.gmap.cold path{fill:#2f6fd0}
+.gmap.hot path{fill:#d99a00}
+.gmap.win path{fill:#1f7a3d}
+
+/* CTA effects: floating district pills + confetti */
+.cta-floaters,.cta-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cta-floater{position:absolute;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.8);
+  border:1px solid rgba(196,18,48,.12);border-radius:999px;padding:7px 13px 7px 9px;
+  box-shadow:0 8px 22px rgba(40,20,25,.07);font-weight:700;color:#9a8f92;white-space:nowrap;opacity:0}
+.cta-floater i{width:15px;height:15px;border-radius:4px;background:rgba(196,18,48,.5);display:block}
+.conf{position:absolute;top:-30px;width:12px;height:17px;border-radius:2px;opacity:0}
+
+/* Personal stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat-card{background:#fbfafa;border:1px solid var(--line);border-radius:16px;padding:22px 24px;text-align:center}
+.stat-card .sv{font-weight:900;font-size:64px;color:var(--ink);line-height:1}
+.stat-card .sv.red{color:var(--red)}
+.stat-card .sl{font-weight:800;letter-spacing:1.2px;font-size:14px;color:var(--muted);text-transform:uppercase;margin-top:6px}
+
+/* Guess Distribution */
+.dist{display:flex;flex-direction:column;gap:11px}
+.drow{display:flex;align-items:center;gap:14px}
+.drow .dn{width:22px;text-align:center;font-weight:900;font-size:22px;color:var(--ink)}
+.dwrap{flex:1;background:#f1efec;border-radius:9px;height:38px;overflow:hidden}
+.dbar{height:100%;width:0;background:#e3a9b2;border-radius:9px;display:flex;align-items:center;justify-content:flex-end;
+  padding-right:12px;min-width:34px}
+.dbar span{font-weight:900;font-size:18px;color:#fff}
+.dbar.today{background:var(--red);box-shadow:0 0 0 3px rgba(244,183,51,.9) inset}
+
+/* Leaderboard */
+.lb{display:flex;flex-direction:column;gap:10px}
+.lbrow{display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--line);border-radius:13px;background:#fbfafa}
+.lbrow .rk{width:26px;text-align:center;font-weight:900;font-size:22px;color:var(--muted)}
+.lbrow .av{width:44px;height:44px;border-radius:50%;background:var(--chip);color:var(--red);font-weight:900;
+  font-size:15px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.lbrow .nm{font-weight:800;font-size:24px;color:var(--ink);flex:1}
+.lbrow .wr{font-weight:900;font-size:26px;color:var(--ink)}
+.lbrow.you{border-color:var(--red);background:rgba(196,18,48,.06);box-shadow:0 8px 20px rgba(196,18,48,.12)}
+.lbrow.you .av{background:var(--red);color:#fff}
+.lbrow.you .nm,.lbrow.you .wr{color:var(--red)}
+.pctile{margin-top:18px;text-align:center;font-weight:800;font-size:24px;color:var(--ink)}
+.pctile b{color:var(--red);font-weight:900}
+
+/* controls */
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
+  border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
+body.clean #controls{display:none}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button.primary{background:var(--red)}
+#controls button:hover{filter:brightness(1.12)}
+#controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
+#hint-cue{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
+body.clean #hint-cue{display:none}
+
+/* portrait / square tuning */
+body[data-aspect="9x16"] .panel{width:960px}
+body[data-aspect="9x16"] .did,body[data-aspect="9x16"] .cta-url{font-size:72px}
+</style>
+</head>
+<body data-aspect="{{ASPECT}}">
+
+<div id="stage">
+  <div id="bg"></div>
+
+  <!-- FRONT: wordmark -->
+  <section class="scene" data-scene="intro">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="pop" data-d="0.05">Not just a puzzle</span>
+      <div class="wordmark" data-anim="pop" data-d="0.18" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.42">Track your streak. Study your distribution. <b class="redword">Climb the leaderboard.</b></div>
+    </div>
+  </section>
+
+  <!-- GUESSES (results modal) -->
+  <section class="scene" data-scene="guesses">
+    <div class="wrap">
+      <div class="panel" data-anim="pop" data-d="0.05">
+        <div class="panel-head">Guesses</div>
+        <div class="solved-line" data-anim="rise" data-d="0.14">Solved in <b>3</b> guesses / 6</div>
+        <div id="guess-rows"></div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.5">Every guess is <span class="redword">scored.</span></div>
+  </section>
+
+  <!-- PERSONAL STATS -->
+  <section class="scene" data-scene="stats">
+    <div class="wrap">
+      <div class="panel" data-anim="pop" data-d="0.05">
+        <div class="panel-head">Your stats</div>
+        <div class="stat-grid">
+          <div class="stat-card" data-anim="pop" data-d="0.16"><div class="sv countup" data-to="47">0</div><div class="sl">Played</div></div>
+          <div class="stat-card" data-anim="pop" data-d="0.26"><div class="sv red countup" data-to="89" data-suf="%">0</div><div class="sl">Win Rate</div></div>
+          <div class="stat-card" data-anim="pop" data-d="0.36"><div class="sv countup" data-to="12">0</div><div class="sl">Current Streak</div></div>
+          <div class="stat-card" data-anim="pop" data-d="0.46"><div class="sv countup" data-to="23">0</div><div class="sl">Max Streak</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.55">Your record, <span class="redword">tracked.</span></div>
+  </section>
+
+  <!-- GUESS DISTRIBUTION HISTOGRAM -->
+  <section class="scene" data-scene="hist">
+    <div class="wrap">
+      <div class="panel" data-anim="pop" data-d="0.05">
+        <div class="panel-head">Guess Distribution</div>
+        <div class="dist">
+          <div class="drow"><span class="dn">1</span><div class="dwrap"><div class="dbar" data-w="13"><span>2</span></div></div></div>
+          <div class="drow"><span class="dn">2</span><div class="dwrap"><div class="dbar" data-w="40"><span>6</span></div></div></div>
+          <div class="drow"><span class="dn">3</span><div class="dwrap"><div class="dbar today" data-w="100"><span>15</span></div></div></div>
+          <div class="drow"><span class="dn">4</span><div class="dwrap"><div class="dbar" data-w="80"><span>12</span></div></div></div>
+          <div class="drow"><span class="dn">5</span><div class="dwrap"><div class="dbar" data-w="47"><span>7</span></div></div></div>
+          <div class="drow"><span class="dn">6</span><div class="dwrap"><div class="dbar" data-w="20"><span>3</span></div></div></div>
+          <div class="drow"><span class="dn">X</span><div class="dwrap"><div class="dbar" data-w="13"><span>2</span></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.55">See how you <span class="redword">solve.</span></div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section class="scene" data-scene="board">
+    <div class="wrap">
+      <div class="panel" data-anim="pop" data-d="0.05">
+        <div class="panel-head">Leaderboard · Everyone</div>
+        <div class="lb">
+          <div class="lbrow" data-anim="rise" data-d="0.16"><span class="rk">1</span><span class="av">MR</span><span class="nm">Maria R.</span><span class="wr">94%</span></div>
+          <div class="lbrow you" data-anim="rise" data-d="0.26"><span class="rk">2</span><span class="av">YOU</span><span class="nm">You</span><span class="wr">89%</span></div>
+          <div class="lbrow" data-anim="rise" data-d="0.36"><span class="rk">3</span><span class="av">JK</span><span class="nm">James K.</span><span class="wr">87%</span></div>
+          <div class="lbrow" data-anim="rise" data-d="0.46"><span class="rk">4</span><span class="av">PS</span><span class="nm">Priya S.</span><span class="wr">85%</span></div>
+        </div>
+        <div class="pctile" data-anim="pop" data-d="0.62">You're in the <b>top 6%</b> of all players</div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.6">Compete with <span class="redword">everyone.</span></div>
+  </section>
+
+  <!-- BACK: wordmark + CTA -->
+  <section class="scene" data-scene="cta">
+    <div class="cta-floaters" id="cta-floaters"></div>
+    <div class="wrap">
+      <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="font-size:31px;color:var(--ink)">Free to play. <b class="redword">Climb the board.</b></div>
+      <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
+    </div>
+    <div class="cta-confetti" id="cta-confetti"></div>
+  </section>
+</div>
+
+<div id="hint-cue">▶ Teaser #4 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="controls">
+  <button class="primary" id="btn-rec">● Record video</button>
+  <button id="btn-restart">↻ Restart</button>
+  <button id="btn-clean">Hide UI</button>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #4</span>
+</div>
+
+<script>
+const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+
+// ── Guess rows: state / district outline + name + hot/cold pill ─────────────
+const GUESSES={{GUESSES_JSON}}, GBOX={{GBOX}};
+(function(){
+  const wrap=document.getElementById('guess-rows'), label={cold:'Cold',hot:'Hot',win:'Correct ✓'};
+  GUESSES.forEach((g,i)=>{
+    const row=document.createElement('div');
+    row.className='guess-row'+(g.pill==='win'?' win':'');
+    row.setAttribute('data-anim','rise'); row.setAttribute('data-d',(0.24+i*0.12).toFixed(2));
+    row.innerHTML=`<span class="gn">${g.n}</span>`
+      +`<svg class="gmap ${g.pill}" viewBox="0 0 ${GBOX} ${GBOX}" aria-hidden="true"><path d="${g.path}"/></svg>`
+      +`<span class="gname">${g.name}</span>`
+      +`<span class="gpill ${g.pill}">${label[g.pill]}</span>`;
+    wrap.appendChild(row);
+  });
+})();
+
+// ── CTA: floating district pills + confetti (created once, animated on the cta scene) ──
+const CTAFLO=[];
+(function(){
+  const items=[['OHIO',8,14],['PA-08',86,10],['FL-27',16,26],['NY-14',90,32],['CA-12',6,62],['TX-35',88,66],['GA-05',12,86],['AZ-03',80,88],['NC-02',30,90],['MI-11',94,50]];
+  const f=document.getElementById('cta-floaters');
+  items.forEach(([n,x,y],i)=>{const el=document.createElement('div');el.className='cta-floater';el.innerHTML='<i></i>'+n;
+    el.style.left=x+'%';el.style.top=y+'%';el.style.fontSize=(13+(i%3)*2)+'px';
+    f.appendChild(el); CTAFLO.push({el,period:6+(i%5)*1.3,phase:(i*0.137)%1,amp:26+(i%4)*7});});
+})();
+const CONF=[];
+(function(){
+  const COLORS=['#C41230','#F4B733','#1f7a3d','#2f6fd0','#e01a3c','#111'];
+  const box=document.getElementById('cta-confetti');
+  for(let i=0;i<72;i++){const c=document.createElement('div');c.className='conf';
+    const h=(i*2654435761)>>>0, left=(h%1000)/10, dur=1.7+((h>>10)%120)/100, delay=0.25+((h>>4)%40)/100;
+    const dx=((h>>7)%180)-90, rot=((h>>3)%720)-360;
+    c.style.left=left+'%'; c.style.background=COLORS[i%COLORS.length];
+    box.appendChild(c); CONF.push({el:c,dur,delay,dx,rot});}
+})();
+
+// scene name, duration, whip axis/direction, and optional behaviours
+const DEF=[
+  {name:'intro',  dur:2.4, ax:'y', dir: 1},
+  {name:'guesses',dur:2.9, ax:'x', dir: 1},
+  {name:'stats',  dur:2.9, ax:'x', dir:-1, count:true},
+  {name:'hist',   dur:3.1, ax:'x', dir: 1, bars:true},
+  {name:'board',  dur:3.1, ax:'x', dir:-1},
+  {name:'cta',    dur:2.6, ax:'x', dir: 1},
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
+const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
+
+SCENES.forEach(s=>{
+  s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0}));
+  if(s.bars) s.bar=[...s.el.querySelectorAll('.dbar')].map((n,i)=>({n,w:parseFloat(n.dataset.w)||0,d:0.28+i*0.07}));
+  if(s.count) s.cu=[...s.el.querySelectorAll('.countup')].map(n=>({n,to:parseFloat(n.dataset.to)||0,suf:n.dataset.suf||'',d:0.3}));
+});
+
+function revealKids(s,lt){
+  for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
+    let tf=''; if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`; else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf; }
+}
+
+let startTs=null, paused=false, pauseAt=0;
+window.__teaser={seek:t=>{paused=true;pauseAt=((t%LOOP)+LOOP)%LOOP;},play:()=>{paused=false;startTs=null;},loop:()=>LOOP};
+
+function frame(ts){
+  if(startTs===null) startTs=ts;
+  const t = paused ? pauseAt : ((ts-startTs)/1000)%LOOP;
+  for(const s of SCENES){
+    const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
+    if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
+    let x=0,y=0,sc=1,bl=0,op=1,ry=0;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=(1-p)*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
+    el.style.opacity=op.toFixed(3);
+    el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
+    el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
+    revealKids(s,lt);
+    if(s.bar) for(const b of s.bar){ const p=easeOut(clamp((lt-b.d)/0.75,0,1)); b.n.style.width=(b.w*p).toFixed(1)+'%'; }
+    if(s.cu) for(const c of s.cu){ const p=easeOut(clamp((lt-c.d)/0.95,0,1)); c.n.textContent=Math.round(c.to*p)+c.suf; }
+    if(s.name==='cta'){
+      for(const f of CTAFLO){ const ph=((lt/f.period)+f.phase)%1, yy=lerp(24,-f.amp,ph), oo=Math.sin(Math.PI*clamp(ph,0,1));
+        f.el.style.transform=`translateY(${yy.toFixed(1)}px)`; f.el.style.opacity=(oo*.62).toFixed(2); }
+      for(const c of CONF){ const p=clamp((lt-c.delay)/c.dur,0,1);
+        c.el.style.opacity=(p>0&&p<1)?'0.95':'0';
+        c.el.style.transform=`translate(${(c.dx*p).toFixed(1)}px,${(p*1180).toFixed(0)}px) rotate(${(c.rot*p).toFixed(0)}deg)`; }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Controls + record ───────────────────────────────────────────────────────
+const statusEl=document.getElementById('status');
+document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
+document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); if(paused){paused=false;startTs=performance.now()-pauseAt*1000;} else {paused=true;pauseAt=((performance.now()-(startTs||performance.now()))/1000)%LOOP;}}
+  if(e.key==='r'||e.key==='R'){startTs=null;paused=false;}
+  if(e.key==='h'||e.key==='H'){document.body.classList.toggle('clean');fit();}
+});
+
+let rec, chunks=[];
+document.getElementById('btn-rec').onclick=async ()=>{
+  try{
+    statusEl.textContent='Choose “This Tab”…';
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:{{STAGE_W}},height:{{STAGE_H}}},audio:false,preferCurrentTab:true});
+    document.body.classList.add('clean'); fit(); startTs=null; paused=false; chunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12_000_000});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-4.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
+    rec.start();
+    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    statusEl.textContent='● Recording '+left+'s…';
+    const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
+    setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);
+    stream.getVideoTracks()[0].onended=()=>{if(rec&&rec.state!=='inactive')rec.stop();};
+  }catch(err){statusEl.textContent='Record cancelled';document.body.classList.remove('clean');fit();}
+};
+
+function fit(){
+  const pad=document.body.classList.contains('clean')?0:56;
+  const s=Math.min(1,(window.innerWidth-pad)/{{STAGE_W}},(window.innerHeight-pad)/{{STAGE_H}});
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+</script>
+</body>
+</html>

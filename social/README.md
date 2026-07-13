@@ -23,16 +23,19 @@ social/
 │      daily-district-<DISTRICT>-16x9.mp4
 │      daily-district-<DISTRICT>-9x16.mp4
 │      daily-district-<DISTRICT>-1x1.mp4
-└─ promo3/                        ← teaser #3 (District Profile showcase)
+├─ promo3/                        ← teaser #3 (District Profile showcase)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-3*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-3-1x1.mp4        (git-ignored)
+└─ promo4/                        ← teaser #4 (Compete — stats/leaderboard)
      teaser.template.html         template (edit copy / motion)
-     teaser-3*.html               built pages  (git-ignored)
-     out/                         ← rendered MP4s  (git-ignored)
-       daily-district-teaser-3-1x1.mp4
+     teaser-4*.html               built pages  (git-ignored)
+     out/daily-district-teaser-4-1x1.mp4        (git-ignored)
 ```
 
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-promo.mjs` (gameplay promo), `build-profile-teaser.mjs` (teaser #3),
-`render-mp4.mjs` (HTML → MP4).
+`build-competitive-teaser.mjs` (teaser #4), `render-mp4.mjs` (HTML → MP4).
 
 ## TL;DR — the commands
 
@@ -54,8 +57,12 @@ npm run promo -- --district=FL-14 --aspect=1x1    # 1:1
 # ── Teaser #3 (District Profile showcase) → social/promo3/teaser-3.html ──
 npm run teaser3
 
+# ── Teaser #4 (Compete — stats/leaderboard) → social/promo4/teaser-4.html ──
+npm run teaser4
+
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 npm run render -- social/promo3/teaser-3.html social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
+npm run render -- social/promo4/teaser-4.html social/promo4/out/daily-district-teaser-4-1x1.mp4 1080 1080 1 30
 ```
 
 > **Note:** flag notation like `--aspect=9x16` is a real flag; if you ever see
@@ -199,10 +206,31 @@ The built `teaser-3.html` also has the same in-browser **● Record video** butt
 
 ---
 
+## 4b. Teaser #4 — Compete showcase (standalone, for X)
+
+A standalone promo that showcases the **competitive / stats** features (not a
+single puzzle): the wordmark, then the results **Guesses**, your personal stats
+(Played · Win Rate · Current/Max Streak), the **Guess Distribution** histogram
+(bars grow, your solve highlighted), and the **leaderboard** (compete with
+everyone + your percentile), then wordmark + CTA. ~17 s, **1:1** by default.
+
+```bash
+node build-competitive-teaser.mjs                  # 1:1
+node render-mp4.mjs social/promo4/teaser-4.html \
+  social/promo4/out/daily-district-teaser-4-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9`. Output is `teaser-4.html`
+  (1:1) or `teaser-4-<aspect>.html`; render with matching `cssW cssH`.
+- The sample numbers (stats, histogram counts, leaderboard) are illustrative and
+  live directly in `social/promo4/teaser.template.html` — edit them there.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`promo-video*.html`, `teaser-3.html`) can export a video
-itself — no `render-mp4.mjs`, no ffmpeg:
+Every built page (`promo-video*.html`, `teaser-3.html`, `teaser-4.html`) can
+export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/promo3/teaser-3.html`) in **Chrome**.
 2. Click **● Record video** and share **“This Tab.”**
@@ -219,6 +247,9 @@ itself — no `render-mp4.mjs`, no ffmpeg:
 - **Teaser #3** — copy/timing/motion in `social/promo3/teaser.template.html`;
   the district line-up + each "hero" stat in `build-profile-teaser.mjs`
   (`DEFAULT_LINEUP`). Rebuild with `build-profile-teaser.mjs`.
+- **Teaser #4** — copy/timing/motion **and** the sample stats/histogram/
+  leaderboard numbers all live in `social/promo4/teaser.template.html`. Rebuild
+  with `build-competitive-teaser.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and
