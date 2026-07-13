@@ -129,6 +129,31 @@ body.clean #hint-cue{display:none}
 /* portrait / square tuning */
 body[data-aspect="9x16"] .panel{width:960px}
 body[data-aspect="9x16"] .did,body[data-aspect="9x16"] .cta-url{font-size:72px}
+body[data-aspect="9x16"] .cap{bottom:180px;font-size:38px}
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+
+/* landscape 16:9 (1280×720) — compress panels vertically */
+body[data-aspect="16x9"] .panel{width:780px;padding:22px 28px 26px;border-radius:20px}
+body[data-aspect="16x9"] .panel-head{font-size:21px;margin-bottom:14px}
+body[data-aspect="16x9"] .solved-line{font-size:19px;margin-bottom:10px}
+body[data-aspect="16x9"] .solved-line b{font-size:26px}
+body[data-aspect="16x9"] .guess-row{padding:9px 14px;margin-bottom:9px}
+body[data-aspect="16x9"] .guess-row .gname{font-size:21px}
+body[data-aspect="16x9"] .gmap{width:36px;height:36px}
+body[data-aspect="16x9"] .stat-card{padding:14px 18px}
+body[data-aspect="16x9"] .stat-card .sv{font-size:46px}
+body[data-aspect="16x9"] .dwrap{height:29px}
+body[data-aspect="16x9"] .dist{gap:8px}
+body[data-aspect="16x9"] .drow .dn{font-size:18px}
+body[data-aspect="16x9"] .lbrow{padding:8px 13px}
+body[data-aspect="16x9"] .lbrow .nm{font-size:20px}
+body[data-aspect="16x9"] .lbrow .wr{font-size:21px}
+body[data-aspect="16x9"] .lbrow .av{width:36px;height:36px;font-size:13px}
+body[data-aspect="16x9"] .pctile{margin-top:12px;font-size:19px}
+body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .cta-url{font-size:48px}
+body[data-aspect="16x9"] .cap{bottom:22px;font-size:23px}
 </style>
 </head>
 <body data-aspect="{{ASPECT}}">

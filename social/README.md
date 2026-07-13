@@ -20,18 +20,21 @@ social/
 │    promo.template.html          template (edit copy / motion)
 │    promo-video*.html            built pages  (git-ignored)
 │    out/                         ← rendered MP4s  (git-ignored)
-│      daily-district-<DISTRICT>-16x9.mp4
-│      daily-district-<DISTRICT>-9x16.mp4
-│      daily-district-<DISTRICT>-1x1.mp4
+│      daily-district-<DISTRICT>-<aspect>.mp4        aspect = 16x9 | 9x16 | 1x1
+│      daily-district-<DISTRICT>-<aspect>-2160.mp4   ★ high-quality (see cheat-sheet)
 ├─ promo3/                        ← teaser #3 (District Profile showcase)
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-3*.html               built pages  (git-ignored)
-│    out/daily-district-teaser-3-1x1.mp4        (git-ignored)
+│    out/daily-district-teaser-3-<aspect>[-2160].mp4   (git-ignored)
 └─ promo4/                        ← teaser #4 (Compete — stats/leaderboard)
      teaser.template.html         template (edit copy / motion)
      teaser-4*.html               built pages  (git-ignored)
-     out/daily-district-teaser-4-1x1.mp4        (git-ignored)
+     out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
 ```
+
+Every video ships in all three aspects — **16:9** (X timeline / YouTube),
+**9:16** (Reels / TikTok / Stories), **1:1** (square feed) — each in standard
+(1080-class) and ★ high-quality (2160-class) resolution.
 
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-promo.mjs` (gameplay promo), `build-profile-teaser.mjs` (teaser #3),
@@ -54,16 +57,35 @@ npm run promo -- --district=FL-14                 # 16:9
 npm run promo -- --district=FL-14 --aspect=9x16   # 9:16
 npm run promo -- --district=FL-14 --aspect=1x1    # 1:1
 
-# ── Teaser #3 (District Profile showcase) → social/promo3/teaser-3.html ──
-npm run teaser3
+# ── Teaser #3 (District Profile showcase) → social/promo3/teaser-3*.html ──
+npm run teaser3                                   # 1:1
+npm run teaser3 -- --aspect=9x16                  # 9:16
+npm run teaser3 -- --aspect=16x9                  # 16:9
 
-# ── Teaser #4 (Compete — stats/leaderboard) → social/promo4/teaser-4.html ──
-npm run teaser4
+# ── Teaser #4 (Compete — stats/leaderboard) → social/promo4/teaser-4*.html ──
+npm run teaser4                                   # 1:1
+npm run teaser4 -- --aspect=9x16                  # 9:16
+npm run teaser4 -- --aspect=16x9                  # 16:9
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
+# args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
 npm run render -- social/promo3/teaser-3.html social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
 npm run render -- social/promo4/teaser-4.html social/promo4/out/daily-district-teaser-4-1x1.mp4 1080 1080 1 30
 ```
+
+### Render size cheat-sheet (`cssW cssH dsf`)
+
+The page's CSS size is fixed per aspect; the **device-scale-factor (dsf)**
+multiplies it into the output resolution. Use the standard row for everyday
+posts and the ★ high-quality row for maximum sharpness (name it `-2160`):
+
+| Aspect | args (std) | output | args (★ hi-q) | output |
+|---|---|---|---|---|
+| 16:9 | `1280 720 1.5 30` | 1920×1080 | `1280 720 3 30` | 3840×2160 (4K) |
+| 9:16 | `1080 1920 1 30` | 1080×1920 | `1080 1920 2 30` | 2160×3840 |
+| 1:1  | `1080 1080 1 30` | 1080×1080 | `1080 1080 2 30` | 2160×2160 |
+
+All renders are H.264 `crf 18` — already near-lossless; dsf only adds pixels.
 
 > **Note:** flag notation like `--aspect=9x16` is a real flag; if you ever see
 > docs write `[--aspect=…]`, the square brackets just mean "optional" — don't
@@ -194,9 +216,9 @@ node render-mp4.mjs social/promo3/teaser-3.html \
   social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
 ```
 
-- `--aspect=` → `1x1` (default) | `9x16` | `16x9`. Output is `teaser-3.html`
-  (1:1) or `teaser-3-<aspect>.html`; render with matching `cssW cssH` (and `1.5`
-  dsf for 16:9, `1` otherwise).
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all three have tuned
+  layouts. Output is `teaser-3.html` (1:1) or `teaser-3-<aspect>.html`; render
+  with the matching args from the cheat-sheet in the TL;DR.
 - `--districts=IL-04,NY-13,AK-01,GA-05,WY-01` overrides the line-up. Each
   district's "hero" card (the distinctive stat it highlights — shape, area,
   demographics, …) is curated in `DEFAULT_LINEUP` at the top of the script.
@@ -220,8 +242,9 @@ node render-mp4.mjs social/promo4/teaser-4.html \
   social/promo4/out/daily-district-teaser-4-1x1.mp4 1080 1080 1 30
 ```
 
-- `--aspect=` → `1x1` (default) | `9x16` | `16x9`. Output is `teaser-4.html`
-  (1:1) or `teaser-4-<aspect>.html`; render with matching `cssW cssH`.
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all three have tuned
+  layouts. Output is `teaser-4.html` (1:1) or `teaser-4-<aspect>.html`; render
+  with the matching args from the cheat-sheet in the TL;DR.
 - The sample numbers (stats, histogram counts, leaderboard) are illustrative and
   live directly in `social/promo4/teaser.template.html` — edit them there.
 
