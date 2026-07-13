@@ -2,7 +2,9 @@
 // JS timeline (window.__promo.seek) frame-by-frame in headless Chrome, then
 // encoding the PNG frames with ffmpeg (H.264, yuv420p — universally playable).
 //
-// Usage: node render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <dsf> [fps]
+// Usage: node render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <dsf> [fps] [crf]
+//   crf defaults to 18 (near-lossless). For flat motion graphics, 20–23 looks
+//   identical but is much smaller — good for high-res (2160) posts.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,8 +12,8 @@ import { spawnSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 
-const [,, inFile, outFile, W, H, DSF, FPS='30'] = process.argv;
-const cssW = +W, cssH = +H, dsf = +DSF, fps = +FPS;
+const [,, inFile, outFile, W, H, DSF, FPS='30', CRF='18'] = process.argv;
+const cssW = +W, cssH = +H, dsf = +DSF, fps = +FPS, crf = +CRF;
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const LOOP_GUESS = 21;                       // seconds (overridden by page value)
 
@@ -50,7 +52,7 @@ const args = [
   '-y', '-framerate', String(fps), '-i', path.join(frameDir, 'f%04d.png'),
   '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2:flags=lanczos',
   '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
-  '-crf', '18', '-preset', 'slow', '-movflags', '+faststart',
+  '-crf', String(crf), '-preset', 'slow', '-movflags', '+faststart',
   '-r', String(fps), outFile,
 ];
 const r = spawnSync(ffmpeg.path, args, { stdio: ['ignore', 'ignore', 'inherit'] });
