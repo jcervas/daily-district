@@ -10,6 +10,9 @@
     "build:pages": "node build-district-pages.mjs",
     "social": "node generate-social-graphics.mjs",
     "teaser": "node build-teaser.mjs",
+    "promo": "node build-promo.mjs",
+    "teaser3": "node build-profile-teaser.mjs",
+    "render": "node render-mp4.mjs",
     "card": "node build-social-card.mjs",
     "recap:dry": "DRY_RUN=1 node daily-recap.mjs"
   },
@@ -18,5 +21,9 @@
     "d3-geo": "^3.1.1",
     "topojson-client": "^3.1.0",
     "twitter-api-v2": "^1.27.0"
+  },
+  "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "puppeteer-core": "^25.3.0"
   }
 }

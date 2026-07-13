@@ -4,7 +4,10 @@ Everything for making Daily District's shareable media — static graphics and
 the animated promo videos. All the **scripts live at the repo root** (next to
 the other `build-*.mjs`), and everything they generate lands under `social/`.
 
-Run every command below **from the repo root**.
+**Easiest way to run everything: the `npm run` scripts in the [TL;DR](#tldr--the-commands)
+below — they work from _any_ folder in the project (`cd`ing into `social/` is
+fine).** The raw `node …` commands in the later sections are equivalent but must
+be run **from the project root**.
 
 ```
 social/
@@ -29,6 +32,34 @@ social/
 `build-promo.mjs` (gameplay promo), `build-profile-teaser.mjs` (teaser #3),
 `render-mp4.mjs` (HTML → MP4).
 
+## TL;DR — the commands
+
+Run these from **anywhere inside the project** — `npm run` finds the project root
+for you, so you don't have to `cd` to a special folder. **The `--` after the
+script name is required** (it passes the flags through to the script).
+
+```bash
+npm install                                   # once (see §1)
+
+# ── Static graphics (PNG cards) → social/out/ ──────────────────────────
+npm run social -- --district=FL-14
+
+# ── Gameplay promo → social/promo/promo-video*.html  (then render, below) ──
+npm run promo -- --district=FL-14                 # 16:9
+npm run promo -- --district=FL-14 --aspect=9x16   # 9:16
+npm run promo -- --district=FL-14 --aspect=1x1    # 1:1
+
+# ── Teaser #3 (District Profile showcase) → social/promo/teaser-3.html ──
+npm run teaser3
+
+# ── Render any built page → MP4  (needs render deps — see §1) ──────────
+npm run render -- social/promo/teaser-3.html social/promo/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
+```
+
+> **Note:** flag notation like `--aspect=9x16` is a real flag; if you ever see
+> docs write `[--aspect=…]`, the square brackets just mean "optional" — don't
+> type them (zsh treats `[…]` as a glob and errors).
+
 > The generated files (`social/out/`, `social/promo/promo-video*.html`,
 > `social/promo/out/`) are **git-ignored** — they're regenerable, so only the
 > scripts and `promo.template.html` are committed. Regenerate any time with the
@@ -39,22 +70,21 @@ social/
 ## 1. One-time setup
 
 ```bash
-npm install                       # d3-geo, topojson-client, @resvg/resvg-js — for graphics + promo HTML
+npm install
 ```
 
-That's all you need for **graphics** and for **building** the promo HTML.
+That installs everything — the graphics/HTML deps (`d3-geo`, `topojson-client`,
+`@resvg/resvg-js`) **and** the MP4-render deps (`puppeteer-core`,
+`@ffmpeg-installer/ffmpeg`, in `devDependencies`).
 
-To **render MP4s** you also need a headless-Chrome driver, an ffmpeg binary, and
-Google Chrome installed:
+Rendering additionally needs **Google Chrome** installed. `render-mp4.mjs` drives
+it at the default macOS path `/Applications/Google Chrome.app/…` — edit the
+`CHROME` constant at the top of the script if yours is elsewhere. If you only
+need the interactive HTML preview, you can skip Chrome and use the in-browser
+recorder (§5).
 
-```bash
-npm install --save-dev puppeteer-core @ffmpeg-installer/ffmpeg
-```
-
-`render-mp4.mjs` drives your installed **Google Chrome** (default path
-`/Applications/Google Chrome.app/…` on macOS — edit the `CHROME` constant at the
-top of the script if yours is elsewhere). If you only need the interactive
-promo page, you can skip this and use the in-browser recorder (§4).
+> If `npm install` warns about root-owned files in `~/.npm`, clear it once with
+> `sudo chown -R $(id -u):$(id -g) ~/.npm`.
 
 ---
 
