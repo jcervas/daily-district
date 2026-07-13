@@ -8,4 +8,5 @@ social/card/
 social/*.mp4
 social/promo/out/
 social/promo/promo-video*.html
-social/promo/teaser-3*.html
+social/promo3/out/
+social/promo3/teaser-3*.html

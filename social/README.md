@@ -16,16 +16,18 @@ social/
 ├─ out/                           ← static graphics output  (git-ignored)
 │    <DISTRICT>-16x9.png
 │    <DISTRICT>-9x16.png
-└─ promo/                         ← animated promo + teaser videos
-     promo.template.html          gameplay-promo template (edit copy / motion)
-     teaser.template.html         teaser #3 template (District Profile showcase)
-     promo-video*.html            built promo pages  (git-ignored)
-     teaser-3*.html               built teaser pages (git-ignored)
-     out/                         ← rendered MP4s    (git-ignored)
-       daily-district-<DISTRICT>-16x9.mp4      (gameplay promo)
-       daily-district-<DISTRICT>-9x16.mp4
-       daily-district-<DISTRICT>-1x1.mp4
-       daily-district-teaser-3-1x1.mp4         (teaser #3)
+├─ promo/                         ← gameplay promo video
+│    promo.template.html          template (edit copy / motion)
+│    promo-video*.html            built pages  (git-ignored)
+│    out/                         ← rendered MP4s  (git-ignored)
+│      daily-district-<DISTRICT>-16x9.mp4
+│      daily-district-<DISTRICT>-9x16.mp4
+│      daily-district-<DISTRICT>-1x1.mp4
+└─ promo3/                        ← teaser #3 (District Profile showcase)
+     teaser.template.html         template (edit copy / motion)
+     teaser-3*.html               built pages  (git-ignored)
+     out/                         ← rendered MP4s  (git-ignored)
+       daily-district-teaser-3-1x1.mp4
 ```
 
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
@@ -49,11 +51,11 @@ npm run promo -- --district=FL-14                 # 16:9
 npm run promo -- --district=FL-14 --aspect=9x16   # 9:16
 npm run promo -- --district=FL-14 --aspect=1x1    # 1:1
 
-# ── Teaser #3 (District Profile showcase) → social/promo/teaser-3.html ──
+# ── Teaser #3 (District Profile showcase) → social/promo3/teaser-3.html ──
 npm run teaser3
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
-npm run render -- social/promo/teaser-3.html social/promo/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
+npm run render -- social/promo3/teaser-3.html social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
 ```
 
 > **Note:** flag notation like `--aspect=9x16` is a real flag; if you ever see
@@ -181,8 +183,8 @@ each drawing its boundary **lines** and flashing its profile cards
 
 ```bash
 node build-profile-teaser.mjs                      # default line-up, 1:1
-node render-mp4.mjs social/promo/teaser-3.html \
-  social/promo/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
+node render-mp4.mjs social/promo3/teaser-3.html \
+  social/promo3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
 ```
 
 - `--aspect=` → `1x1` (default) | `9x16` | `16x9`. Output is `teaser-3.html`
@@ -202,7 +204,7 @@ The built `teaser-3.html` also has the same in-browser **● Record video** butt
 Every built page (`promo-video*.html`, `teaser-3.html`) can export a video
 itself — no `render-mp4.mjs`, no ffmpeg:
 
-1. Open the built HTML (e.g. `social/promo/teaser-3.html`) in **Chrome**.
+1. Open the built HTML (e.g. `social/promo3/teaser-3.html`) in **Chrome**.
 2. Click **● Record video** and share **“This Tab.”**
 3. It records exactly one clean loop at the stage's native size and downloads the
    file. (Also: **Hide UI** hides the controls; **↻ Restart** restarts the loop.)
@@ -214,7 +216,7 @@ itself — no `render-mp4.mjs`, no ffmpeg:
 - **Gameplay promo** — copy/timing/motion in `social/promo/promo.template.html`
   (`SCENES` array); per-district data in `build-promo.mjs`. Rebuild with
   `build-promo.mjs`.
-- **Teaser #3** — copy/timing/motion in `social/promo/teaser.template.html`;
+- **Teaser #3** — copy/timing/motion in `social/promo3/teaser.template.html`;
   the district line-up + each "hero" stat in `build-profile-teaser.mjs`
   (`DEFAULT_LINEUP`). Rebuild with `build-profile-teaser.mjs`.
 
