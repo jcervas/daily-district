@@ -440,3 +440,22 @@ path.dd-statehit { fill: transparent; stroke: none; cursor: pointer; }
   .dd-map-wrap .mzb { background: rgba(35, 39, 46, .92); border-color: rgba(255, 255, 255, .14); color: var(--dd-ink); }
   .dd-map-wrap .mzb:hover { background: #23272e; border-color: #ff5069; color: #ff5069; }
 }
+
+/* ── Ad units ─────────────────────────────────────────────────────────────
+   A labeled placeholder box shows while AdSense isn't serving yet; the real ad
+   fills it once approved, and :has() drops the placeholder chrome when filled. */
+.dd-ad { margin: 26px auto; max-width: 728px; }
+.dd-ad-label {
+  display: block; text-align: center; margin: 0 0 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--dd-oth);
+}
+.dd-ad-box {
+  min-height: 100px; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--dd-line); border-radius: 12px; background: var(--dd-panel);
+  overflow: hidden;
+}
+.dd-ad-box ins.adsbygoogle { display: block; width: 100%; }
+.dd-ad-box:has(ins.adsbygoogle[data-ad-status="filled"]) {
+  border: 0; background: transparent; min-height: 0;
+}

@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SITE = 'https://daily-district.com';
-const CSS_V = 5; // bump when district-pages.css changes
+const CSS_V = 6; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
 const MAP_JS_V = 5; // bump when the emitted district-map.js changes
@@ -199,6 +199,20 @@ ${scripts}</body>
 </html>`;
 }
 
+// Responsive Display ad (one reused unit, slot 3771556759). A labeled placeholder box
+// shows until AdSense is actually serving; the inline push queues this slot even though
+// the adsbygoogle loader in <head> is async, and `.dd-ad-box:has([data-ad-status=filled])`
+// drops the placeholder chrome once a real ad renders.
+function adUnit() {
+  return `<div class="dd-ad">
+      <span class="dd-ad-label">Advertisement</span>
+      <div class="dd-ad-box"><ins class="adsbygoogle" style="display:block"
+        data-ad-client="ca-pub-2164002681613672" data-ad-slot="3771556759"
+        data-ad-format="auto" data-full-width-responsive="true"></ins></div>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>`;
+}
+
 function districtPage(r) {
   const { c, geo, rep, pres: p } = r;
   const label = districtLabel(r.state, r.dnum, r.atLarge);
@@ -366,6 +380,9 @@ ${mapFigure({
     </section>`);
   }
 
+  // One in-content ad, placed after the first couple of profile cards.
+  if (S.length) S.splice(Math.min(2, S.length), 0, adUnit());
+
   const body = `    <nav class="dd-crumbs">
       <a href="/">Home</a><span>›</span>
       <a href="/districts/">Districts</a><span>›</span>
@@ -410,6 +427,7 @@ function browsePage() {
     <h1 class="dd-title">All U.S. House Districts</h1>
     <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
 ${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its profile.' })}
+    ${adUnit()}
     <details class="dd-browse-all">
       <summary>Or browse all ${records.length} districts as a list</summary>
       ${blocks}
