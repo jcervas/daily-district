@@ -333,12 +333,52 @@
         FLO.push({ el: el, period: 5 + (i % 4) * 1.2, phase: (i * 0.137) % 1, amp: 14 + (i % 3) * 4 });
       });
 
-    // Two teaser variants rotate per visit: the original "identify" framing and
-    // an educational "learn" one (adds a District Profile facts scene + copy).
-    var LEARN = location.hash === '#learn' ? true
-              : location.hash === '#identify' ? false
-              : Math.random() < 0.5;
-    var SCENES = LEARN ? [
+    // Four teaser variants rotate per visit — one of the promo themes each load.
+    // Force one for testing with #play / #profile / #compete / #civics.
+    var VARIANTS = {
+      play: {   // gameplay — guess the district
+        facts: false,
+        eyebrow: 'Coming soon', headline: 'Launching soon',
+        sub: 'A free daily game to identify all 435 U.S. House districts from their shape — geographic, map-based, and contextual clues, one puzzle a day. Check back soon.',
+        introSub: '435 congressional districts. <b>One a day.</b>',
+        silTag: 'Name it from its shape',
+        ctaKicker: 'Play it daily', ctaSub: 'Free to play. <b>A new district every day.</b>'
+      },
+      profile: {   // learn the facts (adds the District Profile scene)
+        facts: true,
+        eyebrow: 'Learn the map', headline: 'Know every district',
+        sub: 'A free daily game — and a crash course in the U.S. House. Learn all 435 congressional districts by shape, by place, and by the facts behind them.',
+        introSub: 'Learn all <b>435 U.S. House districts.</b>',
+        silTag: 'See the shape · Learn the place',
+        ctaKicker: 'Go deeper', ctaSub: 'Explore <b>every district profile.</b>'
+      },
+      compete: {   // score / streak
+        facts: false,
+        eyebrow: 'Play & compete', headline: 'Guess it. Beat it.',
+        sub: 'A free daily district puzzle — solve it in fewer guesses, build a streak, and see how you rank.',
+        introSub: 'Six guesses. <b>Hot or cold.</b>',
+        silTag: 'Fewer guesses · higher score',
+        ctaKicker: 'Keep the streak', ctaSub: 'A new district <b>every day.</b>'
+      },
+      civics: {   // mission
+        facts: false,
+        eyebrow: 'A civic education project', headline: 'The map of democracy',
+        sub: 'A free daily game and a civic education project — get to know the 435 districts that decide who represents you.',
+        introSub: '435 districts. <b>Learned one day at a time.</b>',
+        silTag: 'See the shape · Know the place',
+        ctaKicker: 'Free for everyone', ctaSub: 'Play daily at <b>daily-district.com</b>'
+      }
+    };
+    var VKEYS = ['play', 'profile', 'compete', 'civics'];
+    var forced = location.hash.replace('#', '');
+    var V = VARIANTS[forced] || VARIANTS[VKEYS[Math.floor(Math.random() * VKEYS.length)]];
+
+    var setHTML = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
+    setHTML('t-eyebrow', V.eyebrow); setHTML('t-headline', V.headline); setHTML('t-sub', V.sub);
+    setHTML('mp-intro-sub', V.introSub); setHTML('mp-tag', V.silTag);
+    setHTML('mp-cta-kicker', V.ctaKicker); setHTML('mp-cta-sub', V.ctaSub);
+
+    var SCENES = V.facts ? [
       { name: 'intro', t0: 0.0, t1: 3.0,  dir: 1,  ax: 'y', flo: 1 },
       { name: 'sil',   t0: 3.0, t1: 6.1,  dir: 1,  ax: 'x' },
       { name: 'facts', t0: 6.1, t1: 9.6,  dir: 1,  ax: 'x' },
@@ -348,16 +388,6 @@
       { name: 'sil',   t0: 3.0, t1: 6.1, dir: 1,  ax: 'x' },
       { name: 'cta',   t0: 6.1, t1: 9.2, dir: -1, ax: 'x', flo: 1 }
     ];
-    if (LEARN) {
-      var setHTML = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
-      setHTML('t-eyebrow', 'Learn the map');
-      setHTML('t-headline', 'Know every district');
-      setHTML('t-sub', 'A free daily game — and a crash course in the U.S. House. Learn all 435 congressional districts by shape, by place, and by the facts behind them.');
-      setHTML('mp-intro-sub', 'Learn all <b>435 U.S. House districts.</b>');
-      setHTML('mp-tag', 'See the shape · Learn the place');
-      setHTML('mp-cta-kicker', 'Go deeper');
-      setHTML('mp-cta-sub', 'Explore <b>every district profile.</b>');
-    }
     SCENES.forEach(function (s) {
       s.el = mp.querySelector('.mp-scene[data-scene="' + s.name + '"]');
       s.kids = [].slice.call(s.el.querySelectorAll('[data-anim]')).map(function (n) {
