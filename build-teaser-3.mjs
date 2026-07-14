@@ -1,5 +1,5 @@
 // ============================================================
-// build-competitive-teaser.mjs   (Teaser #4 — "Compete" showcase)
+// build-teaser-3.mjs   (Teaser #3 — "Compete" showcase)
 //
 // A standalone, fast-cut promo (for X) that showcases Daily District's
 // competitive / stats features — not a single puzzle: the wordmark, then the
@@ -11,10 +11,10 @@
 // this builder just inlines the fonts + wordmark and stamps the stage size.
 //
 // Usage:
-//   node build-competitive-teaser.mjs                 # 1:1 (for X)
-//   node build-competitive-teaser.mjs --aspect=9x16   # 1:1 (default) | 9x16 | 16x9
+//   node build-teaser-3.mjs                 # 1:1 (for X)
+//   node build-teaser-3.mjs --aspect=9x16   # 1:1 (default) | 9x16 | 16x9
 //
-// Output: social/promo4/teaser-4.html  (or teaser-4-<aspect>.html)
+// Output: social/teaser-3/teaser-3.html  (or teaser-3-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
 // ============================================================
 
@@ -76,16 +76,16 @@ const fontsCss = Object.entries(FONT_WEIGHTS).map(([name, weight]) => {
 const wordmarkInner = read('wordmark.svg').replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '').trim();
 
 // ── Assemble ─────────────────────────────────────────────────────────────────
-let html = read('social/promo4/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
+let html = read('social/teaser-3/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
 const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   GBOX: String(GBOX), GUESSES_JSON: JSON.stringify(GUESSES),
 };
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
-const outDir = path.join(DIR, 'social', 'promo4');
-fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });   // ensure promo4/ (and out/) exist
-const outName = ASPECT === '1x1' ? 'teaser-4.html' : `teaser-4-${ASPECT}.html`;
+const outDir = path.join(DIR, 'social', 'teaser-3');
+fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });   // ensure teaser-3/ (and out/) exist
+const outName = ASPECT === '1x1' ? 'teaser-3.html' : `teaser-3-${ASPECT}.html`;
 fs.writeFileSync(path.join(outDir, outName), html);
 const leftover = html.match(/\{\{[A-Z_]+\}\}/g);
 console.log(`${outName} written @ ${STAGE_W}×${STAGE_H} (${(html.length/1024).toFixed(0)} KB)`);

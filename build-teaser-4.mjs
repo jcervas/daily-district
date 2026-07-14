@@ -1,5 +1,5 @@
 // ============================================================
-// build-civics-teaser.mjs   (Teaser #5 — "Civics / education mission")
+// build-teaser-4.mjs   (Teaser #4 — "Civics / education mission")
 //
 // A standalone promo with a calmer, mission-driven tone: why districts
 // matter. The wordmark, then the real U.S. map with all 435 district lines
@@ -14,10 +14,10 @@
 // game's interactive maps use.
 //
 // Usage:
-//   node build-civics-teaser.mjs                 # 1:1
-//   node build-civics-teaser.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
+//   node build-teaser-4.mjs                 # 1:1
+//   node build-teaser-4.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
 //
-// Output: social/promo5/teaser-5.html  (or teaser-5-<aspect>.html)
+// Output: social/teaser-4/teaser-4.html  (or teaser-4-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
 // ============================================================
 
@@ -97,7 +97,7 @@ const fontsCss = Object.entries(FONT_WEIGHTS).map(([name, weight]) => {
 const wordmarkInner = read('wordmark.svg').replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '').trim();
 
 // ── Assemble ─────────────────────────────────────────────────────────────────
-let html = read('social/promo5/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
+let html = read('social/teaser-4/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
 const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   MAP_W: String(MAP_W), MAP_H: String(MAP_H),
@@ -106,9 +106,9 @@ const repl = {
 };
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
-const outDir = path.join(DIR, 'social', 'promo5');
+const outDir = path.join(DIR, 'social', 'teaser-4');
 fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });
-const outName = ASPECT === '1x1' ? 'teaser-5.html' : `teaser-5-${ASPECT}.html`;
+const outName = ASPECT === '1x1' ? 'teaser-4.html' : `teaser-4-${ASPECT}.html`;
 fs.writeFileSync(path.join(outDir, outName), html);
 const leftover = html.match(/\{\{[A-Z_]+\}\}/g);
 console.log(`${outName} written @ ${STAGE_W}×${STAGE_H} (${(html.length/1024).toFixed(0)} KB)`);

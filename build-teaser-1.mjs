@@ -1,7 +1,7 @@
 // ============================================================
-// build-promo.mjs
+// build-teaser-1.mjs
 // Assembles the self-contained kinetic promo video page
-// (promo-video.html) from promo/promo.template.html for ANY district.
+// (teaser-1.html) from teaser-1/teaser.template.html for ANY district.
 //
 // Everything district-specific — the silhouette, the zoomed state + district
 // for the "pick" scene, the clue/hint values, and the win-screen stat cards —
@@ -9,13 +9,13 @@
 // swapping districts is a one-flag change.
 //
 // Usage:
-//   node build-promo.mjs                     # default district (below)
-//   node build-promo.mjs --district=CA-19    # a specific district
+//   node build-teaser-1.mjs                     # default district (below)
+//   node build-teaser-1.mjs --district=CA-19    # a specific district
 //
 // Inputs:  districts-core.topojson (geometry + stats), districts-map.topojson
 //          (simplified state/district outlines), data/reps_out.json (rep names),
-//          wordmark.svg, social/fonts/Barlow-*.ttf, social/promo/promo.template.html
-// Output:  social/promo/promo-video[-<aspect>].html
+//          wordmark.svg, social/fonts/Barlow-*.ttf, social/teaser-1/teaser.template.html
+// Output:  social/teaser-1/teaser-1[-<aspect>].html
 //          (render to MP4 with render-mp4.mjs)
 // ============================================================
 
@@ -134,11 +134,11 @@ const repl = {
   REP_NAME: rep.name, REP_PARTY: rep.party,
   NARROW_COUNT: String(NARROW_COUNT), LIVE_JSON: JSON.stringify(LIVE),
 };
-let html = read('social/promo/promo.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
+let html = read('social/teaser-1/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
-const outName = ASPECT === '16x9' ? 'promo-video.html' : `promo-video-${ASPECT}.html`;
-fs.writeFileSync(path.join(DIR, 'social', 'promo', outName), html);
+const outName = ASPECT === '16x9' ? 'teaser-1.html' : `teaser-1-${ASPECT}.html`;
+fs.writeFileSync(path.join(DIR, 'social', 'teaser-1', outName), html);
 const leftover = html.match(/\{\{[A-Z_]+\}\}/g);
 console.log(`${outName} written for ${DIST_ID} @ ${STAGE_W}×${STAGE_H} (${(html.length/1024).toFixed(0)} KB)`);
 if (leftover) console.warn('  ⚠ unreplaced placeholders:', [...new Set(leftover)].join(', '));

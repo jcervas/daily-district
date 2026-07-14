@@ -1,10 +1,10 @@
 // ============================================================
-// build-profile-teaser.mjs   (Teaser #3 — "District Profile showcase")
+// build-teaser-2.mjs   (Teaser #2 — "District Profile showcase")
 //
 // NOTE: distinct from build-teaser.mjs, which manages the launch-date text in
 // the pre-launch index.html. THIS builds a standalone promo video.
 //
-// Teaser #3 is a fast-cut, standalone promo (for X) that showcases the District
+// Teaser #2 is a fast-cut, standalone promo (for X) that showcases the District
 // Profile feature — not gameplay: the wordmark, then a montage of several real
 // districts (each drawing its boundary lines and flashing its profile cards —
 // representative, 2024 vote, and a distinctive "hero" stat), then wordmark + CTA.
@@ -13,11 +13,11 @@
 // the curated line-up below can be swapped freely.
 //
 // Usage:
-//   node build-profile-teaser.mjs                       # default line-up, 1:1 (for X)
-//   node build-profile-teaser.mjs --aspect=9x16         # 1:1 (default) | 9x16 | 16x9
-//   node build-profile-teaser.mjs --districts=IL-04,AK-01,NY-13,GA-05,WY-01
+//   node build-teaser-2.mjs                       # default line-up, 1:1 (for X)
+//   node build-teaser-2.mjs --aspect=9x16         # 1:1 (default) | 9x16 | 16x9
+//   node build-teaser-2.mjs --districts=IL-04,AK-01,NY-13,GA-05,WY-01
 //
-// Output: social/promo3/teaser-3.html  (or teaser-3-<aspect>.html)
+// Output: social/teaser-2/teaser-2.html  (or teaser-2-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
 // ============================================================
 
@@ -102,16 +102,16 @@ const fontsCss = Object.entries(FONT_WEIGHTS).map(([name, weight]) => {
 const wordmarkInner = read('wordmark.svg').replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '').trim();
 
 // ── Assemble ─────────────────────────────────────────────────────────────────
-let html = read('social/promo3/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
+let html = read('social/teaser-2/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
 const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   DISTRICTS_JSON: JSON.stringify(DISTRICTS),
 };
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
-const outDir = path.join(DIR, 'social', 'promo3');
-fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });   // ensure promo3/ (and out/) exist
-const outName = ASPECT === '1x1' ? 'teaser-3.html' : `teaser-3-${ASPECT}.html`;
+const outDir = path.join(DIR, 'social', 'teaser-2');
+fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });   // ensure teaser-2/ (and out/) exist
+const outName = ASPECT === '1x1' ? 'teaser-2.html' : `teaser-2-${ASPECT}.html`;
 fs.writeFileSync(path.join(outDir, outName), html);
 const leftover = html.match(/\{\{[A-Z_]+\}\}/g);
 console.log(`${outName} written @ ${STAGE_W}×${STAGE_H} — ${DISTRICTS.map(d=>d.id).join(', ')} (${(html.length/1024).toFixed(0)} KB)`);
