@@ -667,6 +667,7 @@ writeFileSync(join(ROOT, 'robots.txt'),
 Allow: /
 Disallow: /globe-playground.html
 Disallow: /globe-css-playground.html
+Disallow: /loaders/
 
 Sitemap: ${SITE}/sitemap.xml
 `);
