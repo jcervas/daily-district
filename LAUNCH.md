@@ -100,6 +100,13 @@ curl -sS -X POST "https://itbpvqkunfeaimuxposx.supabase.co/functions/v1/today" \
 
 (The real game lives at git tag **`launch-index`** — commit `8e0a587`.)
 
+Then **re-enable the two X automations** (both are hard-disabled on GitHub —
+see "Handy extras" below for why):
+```sh
+gh workflow enable daily-recap.yml    # "Yesterday's District" cards, first post the day after launch
+gh workflow enable daily-tweet.yml    # daily puzzle teaser image post
+```
+
 ---
 
 ## If you DON'T have a date yet (this is today's setup)
@@ -123,5 +130,9 @@ Leave `LAUNCH_EPOCH` at any near-future date — it's hidden while
   all the links in one commit), then push.
 - **Preview a date without committing:** `npm run teaser -- --epoch=2026-09-07 --check`
 - **Dry-run the daily recap post:** `npm run recap:dry`
-- **The daily-recap GitHub Action is already live but self-guarding** — it posts
-  nothing until the day after `LAUNCH_EPOCH`, so it's safe to leave on.
+- **Both X-posting GitHub Actions are hard-disabled** (`disabled_manually`) until
+  launch. The daily-recap action's own guard derives from `LAUNCH_EPOCH`, which is
+  a *provisional* date while unannounced — on 2026-07-14 the guard passed and it
+  posted a recap for a game that wasn't live (post was deleted). Don't rely on the
+  guard alone: keep the workflows disabled until launch day, then enable each with
+  `gh workflow enable <file>` (see the launch-day section).
