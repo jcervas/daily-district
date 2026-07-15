@@ -63,7 +63,8 @@ body.clean #stage{border-radius:0;box-shadow:none}
 
 /* learn scene */
 .sil path{fill:var(--red)}
-.sil{filter:drop-shadow(0 20px 36px rgba(196,18,48,.20))}
+/* No filter here: filter + will-change makes Chrome composite an opaque
+   backing box around the shape (a visible "unmatched" halo). Flat is cleaner. */
 .learn-chips{display:flex;gap:14px;margin-top:16px}
 .lchip{background:var(--card);border:1px solid var(--line);border-radius:999px;
   font-weight:800;font-size:22px;color:var(--ink);padding:12px 26px;box-shadow:0 12px 26px rgba(40,20,25,.08)}
@@ -135,25 +136,25 @@ body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
   <!-- 1 · INTRO -->
   <section class="scene" data-scene="intro">
     <div class="wrap">
-      <span class="eyebrow" data-anim="pop" data-d="0.05">A civic education project</span>
-      <div class="wordmark" data-anim="pop" data-d="0.20" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
-      <div class="sub" data-anim="rise" data-d="0.46">The map of American democracy — <b class="redword">learned one day at a time.</b></div>
+      <span class="eyebrow" data-anim="pop" data-d="0.05" data-exit="L">A civic education project</span>
+      <div class="wordmark" data-anim="pop" data-d="0.20" data-exit="U" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.46" data-exit="R">The map of American democracy — <b class="redword">learned one day at a time.</b></div>
     </div>
   </section>
 
   <!-- 2 · THE MAP -->
   <section class="scene" data-scene="map">
     <div class="wrap">
-      <div class="count-line" data-anim="pop" data-d="0.08">
+      <div class="count-line" data-anim="pop" data-d="0.08" data-exit="U">
         <span class="big countup" data-to="435">0</span><span class="rest">congressional districts</span>
       </div>
-      <svg id="usmap-svg" class="usmap" data-anim="rise" data-d="0.16" viewBox="0 0 {{MAP_W}} {{MAP_H}}" width="880" height="546" aria-hidden="true">
+      <svg id="usmap-svg" class="usmap" data-anim="rise" data-d="0.16" data-exit="fade" viewBox="0 0 {{MAP_W}} {{MAP_H}}" width="880" height="546" aria-hidden="true">
         <path class="outline" d="{{US_OUTLINE}}"/>
         <g id="us-fills"></g>
         <path class="states" d="{{US_STATES}}"/>
       </svg>
     </div>
-    <div class="cap" data-anim="rise" data-d="0.6">Each one represents <span class="redword">≈ 761,000 people.</span></div>
+    <div class="cap" data-anim="rise" data-d="0.6" data-exit="D">Each one represents <span class="redword">≈ 761,000 people.</span></div>
   </section>
 
   <!-- 3 · REDRAWN -->
@@ -221,6 +222,10 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
 // ── The 435-district mosaic: every district polygon, filling in one by one
 //    in deterministic-random order across the fill window. ─────────────────
 const FILL_START=0.55, FILL_SPAN=2.9, FILL_FADE=0.45;   // s into the map scene
+// After the fill completes, districts release again in a reverse wave (the
+// "undistrict") — each dims from its tint toward UNFILL_MIN×tint, staggered,
+// then the whole map fades. UNFILL_MIN=0 = full release back to the base map.
+const UNFILL_START=4.0, UNFILL_SPAN=0.7, UNFILL_FADE=0.55, UNFILL_MIN=0.0;
 const DISTS=[];
 (function(){
   const paths={{US_DIST_FILLS_JSON}};
@@ -230,7 +235,7 @@ const DISTS=[];
     el.setAttribute('class','dfill'); el.setAttribute('d',d);
     g.appendChild(el);
     const h=(i*2654435761)>>>0;                          // deterministic shuffle
-    DISTS.push({el, delay:FILL_START+((h%997)/997)*FILL_SPAN, tint:0.42+((h>>>10)%100)/100*0.38});
+    DISTS.push({el, delay:FILL_START+((h%997)/997)*FILL_SPAN, undelay:UNFILL_START+(((h>>>7)%997)/997)*UNFILL_SPAN, tint:0.42+((h>>>10)%100)/100*0.38});
   });
 })();
 
@@ -289,8 +294,8 @@ function renderConfetti(active, elapsed){
 // Calmer pacing than the other teasers: longer holds, gentler whips.
 // The map scene runs long so the mosaic can breathe.
 const DEF=[
-  {name:'intro',  dur:3.2, ax:'y', dir: 1},
-  {name:'map',    dur:4.8, ax:'x', dir: 1, count:true, dists:true, fadeOut:true},
+  {name:'intro',  dur:3.2, ax:'y', dir: 1, scatterOut:true},
+  {name:'map',    dur:5.8, ax:'x', dir: 1, count:true, dists:true, scatterOut:true},
   {name:'fact',   dur:3.4, ax:'x', dir:-1},
   {name:'learn',  dur:10.1, ax:'x', dir: 1, sils:true, fadeOut:true, fadeDur:0.2},   // quick fade at the end (no shrink/swipe)
   {name:'makers', dur:2.6, ax:'y', dir: 1},
@@ -302,7 +307,7 @@ const ENTER=0.6, EXIT=0.5, TRAVEL=420, BLURMAX=14, CHILD=0.55;
 
 SCENES.forEach(s=>{
   s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
-  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0}));
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
   if(s.count) s.cu=[...s.el.querySelectorAll('.countup')].map(n=>({n,to:parseFloat(n.dataset.to)||0}));
 });
 const CTA=SCENES.find(s=>s.name==='cta');
@@ -311,6 +316,19 @@ function revealKids(s,lt){
   for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
     let tf=''; if(k.type==='pop')tf=`scale(${lerp(.78,1,p)})`; else if(k.type==='rise')tf=`translateY(${lerp(26,0,p)}px)`;
     k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf; }
+}
+
+// On exit, a scatterOut scene doesn't slide off as a block — each element flies
+// off in its own direction (data-exit: L/R/U/D) while any 'fade' element (e.g.
+// the U.S. map) just fades in place. Overrides revealKids for the last moments.
+const SCATTER_DUR=0.7, SCATTER_TRAVEL=820;
+function scatterKids(s,lt,dur){
+  if(lt<=dur-SCATTER_DUR) return;
+  const p=easeIn(clamp((lt-(dur-SCATTER_DUR))/SCATTER_DUR,0,1)), T=SCATTER_TRAVEL;
+  for(const k of s.kids){ let x=0,y=0; const e=k.exit;
+    if(e==='L')x=-T*p; else if(e==='R')x=T*p; else if(e==='U')y=-T*p; else if(e==='D')y=T*p;
+    k.n.style.transform=`translate3d(${x.toFixed(0)}px,${y.toFixed(0)}px,0)`;
+    k.n.style.opacity=clamp(1-p*1.5,0,1).toFixed(3); }
 }
 
 let startTs=null, paused=false, pauseAt=0;
@@ -326,6 +344,7 @@ function frame(ts){
     if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=(1-p)*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1.06-0.06*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*6*(1-p):0; }
     else if(s.hold){ /* settle and hold — static logo, never swipes out */ }
+    else if(s.scatterOut){ /* scene stays still & opaque; its children fly off individually (scatterKids) */ }
     else if(s.fadeOut){ const fd=s.fadeDur||EXIT; if(lt>dur-fd){ const p=easeIn(clamp((lt-(dur-fd))/fd,0,1)); op=clamp(1-p*1.4,0,1); } }  // no slide — just fade (quick if fadeDur set)
     else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.04*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*7*p:0; }
@@ -334,14 +353,16 @@ function frame(ts){
     el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
     el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
     revealKids(s,lt);
+    if(s.scatterOut) scatterKids(s,lt,dur);
     if(s.dists){
       // Mosaic: each district fades to its own tint at its own randomized time;
       // the counter reads the number of districts filled so far → lands on 435
       // exactly as the map completes.
       let filled=0;
-      for(const d of DISTS){ const p=easeOut(clamp((lt-d.delay)/FILL_FADE,0,1));
+      for(const d of DISTS){ const up=easeOut(clamp((lt-d.delay)/FILL_FADE,0,1));
+        const down=easeIn(clamp((lt-d.undelay)/UNFILL_FADE,0,1));
         if(lt>=d.delay) filled++;
-        d.el.style.opacity=(d.tint*p).toFixed(3); }
+        d.el.style.opacity=(d.tint*up*(1-(1-UNFILL_MIN)*down)).toFixed(3); }
       if(s.cu) for(const c of s.cu) c.n.textContent=filled;
     } else if(s.sils){
       // Morph (tween) between districts: hold each shape, then flubber-morph
@@ -382,7 +403,7 @@ document.getElementById('btn-rec').onclick=async ()=>{
     rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
     rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
       const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-5.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-4.'+(mime.includes('mp4')?'mp4':'webm');a.click();
       document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
     rec.start();
     const total=Math.round(LOOP*1000)-200; let left=Math.ceil(total/1000);
