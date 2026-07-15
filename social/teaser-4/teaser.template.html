@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily District — Teaser #5 (Civics)</title>
+<title>Daily District — Teaser #4 (Civics)</title>
 <style>
 /*{{FONTS_CSS}}*/
 
@@ -205,12 +205,12 @@ body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
   </section>
 </div>
 
-<div id="hint-cue">▶ Teaser #5 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="hint-cue">▶ Teaser #4 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
 <div id="controls">
   <button class="primary" id="btn-rec">● Record video</button>
   <button id="btn-restart">↻ Restart</button>
   <button id="btn-clean">Hide UI</button>
-  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #5</span>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #4</span>
 </div>
 
 <script>
@@ -340,11 +340,18 @@ function frame(ts){
         d.el.style.opacity=(d.tint*p).toFixed(3); }
       if(s.cu) for(const c of s.cu) c.n.textContent=filled;
     } else if(s.sils){
-      // Show the latest silhouette whose scheduled time has passed.
+      // Tween between districts with a quick squash: each shape grows in when it
+      // appears and shrinks toward the next swap, so the hard cut happens while
+      // it's small — solid red, no ghosting.
       let idx=0; for(let i=0;i<SIL_STOPS.length;i++){ if(lt>=SIL_STOPS[i]) idx=i; else break; }
       if(idx!==SIL_CUR){ SIL_CUR=idx; if(SIL_EL&&SIL_PATHS[idx]) SIL_EL.setAttribute('d',SIL_PATHS[idx]); }
-      // On exit: the district shrinks away as the whole card fades out.
-      if(lt>dur-EXIT){ const sp=easeOut(clamp((lt-(dur-EXIT))/EXIT,0,1)); SIL_SVG.style.transform=`scale(${(1-0.6*sp).toFixed(3)})`; }
+      const appT=SIL_STOPS[idx], nextT=SIL_STOPS[idx+1]||(appT+1);
+      const gp=idx>0?(appT-SIL_STOPS[idx-1]):1, gn=nextT-appT, SQ=0.18;
+      const inP=clamp((lt-appT)/Math.min(SQ,gp*0.5),0,1);          // grow after appearing
+      const outP=clamp((nextT-lt)/Math.min(SQ,gn*0.5),0,1);        // shrink before leaving
+      let sc=0.5+0.5*Math.min(easeOut(inP), easeOut(outP));
+      if(lt>dur-EXIT){ sc=1-0.6*easeOut(clamp((lt-(dur-EXIT))/EXIT,0,1)); }   // exit shrink-away
+      SIL_SVG.style.transform=`scale(${sc.toFixed(3)})`;
     } else if(s.cu){ for(const c of s.cu){ const p=easeOut(clamp((lt-0.25)/1.3,0,1)); c.n.textContent=Math.round(c.to*p); } }
   }
   // End-card confetti — driven purely by the CTA scene's local time (so it's
