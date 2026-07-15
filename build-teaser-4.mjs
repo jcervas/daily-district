@@ -55,7 +55,7 @@ const US_DIST_FILLS = topojson.feature(tm, dObj).features
 // ── "Learn" beat: an accelerating rotation through ~30 district silhouettes,
 //    starting on CO-03 (slow) and speeding up into an indecipherable blur. ────
 const LEARN_ID = (arg('learn') || 'CO-03').toUpperCase();
-const SIL_COUNT = parseInt(arg('sils') || '30', 10);
+const SIL_COUNT = parseInt(arg('sils') || '40', 10);
 const core = JSON.parse(read('districts-core.topojson'));
 const allDist = topojson.feature(core, core.objects.districts).features;
 const dFeat = allDist.find(f => f.properties['state-district'] === LEARN_ID);

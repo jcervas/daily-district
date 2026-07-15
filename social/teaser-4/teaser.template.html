@@ -240,7 +240,7 @@ const DISTS=[];
 const SIL_PATHS={{SIL_PATHS_JSON}};
 const SIL_EL=document.querySelector('#sil-svg path');
 const SIL_SVG=document.getElementById('sil-svg');
-const SIL_STOPS=(()=>{const s=[];let tt=0.5,iv=1.1;for(let i=0;i<SIL_PATHS.length;i++){s.push(tt);tt+=iv;iv*=0.88;}return s;})();
+const SIL_STOPS=(()=>{const s=[];let tt=0.5,iv=1.1;for(let i=0;i<SIL_PATHS.length;i++){s.push(tt);tt+=iv;iv=Math.max(iv*0.88,0.035);}return s;})();  // accelerate, then hold the terminal speed for the extra shapes
 let SIL_CUR=-1;
 // Precompute a flubber morph between each consecutive pair of district shapes.
 const SIL_MORPH=[];
@@ -292,7 +292,7 @@ const DEF=[
   {name:'intro',  dur:3.2, ax:'y', dir: 1},
   {name:'map',    dur:4.8, ax:'x', dir: 1, count:true, dists:true, fadeOut:true},
   {name:'fact',   dur:3.4, ax:'x', dir:-1},
-  {name:'learn',  dur:10,  ax:'x', dir: 1, sils:true, fadeOut:true},   // fades out in place (no swipe)
+  {name:'learn',  dur:10.5, ax:'x', dir: 1, sils:true, fadeOut:true},   // fades out in place (no swipe)
   {name:'makers', dur:2.6, ax:'y', dir: 1},
   {name:'cta',    dur:CTA_DUR, ax:'x', dir:-1, hold:true},   // holds on the logo through the confetti, then +3s, no swipe-out
 ];
