@@ -30,10 +30,14 @@ social/
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-3*.html               built pages  (git-ignored)
 │    out/daily-district-teaser-3-<aspect>[-2160].mp4   (git-ignored)
-└─ teaser-4/                        ← teaser #4 (Civics — education mission)
+├─ teaser-4/                        ← teaser #4 (Civics — education mission)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-4*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
+└─ teaser-5/                        ← teaser #5 (Daily habit / ritual)
      teaser.template.html         template (edit copy / motion)
-     teaser-4*.html               built pages  (git-ignored)
-     out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
+     teaser-5*.html               built pages  (git-ignored)
+     out/daily-district-teaser-5-<aspect>[-2160].mp4   (git-ignored)
 ```
 
 Every video ships in all three aspects — **16:9** (X timeline / YouTube),
@@ -42,8 +46,8 @@ Every video ships in all three aspects — **16:9** (X timeline / YouTube),
 
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-teaser-1.mjs` (gameplay promo), `build-teaser-2.mjs` (teaser #2),
-`build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs`
-(teaser #4), `render-mp4.mjs` (HTML → MP4).
+`build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
+`build-teaser-5.mjs` (teaser #5), `render-mp4.mjs` (HTML → MP4).
 
 ## TL;DR — the commands
 
@@ -74,6 +78,9 @@ npm run teaser3 -- --aspect=16x9                  # 16:9
 
 # ── Teaser #4 (Civics — education mission) → social/teaser-4/teaser-4*.html ──
 npm run teaser4                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #5 (Daily habit / ritual) → social/teaser-5/teaser-5*.html ──
+npm run teaser5                                   # 1:1 (also --aspect=9x16 | 16x9)
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 # args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
@@ -287,9 +294,31 @@ node render-mp4.mjs social/teaser-4/teaser-4.html \
 
 ---
 
+## 4d. Teaser #5 — Daily habit / ritual (standalone)
+
+The habit hook, high-energy: the wordmark, then **kinetic words flying at the
+viewer** ("EVERY. SINGLE. DAY." — each dollies in from far away, then blows
+past the camera), a **calendar filling day by day** with an honest "Day N"
+counter (last day gold-ringed), the midnight ritual (lines flying in from
+**opposite directions**: "a new district drops at midnight ET" / "the same
+puzzle for everyone"), then wordmark + CTA. ~16 s, **1:1** by default.
+
+```bash
+node build-teaser-5.mjs                       # 1:1
+node render-mp4.mjs social/teaser-5/teaser-5.html \
+  social/teaser-5/out/daily-district-teaser-5-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- All copy, the zoom words, and the calendar size (28 days) live in
+  `social/teaser-5/teaser.template.html`.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`teaser-1*.html`, `teaser-2/4/5.html`) can
+Every built page (`teaser-1*.html`, `teaser-2/3/4/5.html`) can
 export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/teaser-2/teaser-2.html`) in **Chrome**.
@@ -313,6 +342,8 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
 - **Teaser #4** — copy/timing/motion in `social/teaser-4/teaser.template.html`;
   the learn-beat silhouette via `--learn=`. Rebuild with
   `build-teaser-4.mjs`.
+- **Teaser #5** — everything (copy, zoom words, calendar size, timings) lives in
+  `social/teaser-5/teaser.template.html`. Rebuild with `build-teaser-5.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and

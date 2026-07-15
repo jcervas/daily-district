@@ -164,9 +164,9 @@ body[data-aspect="16x9"] .cap{bottom:22px;font-size:23px}
   <!-- FRONT: wordmark -->
   <section class="scene" data-scene="intro">
     <div class="wrap">
-      <span class="eyebrow" data-anim="pop" data-d="0.05">Not just a puzzle</span>
-      <div class="wordmark" data-anim="pop" data-d="0.18" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
-      <div class="sub" data-anim="rise" data-d="0.42">Track your streak. Study your distribution. <b class="redword">Climb the leaderboard.</b></div>
+      <span class="eyebrow" data-anim="slideL" data-d="0.05" data-exit="L">Not just a puzzle</span>
+      <div class="wordmark" data-anim="zoomIn" data-d="0.18" data-exit="Z" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="slideR" data-d="0.42" data-exit="R">Track your streak. Study your distribution. <b class="redword">Climb the leaderboard.</b></div>
     </div>
   </section>
 
@@ -296,7 +296,7 @@ const CONF=[];
 
 // scene name, duration, whip axis/direction, and optional behaviours
 const DEF=[
-  {name:'intro',  dur:2.4, ax:'y', dir: 1},
+  {name:'intro',  dur:2.4, ax:'y', dir: 1, scatterOut:true, dynamicIntro:true},
   {name:'guesses',dur:2.9, ax:'x', dir: 1},
   {name:'stats',  dur:2.9, ax:'x', dir:-1, count:true},
   {name:'hist',   dur:3.1, ax:'x', dir: 1, bars:true},
@@ -309,15 +309,34 @@ const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
 
 SCENES.forEach(s=>{
   s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
-  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0}));
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
   if(s.bars) s.bar=[...s.el.querySelectorAll('.dbar')].map((n,i)=>({n,w:parseFloat(n.dataset.w)||0,d:0.28+i*0.07}));
   if(s.count) s.cu=[...s.el.querySelectorAll('.countup')].map(n=>({n,to:parseFloat(n.dataset.to)||0,suf:n.dataset.suf||'',d:0.3}));
 });
 
 function revealKids(s,lt){
   for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
-    let tf=''; if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`; else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
-    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf; }
+    let tf='', fl='';
+    if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`;
+    else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
+    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;
+    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;
+    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf;
+    if(k.type==='zoomIn') k.n.style.filter=fl; }
+}
+
+// scatterOut scenes fly each child off in its own direction (data-exit: L/R/U/D)
+// or zoom past the camera (Z) instead of the block sliding off as one piece.
+const SCATTER_DUR=0.7, SCATTER_TRAVEL=820, SCATTER_ZOOM=5.5, SCATTER_ZBLUR=22;
+function scatterKids(s,lt,dur){
+  if(lt<=dur-SCATTER_DUR) return;
+  const p=easeIn(clamp((lt-(dur-SCATTER_DUR))/SCATTER_DUR,0,1)), T=SCATTER_TRAVEL;
+  for(const k of s.kids){ let x=0,y=0; const e=k.exit;
+    if(e==='L')x=-T*p; else if(e==='R')x=T*p; else if(e==='U')y=-T*p; else if(e==='D')y=T*p;
+    if(e==='Z'){ k.n.style.transform=`scale(${(1+p*SCATTER_ZOOM).toFixed(2)})`; k.n.style.filter=`blur(${(p*SCATTER_ZBLUR).toFixed(1)}px)`; }
+    else k.n.style.transform=`translate3d(${x.toFixed(0)}px,${y.toFixed(0)}px,0)`;
+    k.n.style.opacity=clamp(1-p*1.5,0,1).toFixed(3); }
 }
 
 let startTs=null, paused=false, pauseAt=0;
@@ -330,8 +349,9 @@ function frame(ts){
     const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
     if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
     let x=0,y=0,sc=1,bl=0,op=1,ry=0;
-    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=(1-p)*TRAVEL*s.dir;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=s.dynamicIntro?0:(1-p)*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
     else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
     else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
@@ -339,6 +359,7 @@ function frame(ts){
     el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
     el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
     revealKids(s,lt);
+    if(s.scatterOut) scatterKids(s,lt,dur);
     if(s.bar) for(const b of s.bar){ const p=easeOut(clamp((lt-b.d)/0.75,0,1)); b.n.style.width=(b.w*p).toFixed(1)+'%'; }
     if(s.cu) for(const c of s.cu){ const p=easeOut(clamp((lt-c.d)/0.95,0,1)); c.n.textContent=Math.round(c.to*p)+c.suf; }
     if(s.name==='cta'){

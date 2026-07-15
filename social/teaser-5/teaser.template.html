@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily District — Teaser #2 (District Profiles)</title>
+<title>Daily District — Teaser #5 (Daily Habit)</title>
 <style>
 /*{{FONTS_CSS}}*/
 
 :root{
   --red:#C41230; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
-  --line:#e7e4e0; --blue:#2f6fd0;
+  --line:#e7e4e0; --gold:#F4B733; --chip:#f6eef0;
   --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
   font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
@@ -36,36 +36,48 @@ body.clean #stage{border-radius:0;box-shadow:none}
   align-items:center;justify-content:center}
 [data-anim]{opacity:0;will-change:transform,opacity}
 
-/* wordmark scenes */
 .wordmark{color:var(--red);display:block}
 .wordmark svg{display:block;width:100%;height:auto}
 .eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
-.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:80%}
-.redword{color:var(--red)} .ink{color:var(--ink)}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:84%;line-height:1.25}
+.redword{color:var(--red)}
 .cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+.cap{position:absolute;left:0;right:0;bottom:64px;text-align:center;font-weight:800;font-size:30px;color:var(--ink);z-index:15}
+.cap .redword{color:var(--red)}
 
-/* district scene */
-.dhead{display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:8px}
-.deyebrow{font-weight:800;letter-spacing:2.6px;text-transform:uppercase;color:var(--red);font-size:19px}
-.did{font-weight:900;font-size:104px;line-height:.92;color:var(--ink);letter-spacing:-2px}
-.dstate{font-weight:700;font-size:24px;color:var(--muted)}
-.dshape{width:440px;height:440px;overflow:visible;filter:drop-shadow(0 20px 34px rgba(196,18,48,.18))}
-.dshape .dfill{fill:var(--red);opacity:0}
-.dshape .dline{fill:none;stroke:var(--red);stroke-width:6;stroke-linejoin:round;stroke-linecap:round}
-.dcards{display:flex;gap:16px;margin-top:12px}
-.dcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
-  min-width:300px;box-shadow:0 20px 44px rgba(40,20,25,.10);text-align:left}
-.dcard .lab{font-weight:800;letter-spacing:1.2px;font-size:12px;color:var(--muted);text-transform:uppercase}
-.dcard .val{font-weight:900;font-size:32px;color:var(--ink);margin-top:3px;line-height:1}
-.dcard .sub2{font-weight:700;font-size:15px;color:var(--muted);margin-top:4px}
+/* zoom-at-the-watcher words */
+.zoomwrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.zword{position:absolute;font-weight:900;font-size:170px;letter-spacing:-4px;color:var(--ink);
+  opacity:0;will-change:transform,opacity,filter;white-space:nowrap}
+.zword.red{color:var(--red)}
 
-/* controls */
+/* calendar */
+.cal{background:var(--card);border:1px solid var(--line);border-radius:24px;
+  box-shadow:0 40px 90px rgba(40,20,25,.16);padding:30px 34px}
+.cal-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.cal-title{font-weight:900;font-size:26px;color:var(--ink)}
+.cal-day{font-weight:900;font-size:30px;color:var(--red)}
+.dow{display:grid;grid-template-columns:repeat(7,74px);gap:10px;margin-bottom:10px}
+.dow span{text-align:center;font-weight:800;font-size:14px;letter-spacing:1px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(7,74px);gap:10px}
+.cell{width:74px;height:74px;border-radius:14px;background:#efedea;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;color:#b9b3ad;
+  position:relative;will-change:transform}
+.cell b{position:absolute;inset:0;border-radius:14px;background:var(--red);color:#fff;
+  display:flex;align-items:center;justify-content:center;opacity:0;will-change:transform,opacity}
+.cell.today b{box-shadow:0 0 0 4px var(--gold) inset}
+
+/* midnight ritual */
+.rit{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+.rit .r-line{font-weight:900;font-size:56px;color:var(--ink);letter-spacing:-1px;line-height:1.05}
+.rit .r-line b{color:var(--red)}
+.rit .r-mini{font-weight:700;font-size:27px;color:var(--muted)}
+
 #controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
   align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
   border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
 body.clean #controls{display:none}
-#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;
-  padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
 #controls button.primary{background:var(--red)}
 #controls button:hover{filter:brightness(1.12)}
 #controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
@@ -73,31 +85,33 @@ body.clean #controls{display:none}
   background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
 body.clean #hint-cue{display:none}
 
-/* portrait / square tuning */
-body[data-aspect="1x1"] .did{font-size:112px}
-body[data-aspect="1x1"] .dshape{width:400px;height:400px}
-body[data-aspect="1x1"] .dcards{flex-direction:column;gap:12px;align-items:center}
-body[data-aspect="1x1"] .dcard{min-width:520px;display:flex;justify-content:space-between;align-items:center}
-body[data-aspect="1x1"] .dcard .val{font-size:30px}
-body[data-aspect="9x16"] .dcards{flex-direction:column;align-items:center}
-body[data-aspect="9x16"] .dcard{min-width:620px;display:flex;justify-content:space-between;align-items:center}
-body[data-aspect="9x16"] .dshape{width:620px;height:620px}
-body[data-aspect="9x16"] .did{font-size:150px}
-body[data-aspect="9x16"] .cap{bottom:170px;font-size:38px}
+/* portrait tuning */
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+body[data-aspect="9x16"] .zword{font-size:210px}
+body[data-aspect="9x16"] .dow{grid-template-columns:repeat(7,92px)}
+body[data-aspect="9x16"] .grid{grid-template-columns:repeat(7,92px)}
+body[data-aspect="9x16"] .cell{width:92px;height:92px;font-size:28px}
+body[data-aspect="9x16"] .rit .r-line{font-size:64px}
+body[data-aspect="9x16"] .cap{bottom:180px;font-size:38px}
+body[data-aspect="9x16"] .cta-url{font-size:72px}
 
-/* landscape 16:9 (1280×720) — compress the district scene vertically */
-body[data-aspect="16x9"] .dhead{margin-bottom:4px}
-body[data-aspect="16x9"] .deyebrow{font-size:16px}
-body[data-aspect="16x9"] .did{font-size:70px;letter-spacing:-1px}
-body[data-aspect="16x9"] .dstate{font-size:19px}
-body[data-aspect="16x9"] .dshape{width:280px;height:280px}
-body[data-aspect="16x9"] .dcards{margin-top:8px;gap:12px}
-body[data-aspect="16x9"] .dcard{min-width:250px;padding:11px 16px}
-body[data-aspect="16x9"] .dcard .val{font-size:24px}
-body[data-aspect="16x9"] .dcard .sub2{font-size:13px}
+/* landscape tuning (1280×720) */
 body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .eyebrow{font-size:17px}
+body[data-aspect="16x9"] .sub{font-size:24px}
+body[data-aspect="16x9"] .zword{font-size:130px}
+body[data-aspect="16x9"] .cal{padding:20px 24px}
+body[data-aspect="16x9"] .cal-title{font-size:20px}
+body[data-aspect="16x9"] .cal-day{font-size:23px}
+body[data-aspect="16x9"] .dow{grid-template-columns:repeat(7,56px);gap:7px;margin-bottom:7px}
+body[data-aspect="16x9"] .grid{grid-template-columns:repeat(7,56px);gap:7px}
+body[data-aspect="16x9"] .cell{width:56px;height:56px;font-size:18px;border-radius:10px}
+body[data-aspect="16x9"] .cell b{border-radius:10px}
+body[data-aspect="16x9"] .rit .r-line{font-size:42px}
+body[data-aspect="16x9"] .rit .r-mini{font-size:21px}
 body[data-aspect="16x9"] .cta-url{font-size:48px}
-body[data-aspect="16x9"] .cap{bottom:26px;font-size:24px}
+body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
 </style>
 </head>
 <body data-aspect="{{ASPECT}}">
@@ -105,81 +119,101 @@ body[data-aspect="16x9"] .cap{bottom:26px;font-size:24px}
 <div id="stage">
   <div id="bg"></div>
 
-  <!-- FRONT: wordmark -->
+  <!-- 1 · INTRO -->
   <section class="scene" data-scene="intro">
     <div class="wrap">
-      <span class="eyebrow" data-anim="slideL" data-d="0.05" data-exit="L">435 districts, explained</span>
+      <span class="eyebrow" data-anim="slideL" data-d="0.05" data-exit="L">The daily geography habit</span>
       <div class="wordmark" data-anim="zoomIn" data-d="0.18" data-exit="Z" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
-      <div class="sub" data-anim="slideR" data-d="0.42" data-exit="R">Every U.S. House district — its <b class="redword">shape, representative, elections &amp; people.</b></div>
+      <div class="sub" data-anim="slideR" data-d="0.42" data-exit="R">One district a day. <b class="redword">Same puzzle for everyone.</b></div>
     </div>
   </section>
 
-  <!-- district scenes injected here by JS -->
+  <!-- 2 · WORDS AT THE WATCHER -->
+  <section class="scene" data-scene="zoom">
+    <div class="zoomwrap">
+      <span class="zword" data-z="0">EVERY</span>
+      <span class="zword" data-z="1">SINGLE</span>
+      <span class="zword red" data-z="2">DAY.</span>
+    </div>
+  </section>
 
-  <!-- BACK: wordmark + CTA -->
+  <!-- 3 · CALENDAR -->
+  <section class="scene" data-scene="cal">
+    <div class="wrap">
+      <div class="cal" data-anim="pop" data-d="0.05">
+        <div class="cal-head"><span class="cal-title">Your month</span><span class="cal-day">Day <span id="daycount">0</span></span></div>
+        <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="grid" id="cal-grid"></div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.5">One puzzle. <span class="redword">Every day.</span></div>
+  </section>
+
+  <!-- 4 · THE RITUAL (lines from opposite directions) -->
+  <section class="scene" data-scene="ritual">
+    <div class="wrap">
+      <div class="rit">
+        <span class="eyebrow" data-anim="pop" data-d="0.06" style="margin-bottom:8px">The ritual</span>
+        <span class="r-line" data-anim="slideL" data-d="0.20">A new district drops <b>at midnight ET.</b></span>
+        <span class="r-line" data-anim="slideR" data-d="0.44">The <b>same puzzle</b> for everyone.</span>
+        <span class="r-mini" data-anim="rise" data-d="0.72">Miss a day? The archive is waiting.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · CTA -->
   <section class="scene" data-scene="cta">
     <div class="wrap">
       <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
-      <div class="sub" data-anim="rise" data-d="0.22" style="font-size:31px;color:var(--ink)">Explore <b class="redword">all 435 district profiles.</b></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="color:var(--ink)">Free to play. <b class="redword">Make it a habit.</b></div>
       <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
     </div>
   </section>
 </div>
 
-<div id="hint-cue">▶ Teaser #2 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="hint-cue">▶ Teaser #5 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
 <div id="controls">
   <button class="primary" id="btn-rec">● Record video</button>
   <button id="btn-restart">↻ Restart</button>
   <button id="btn-clean">Hide UI</button>
-  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #2</span>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #5</span>
 </div>
 
 <script>
-const DISTRICTS = {{DISTRICTS_JSON}};
-
-// ── Build district scenes (inserted before the CTA) ────────────────────────
-const stage = document.getElementById('stage');
-const ctaEl = document.querySelector('.scene[data-scene="cta"]');
-DISTRICTS.forEach((d, i) => {
-  const sec = document.createElement('section');
-  sec.className = 'scene'; sec.dataset.scene = 'd' + i;
-  const cards = d.cards.map((c, j) => {
-    const d0 = (0.34 + j * 0.13).toFixed(2);
-    const valStyle = c.color ? ` style="color:${c.color}"` : '';
-    const sub = c.sub ? `<div class="sub2">${c.sub}</div>` : '';
-    return `<div class="dcard" data-anim="rise" data-d="${d0}"><div class="lab">${c.label}</div><div class="val"${valStyle}>${c.value}</div>${sub}</div>`;
-  }).join('');
-  sec.innerHTML = `<div class="wrap">
-      <div class="dhead">
-        <span class="deyebrow" data-anim="rise" data-d="0.06">District Profile</span>
-        <span class="did" data-anim="pop" data-d="0.12">${d.id}</span>
-        <span class="dstate" data-anim="rise" data-d="0.20">${d.state}</span>
-      </div>
-      <svg class="dshape" viewBox="0 0 ${d.box} ${d.box}" aria-hidden="true">
-        <path class="dfill" d="${d.path}"/>
-        <path class="dline" d="${d.path}"/>
-      </svg>
-      <div class="dcards">${cards}</div>
-    </div>`;
-  stage.insertBefore(sec, ctaEl);
-});
-
-// ── Timeline ───────────────────────────────────────────────────────────────
 const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
 
-const FRONT=2.4, SHOT=2.7, BACK=2.7;
-const SCENES=[{name:'intro',t0:0,t1:FRONT,dir:1,ax:'y',scatterOut:true,dynamicIntro:true}];
-DISTRICTS.forEach((d,i)=>{ const t0=FRONT+i*SHOT; SCENES.push({name:'d'+i,t0,t1:t0+SHOT,dir:(i%2?-1:1),ax:'x',draw:true}); });
-{ const t0=FRONT+DISTRICTS.length*SHOT; SCENES.push({name:'cta',t0,t1:t0+BACK,dir:-1,ax:'x'}); }
-const LOOP=SCENES[SCENES.length-1].t1;
+// ── Calendar cells (28 days; last filled gets the gold ring) ────────────────
+const DAYS=28, CELLS=[];
+(function(){
+  const g=document.getElementById('cal-grid');
+  for(let i=1;i<=DAYS;i++){
+    const c=document.createElement('div'); c.className='cell'+(i===DAYS?' today':'');
+    c.innerHTML=`${i}<b>${i}</b>`;
+    g.appendChild(c); CELLS.push({el:c, fill:c.querySelector('b'), delay:0.55+(i-1)*0.082});
+  }
+})();
+const dayCountEl=document.getElementById('daycount');
+
+// ── Zoom words: dolly in toward the viewer, then fly past the camera ───────
+// (the last word arrives and stays)
+const ZWORDS=[...document.querySelectorAll('.zword')].map((el,i)=>({el,start:0.30+i*0.72}));
+const Z_ARRIVE=0.34, Z_HOLD=0.18, Z_DEPART=0.30;
+
+const DEF=[
+  {name:'intro',  dur:2.7, ax:'y', dir: 1, scatterOut:true, dynamicIntro:true},
+  {name:'zoom',   dur:2.9, ax:'x', dir: 1, zoom:true},
+  {name:'cal',    dur:4.0, ax:'x', dir:-1, cal:true},
+  {name:'ritual', dur:3.2, ax:'y', dir:-1},
+  {name:'cta',    dur:2.8, ax:'x', dir: 1},
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
 const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
 
 SCENES.forEach(s=>{
   s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
   s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
-  if(s.draw){ s.line=s.el.querySelector('.dline'); s.fill=s.el.querySelector('.dfill');
-    s.len=s.line.getTotalLength(); s.line.style.strokeDasharray=s.len; s.line.style.strokeDashoffset=s.len; }
 });
 
 function revealKids(s,lt){
@@ -187,9 +221,9 @@ function revealKids(s,lt){
     let tf='', fl='';
     if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`;
     else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
-    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;
-    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;
-    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }
+    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;   // fly in from the left
+    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;    // fly in from the right
+    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }  // rushes at the viewer
     k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf;
     if(k.type==='zoomIn') k.n.style.filter=fl; }
 }
@@ -222,20 +256,46 @@ function frame(ts){
     else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
     else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
-    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.028*hp; y=-7*hp; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
     el.style.opacity=op.toFixed(3);
     el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
     el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
     revealKids(s,lt);
     if(s.scatterOut) scatterKids(s,lt,dur);
-    if(s.draw){ const dp=easeOut(clamp((lt-0.18)/0.95,0,1)); s.line.style.strokeDashoffset=(s.len*(1-dp)).toFixed(1);
-      s.fill.style.opacity=(clamp((lt-0.8)/0.6,0,1)*0.16).toFixed(3); }
+
+    if(s.zoom){
+      // Each word dollies in from far away (tiny → full size), holds, then
+      // blows past the camera (scales huge + blurs + fades). Last word stays.
+      ZWORDS.forEach((w,i)=>{
+        const wl=lt-w.start, last=i===ZWORDS.length-1;
+        let o=0, scw=0.1, blw=0;
+        if(wl>0){
+          if(wl<Z_ARRIVE){ const p=easeOut(clamp(wl/Z_ARRIVE,0,1)); scw=lerp(0.1,1,p); o=clamp(p*1.8,0,1); }
+          else if(last || wl<Z_ARRIVE+Z_HOLD){ scw=1; o=1; }
+          else if(wl<Z_ARRIVE+Z_HOLD+Z_DEPART){ const p=easeIn(clamp((wl-Z_ARRIVE-Z_HOLD)/Z_DEPART,0,1));
+            scw=lerp(1,6.5,p); o=1-p; blw=10*p; }
+          else { o=0; scw=6.5; }
+        }
+        w.el.style.opacity=o.toFixed(3);
+        w.el.style.transform=`scale(${scw.toFixed(3)})`;
+        w.el.style.filter=blw>0.05?`blur(${blw.toFixed(1)}px)`:'none';
+      });
+    }
+    if(s.cal){
+      // Days pop in one after another; the counter reads the true fill count.
+      let filled=0;
+      for(const c of CELLS){ const p=easeOut(clamp((lt-c.delay)/0.3,0,1));
+        if(lt>=c.delay) filled++;
+        c.fill.style.opacity=p.toFixed(3);
+        c.fill.style.transform=`scale(${lerp(0.55,1,p).toFixed(3)})`; }
+      dayCountEl.textContent=filled;
+    }
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-// ── Controls + record (same as promo) ──────────────────────────────────────
+// ── Controls + record ───────────────────────────────────────────────────────
 const statusEl=document.getElementById('status');
 document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
 document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
@@ -256,7 +316,7 @@ document.getElementById('btn-rec').onclick=async ()=>{
     rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
     rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
       const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-3.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-5.'+(mime.includes('mp4')?'mp4':'webm');a.click();
       document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
     rec.start();
     const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
