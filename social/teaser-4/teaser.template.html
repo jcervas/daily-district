@@ -213,6 +213,7 @@ body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
   <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #4</span>
 </div>
 
+<script>/*{{FLUBBER_JS}}*/</script>
 <script>
 const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
@@ -241,6 +242,9 @@ const SIL_EL=document.querySelector('#sil-svg path');
 const SIL_SVG=document.getElementById('sil-svg');
 const SIL_STOPS=(()=>{const s=[];let tt=0.5,iv=1.1;for(let i=0;i<SIL_PATHS.length;i++){s.push(tt);tt+=iv;iv*=0.88;}return s;})();
 let SIL_CUR=-1;
+// Precompute a flubber morph between each consecutive pair of district shapes.
+const SIL_MORPH=[];
+for(let i=0;i<SIL_PATHS.length-1;i++){ try{ SIL_MORPH[i]=flubber.interpolate(SIL_PATHS[i],SIL_PATHS[i+1]); }catch(e){ SIL_MORPH[i]=null; } }
 
 // ── End-card confetti: fires part-way into the (held) CTA scene and keeps
 //    falling through the hold, so the final frame is logo + confetti. ────────
@@ -340,18 +344,15 @@ function frame(ts){
         d.el.style.opacity=(d.tint*p).toFixed(3); }
       if(s.cu) for(const c of s.cu) c.n.textContent=filled;
     } else if(s.sils){
-      // Tween between districts with a quick squash: each shape grows in when it
-      // appears and shrinks toward the next swap, so the hard cut happens while
-      // it's small — solid red, no ghosting.
+      // Morph (tween) between districts: hold each shape, then flubber-morph
+      // into the next over the tail of its dwell.
       let idx=0; for(let i=0;i<SIL_STOPS.length;i++){ if(lt>=SIL_STOPS[i]) idx=i; else break; }
-      if(idx!==SIL_CUR){ SIL_CUR=idx; if(SIL_EL&&SIL_PATHS[idx]) SIL_EL.setAttribute('d',SIL_PATHS[idx]); }
-      const appT=SIL_STOPS[idx], nextT=SIL_STOPS[idx+1]||(appT+1);
-      const gp=idx>0?(appT-SIL_STOPS[idx-1]):1, gn=nextT-appT, SQ=0.18;
-      const inP=clamp((lt-appT)/Math.min(SQ,gp*0.5),0,1);          // grow after appearing
-      const outP=clamp((nextT-lt)/Math.min(SQ,gn*0.5),0,1);        // shrink before leaving
-      let sc=0.5+0.5*Math.min(easeOut(inP), easeOut(outP));
-      if(lt>dur-EXIT){ sc=1-0.6*easeOut(clamp((lt-(dur-EXIT))/EXIT,0,1)); }   // exit shrink-away
-      SIL_SVG.style.transform=`scale(${sc.toFixed(3)})`;
+      const appT=SIL_STOPS[idx], nextT=SIL_STOPS[idx+1]||(appT+1), gap=nextT-appT, hold=gap*0.45;
+      const mrp=SIL_MORPH[idx];
+      if(mrp && lt>appT+hold){ SIL_EL.setAttribute('d', mrp(easeOut(clamp((lt-appT-hold)/(gap-hold),0,1)))); }
+      else if(idx!==SIL_CUR){ SIL_CUR=idx; if(SIL_PATHS[idx]) SIL_EL.setAttribute('d',SIL_PATHS[idx]); }
+      // On exit: the district shrinks away as the whole card fades out.
+      if(lt>dur-EXIT){ const sp=easeOut(clamp((lt-(dur-EXIT))/EXIT,0,1)); SIL_SVG.style.transform=`scale(${(1-0.6*sp).toFixed(3)})`; }
     } else if(s.cu){ for(const c of s.cu){ const p=easeOut(clamp((lt-0.25)/1.3,0,1)); c.n.textContent=Math.round(c.to*p); } }
   }
   // End-card confetti — driven purely by the CTA scene's local time (so it's

@@ -73,8 +73,8 @@ function fitFeatureOf(feature) {
   return feature;
 }
 const SIL_BOX = 400;
-const silPathOf = f => round(geoPath(geoAlbersUsa()
-  .fitExtent([[18, 18], [SIL_BOX - 18, SIL_BOX - 18]], fitFeatureOf(f)))(f), 1);
+const silPathOf = f => { const ff = fitFeatureOf(f);   // largest ring → single closed polygon (clean to morph)
+  return round(geoPath(geoAlbersUsa().fitExtent([[18, 18], [SIL_BOX - 18, SIL_BOX - 18]], ff))(ff), 1); };
 // CO-03 first (recognisable while slow), then the most irregular real districts
 // — striking shapes for the clear early beats — excluding at-large whole states.
 const AT_LARGE = new Set(['AK', 'DE', 'ND', 'SD', 'VT', 'WY']);
@@ -97,7 +97,10 @@ const fontsCss = Object.entries(FONT_WEIGHTS).map(([name, weight]) => {
 const wordmarkInner = read('wordmark.svg').replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '').trim();
 
 // ── Assemble ─────────────────────────────────────────────────────────────────
-let html = read('social/teaser-4/teaser.template.html').replace('/*{{FONTS_CSS}}*/', fontsCss);
+const flubberJs = read('node_modules/flubber/build/flubber.min.js');
+let html = read('social/teaser-4/teaser.template.html')
+  .replace('/*{{FONTS_CSS}}*/', () => fontsCss)
+  .replace('/*{{FLUBBER_JS}}*/', () => flubberJs);
 const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   MAP_W: String(MAP_W), MAP_H: String(MAP_H),
