@@ -74,13 +74,16 @@ body.clean #stage{border-radius:0;box-shadow:none}
 .gmap.hot path{fill:#d99a00}
 .gmap.win path{fill:#1f7a3d}
 
-/* CTA effects: floating district pills + confetti */
-.cta-floaters,.cta-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+/* CTA effect: floating district pills */
+.cta-floaters{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .cta-floater{position:absolute;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.8);
   border:1px solid rgba(196,18,48,.12);border-radius:999px;padding:7px 13px 7px 9px;
   box-shadow:0 8px 22px rgba(40,20,25,.07);font-weight:700;color:#9a8f92;white-space:nowrap;opacity:0}
 .cta-floater i{width:15px;height:15px;border-radius:4px;background:rgba(196,18,48,.5);display:block}
-.conf{position:absolute;top:-30px;width:12px;height:17px;border-radius:2px;opacity:0}
+
+/* end-card confetti (shared pattern) */
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:12;opacity:0}
+.cf{position:absolute;left:0;top:0;will-change:transform,opacity}
 
 /* Personal stats */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -160,6 +163,7 @@ body[data-aspect="16x9"] .cap{bottom:22px;font-size:23px}
 
 <div id="stage">
   <div id="bg"></div>
+  <div id="confetti"></div>
 
   <!-- FRONT: wordmark -->
   <section class="scene" data-scene="intro">
@@ -242,7 +246,6 @@ body[data-aspect="16x9"] .cap{bottom:22px;font-size:23px}
       <div class="sub" data-anim="rise" data-d="0.22" style="font-size:31px;color:var(--ink)">Free to play. <b class="redword">Climb the board.</b></div>
       <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
     </div>
-    <div class="cta-confetti" id="cta-confetti"></div>
   </section>
 </div>
 
@@ -274,7 +277,7 @@ const GUESSES={{GUESSES_JSON}}, GBOX={{GBOX}};
   });
 })();
 
-// ── CTA: floating district pills + confetti (created once, animated on the cta scene) ──
+// ── CTA: floating district pills (created once, animated on the cta scene) ──
 const CTAFLO=[];
 (function(){
   const items=[['OHIO',8,14],['PA-08',86,10],['FL-27',16,26],['NY-14',90,32],['CA-12',6,62],['TX-35',88,66],['GA-05',12,86],['AZ-03',80,88],['NC-02',30,90],['MI-11',94,50]];
@@ -283,16 +286,46 @@ const CTAFLO=[];
     el.style.left=x+'%';el.style.top=y+'%';el.style.fontSize=(13+(i%3)*2)+'px';
     f.appendChild(el); CTAFLO.push({el,period:6+(i%5)*1.3,phase:(i*0.137)%1,amp:26+(i%4)*7});});
 })();
-const CONF=[];
-(function(){
-  const COLORS=['#C41230','#F4B733','#1f7a3d','#2f6fd0','#e01a3c','#111'];
-  const box=document.getElementById('cta-confetti');
-  for(let i=0;i<72;i++){const c=document.createElement('div');c.className='conf';
-    const h=(i*2654435761)>>>0, left=(h%1000)/10, dur=1.7+((h>>10)%120)/100, delay=0.25+((h>>4)%40)/100;
-    const dx=((h>>7)%180)-90, rot=((h>>3)%720)-360;
-    c.style.left=left+'%'; c.style.background=COLORS[i%COLORS.length];
-    box.appendChild(c); CONF.push({el:c,dur,delay,dx,rot});}
+
+// ── End-card confetti: fires part-way into the (held) CTA scene and keeps
+//    falling through the hold, so the final frame is logo + confetti. ────────
+const SW={{STAGE_W}}, SH={{STAGE_H}};
+const CONF_FIRE=2.0;                                   // s into the CTA scene
+const CONF_COLORS=['#C41230','#2b6cb0','#2f9e44','#FDB515','#1a1a1a','#e64980','#ffffff'];
+const confettiLayer=document.getElementById('confetti');
+const CONFETTI=(function(){
+  const arr=[]; let seed=1337; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=0;i<72;i++){
+    const el=document.createElement('div'); el.className='cf';
+    const w=8+rnd()*12, h=8+rnd()*14;
+    el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+    el.style.width=w.toFixed(1)+'px'; el.style.height=h.toFixed(1)+'px';
+    el.style.borderRadius=(rnd()<0.3?'50%':'2px');
+    confettiLayer.appendChild(el);
+    arr.push({el, x0:-0.05*SW+rnd()*1.10*SW, y0:-0.12*SH-rnd()*0.10*SH,
+      dist:SH*1.20+rnd()*0.1*SH, delay:rnd()*1.4, fall:2.0+rnd()*1.3,
+      damp:12+rnd()*60, dfreq:1.4+rnd()*2.4, phase:rnd()*6.283,
+      rot0:rnd()*360, spin:(rnd()-0.5)*720});
+  }
+  return arr;
 })();
+// Run the end card until every piece has landed, then hold the logo +3s more.
+const CONF_END = CONF_FIRE + Math.max(...CONFETTI.map(c=>c.delay+c.fall));
+const CTA_DUR = CONF_END + 3;
+function renderConfetti(active, elapsed){
+  if(!active){ if(confettiLayer.style.opacity!=='0') confettiLayer.style.opacity='0'; return; }
+  confettiLayer.style.opacity='1';
+  for(const c of CONFETTI){
+    if(elapsed<c.delay){ c.el.style.opacity='0'; continue; }
+    const p=clamp((elapsed-c.delay)/c.fall,0,1);
+    const y=c.y0+c.dist*(0.35*p+0.65*p*p);
+    const x=c.x0+Math.sin(elapsed*c.dfreq+c.phase)*c.damp;
+    const rot=c.rot0+elapsed*c.spin;
+    const op = p<0.12 ? p/0.12 : p>0.9 ? (1-p)/0.1 : 1;
+    c.el.style.opacity=op.toFixed(2);
+    c.el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(1)}deg)`;
+  }
+}
 
 // scene name, duration, whip axis/direction, and optional behaviours
 const DEF=[
@@ -301,10 +334,11 @@ const DEF=[
   {name:'stats',  dur:2.9, ax:'x', dir:-1, count:true},
   {name:'hist',   dur:3.1, ax:'x', dir: 1, bars:true},
   {name:'board',  dur:3.1, ax:'x', dir:-1},
-  {name:'cta',    dur:2.6, ax:'x', dir: 1},
+  {name:'cta',    dur:CTA_DUR, ax:'x', dir: 1, hold:true},
 ];
 let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
 const LOOP=acc;
+const CTA=SCENES.find(s=>s.name==='cta');
 const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
 
 SCENES.forEach(s=>{
@@ -351,6 +385,7 @@ function frame(ts){
     let x=0,y=0,sc=1,bl=0,op=1,ry=0;
     if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=s.dynamicIntro?0:(1-p)*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(s.hold){ /* settle and hold — static logo, never swipes out (confetti scene) */ }
     else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
     else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
       if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
@@ -365,11 +400,12 @@ function frame(ts){
     if(s.name==='cta'){
       for(const f of CTAFLO){ const ph=((lt/f.period)+f.phase)%1, yy=lerp(24,-f.amp,ph), oo=Math.sin(Math.PI*clamp(ph,0,1));
         f.el.style.transform=`translateY(${yy.toFixed(1)}px)`; f.el.style.opacity=(oo*.62).toFixed(2); }
-      for(const c of CONF){ const p=clamp((lt-c.delay)/c.dur,0,1);
-        c.el.style.opacity=(p>0&&p<1)?'0.95':'0';
-        c.el.style.transform=`translate(${(c.dx*p).toFixed(1)}px,${(p*1180).toFixed(0)}px) rotate(${(c.rot*p).toFixed(0)}deg)`; }
     }
   }
+  // End-card confetti — driven purely by the CTA scene's local time (so it's
+  // deterministic under render-mp4's frame-by-frame seek).
+  const ctaLt=t-CTA.t0, ctaOn=(t>=CTA.t0-0.02 && t<CTA.t1+0.02);
+  renderConfetti(ctaOn && ctaLt>=CONF_FIRE, ctaLt-CONF_FIRE);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -44,6 +44,14 @@ Every video ships in all three aspects — **16:9** (X timeline / YouTube),
 **9:16** (Reels / TikTok / Stories), **1:1** (square feed) — each in standard
 (1080-class) and ★ high-quality (2160-class) resolution.
 
+**Every teaser ends on the same pattern:** the wordmark + CTA scene *holds*
+(no swipe-out) while **end-card confetti** fires, falls, and settles — the
+scene's duration is computed from the confetti physics (`CONF_FIRE` +
+last-piece-landed + a 3 s hold), so the final frame is always a clean,
+settled logo. This lives in each `teaser.template.html` as the
+`CONFETTI`/`renderConfetti` block + a `{name:'cta', …, hold:true}` scene — copy
+that block verbatim into a new teaser to keep the ending consistent.
+
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-teaser-1.mjs` (gameplay promo), `build-teaser-2.mjs` (teaser #2),
 `build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
@@ -162,6 +170,22 @@ node generate-social-graphics.mjs --out=some/dir   # override output directory
 Two steps: **build** the self-contained HTML page for a district + aspect, then
 **render** it to MP4.
 
+**Scenes** (`data-scene` name — refer to these by name or number when asking
+for an edit, e.g. "on scene 6 (win), make the confetti bigger"):
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline, multi-directional entrance, floating district-code pills |
+| 2 | `silhouette` | 3.0s | Today's mystery district — just the shape |
+| 3 | `board` | 5.9s | The full game board (state grid + guesses) |
+| 4 | `hotcold` | 9.2s | Hot/cold elimination in action |
+| 5 | `pick` | 12.7s | Picking the district within the state |
+| 6 | `win` | 15.0s | Win screen — **confetti fires here** (not on the CTA, unlike teasers #2–5) |
+| 7 | `cta` | 18.6s | Wordmark + CTA, floating pills |
+
+Total loop: **21.0s** (fixed — this is the one teaser without a confetti-driven
+hold; see §"end-card confetti" note above).
+
 ### 3a. Build the HTML
 
 ```bash
@@ -224,11 +248,28 @@ A separate, standalone promo that showcases the **District Profile** feature
 (not gameplay): the wordmark, then a fast montage of several real districts —
 each drawing its boundary **lines** and flashing its profile cards
 (representative, 2024 vote, and a distinctive "hero" stat) — then the wordmark
-+ CTA. ~18 s, **1:1** by default (built for X).
++ CTA + **end-card confetti** (holds on the logo until every piece has landed,
++3 s). ~25 s, **1:1** by default (built for X).
 
 > Built by **`build-teaser-2.mjs`** — note this is *not* `build-teaser.mjs`,
 > which is unrelated (it manages the launch-date text in the pre-launch
 > `index.html`).
+
+**Scenes** — the district scenes (`d0`, `d1`, …) are generated dynamically,
+one per entry in `DEFAULT_LINEUP` (or `--districts=`), so the count/order/start
+times below reflect the **default 5-district line-up**:
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline |
+| 2 | `d0` | 2.4s | 1st curated district — default **IL-04** (Shape: Irregular) |
+| 3 | `d1` | 5.1s | 2nd curated district — default **NY-13** (District Area) |
+| 4 | `d2` | 7.8s | 3rd curated district — default **AK-01** (District Area: largest in the U.S.) |
+| 5 | `d3` | 10.5s | 4th curated district — default **GA-05** (Demographics) |
+| 6 | `d4` | 13.2s | 5th curated district — default **WY-01** (House seats: 1 of 435) |
+| 7 | `cta` | 15.9s | Wordmark + CTA + end-card confetti (holds until settled) |
+
+Total loop: **~25.4s** with the default line-up; changes with `--districts=`.
 
 ```bash
 node build-teaser-2.mjs                      # default line-up, 1:1
@@ -254,7 +295,22 @@ A standalone promo that showcases the **competitive / stats** features (not a
 single puzzle): the wordmark, then the results **Guesses**, your personal stats
 (Played · Win Rate · Current/Max Streak), the **Guess Distribution** histogram
 (bars grow, your solve highlighted), and the **leaderboard** (compete with
-everyone + your percentile), then wordmark + CTA. ~17 s, **1:1** by default.
+everyone + your percentile), then wordmark + CTA — with drifting **district
+pills** and **end-card confetti** both layered behind/over the logo (holds
+until every confetti piece has landed, +3 s). ~24 s, **1:1** by default.
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline |
+| 2 | `guesses` | 2.4s | Results-modal "Guesses" list |
+| 3 | `stats` | 5.3s | Personal stats (Played, Win Rate, streaks) |
+| 4 | `hist` | 8.2s | Guess Distribution histogram |
+| 5 | `board` | 11.3s | Leaderboard |
+| 6 | `cta` | 14.4s | Wordmark + CTA + drifting district pills + end-card confetti |
+
+Total loop: **~23.9s**.
 
 ```bash
 node build-teaser-3.mjs                  # 1:1
@@ -275,9 +331,24 @@ node render-mp4.mjs social/teaser-3/teaser-3.html \
 The mission-driven teaser, with calmer pacing: the wordmark, then the **real
 U.S. map with all 435 district lines** (count-up + "each ≈ 761,000 people"),
 the redistricting fact ("redrawn every 10 years"), the learn-by-playing beat
-(silhouette + by shape / by place / by the people), the makers line (Carnegie
-Mellon University · Redistrict Network), then wordmark + CTA. ~20 s, **1:1**
-by default.
+(a single silhouette that **flubber-morphs through ~30 district shapes**,
+accelerating, alongside "by shape / by place / by the people"), the makers
+line (Carnegie Mellon University · Redistrict Network), then wordmark + CTA.
+~35 s, **1:1** by default — the longest of the five (the `learn` beat alone
+runs 10s to let the morph breathe).
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline |
+| 2 | `map` | 3.2s | U.S. map, all 435 district lines drawing in, live count-up to 435 |
+| 3 | `fact` | 9.0s | "Redrawn every 10 years" fact card |
+| 4 | `learn` | 12.4s | Silhouette morphs through ~30 districts (starts on CO-03) + "by shape / by place / by the people" chips |
+| 5 | `makers` | 22.5s | Makers credit (Carnegie Mellon University · Redistrict Network) |
+| 6 | `cta` | 25.1s | Wordmark + CTA + end-card confetti |
+
+Total loop: **~34.6s**.
 
 ```bash
 node build-teaser-4.mjs                       # 1:1
@@ -301,7 +372,20 @@ viewer** ("EVERY. SINGLE. DAY." — each dollies in from far away, then blows
 past the camera), a **calendar filling day by day** with an honest "Day N"
 counter (last day gold-ringed), the midnight ritual (lines flying in from
 **opposite directions**: "a new district drops at midnight ET" / "the same
-puzzle for everyone"), then wordmark + CTA. ~16 s, **1:1** by default.
+puzzle for everyone"), then wordmark + CTA + **end-card confetti** (holds on
+the logo until every piece has landed, +3 s). ~22 s, **1:1** by default.
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline |
+| 2 | `zoom` | 2.7s | Kinetic zoom words ("EVERY. SINGLE. DAY.") flying at the viewer |
+| 3 | `cal` | 5.6s | Calendar filling day by day, live "Day N" counter, last day gold-ringed |
+| 4 | `ritual` | 9.6s | Opposite-direction line flies ("midnight ET" from one side / "same puzzle" from the other) |
+| 5 | `cta` | 12.8s | Wordmark + CTA + end-card confetti |
+
+Total loop: **~22.3s**.
 
 ```bash
 node build-teaser-5.mjs                       # 1:1
@@ -348,3 +432,11 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and
 re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these pages.
+
+**Every video's section above (§3, §4, §4b–d) has a numbered Scenes table** —
+`#`, `data-scene` name, start time, and what it shows. Use those to point at a
+specific beat instead of describing it ("scene 4 of teaser #5" / "the `hist`
+scene in teaser #3"). **When you add a new teaser, add the same kind of table
+to its section** — pull the scene list straight from its `DEF`/`SCENES` array
+(or `window.__teaser.loop()` + inspecting `SCENES` in a browser console for the
+exact start times) rather than estimating; a stale table is worse than none.
