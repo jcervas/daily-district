@@ -194,7 +194,12 @@ if (leftover) console.warn('  ⚠ unreplaced placeholders:', [...new Set(leftove
 // Renders the full window at 2× (the card fills the frame in #shot/clean mode).
 if (flag('png')) {
   const { spawnSync } = await import('node:child_process');
-  const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  // CHROME_BIN overrides; otherwise the macOS app bundle locally, or PATH lookup
+  // (google-chrome) on Linux — GitHub's ubuntu runners ship Chrome that way.
+  const CHROME = process.env.CHROME_BIN
+    || (process.platform === 'darwin'
+      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      : 'google-chrome');
   const outPng = outHtml.replace(/\.html$/, '.png');
   const r = spawnSync(CHROME, [
     '--headless=new', `--screenshot=${outPng}`,
