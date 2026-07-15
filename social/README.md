@@ -34,10 +34,18 @@ social/
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-4*.html               built pages  (git-ignored)
 │    out/daily-district-teaser-4-<aspect>[-2160].mp4   (git-ignored)
-└─ teaser-5/                        ← teaser #5 (Daily habit / ritual)
+├─ teaser-5/                        ← teaser #5 (Daily habit / ritual)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-5*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-5-<aspect>[-2160].mp4   (git-ignored)
+├─ teaser-6/                        ← teaser #6 (Play to Win — basketball)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-6*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-6-<aspect>[-2160].mp4   (git-ignored)
+└─ teaser-7/                        ← teaser #7 (Wordle for geography nerds)
      teaser.template.html         template (edit copy / motion)
-     teaser-5*.html               built pages  (git-ignored)
-     out/daily-district-teaser-5-<aspect>[-2160].mp4   (git-ignored)
+     teaser-7*.html               built pages  (git-ignored)
+     out/daily-district-teaser-7-<aspect>[-2160].mp4   (git-ignored)
 ```
 
 Every video ships in all three aspects — **16:9** (X timeline / YouTube),
@@ -55,7 +63,17 @@ that block verbatim into a new teaser to keep the ending consistent.
 **Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
 `build-teaser-1.mjs` (gameplay promo), `build-teaser-2.mjs` (teaser #2),
 `build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
-`build-teaser-5.mjs` (teaser #5), `render-mp4.mjs` (HTML → MP4).
+`build-teaser-5.mjs` (teaser #5), `build-teaser-6.mjs` (teaser #6),
+`build-teaser-7.mjs` (teaser #7), `render-mp4.mjs` (HTML → MP4).
+
+**Two teasers (#4 and #6) morph one district silhouette into another** using
+the `flubber` npm package (already a project dependency — `node_modules/flubber/build/flubber.min.js`
+is read and inlined into the built HTML by their build scripts, so the output
+page has no external dependency at runtime). Pattern: precompute
+`SIL_PATHS` (one path string per district, all fit to the same viewBox so
+point counts/positions line up reasonably), then in the template
+`flubber.interpolate(SIL_PATHS[i], SIL_PATHS[i+1])` returns a `t ⇒ path`
+function used to tween between them frame-by-frame.
 
 ## TL;DR — the commands
 
@@ -89,6 +107,12 @@ npm run teaser4                                   # 1:1 (also --aspect=9x16 | 16
 
 # ── Teaser #5 (Daily habit / ritual) → social/teaser-5/teaser-5*.html ──
 npm run teaser5                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #6 (Play to Win — basketball) → social/teaser-6/teaser-6*.html ──
+npm run teaser6                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #7 (Wordle for geography nerds) → social/teaser-7/teaser-7*.html ──
+npm run teaser7                                   # 1:1 (also --aspect=9x16 | 16x9)
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 # args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
@@ -400,9 +424,85 @@ node render-mp4.mjs social/teaser-5/teaser-5.html \
 
 ---
 
+## 4e. Teaser #6 — Play to Win (standalone, basketball)
+
+The playful, high-energy one: the wordmark, then a **basketball arcs in with
+a 3D effect** (grows large as it "approaches the camera" mid-flight — scale
+swings 0.2×→1.45×→0.32×, spins continuously, motion-blurs, casts a contact
+shadow — then shrinks and drops through a district silhouette styled as the
+hoop/net), a **swish flash** + district label + running scoreboard, and the
+shape **flubber-morphs** into the next district for the next shot — repeated
+for a curated line-up — then wordmark + CTA ("Play to win.") + end-card
+confetti. ~25 s, **1:1** by default.
+
+```bash
+node build-teaser-6.mjs                       # default line-up, 1:1
+node render-mp4.mjs social/teaser-6/teaser-6.html \
+  social/teaser-6/out/daily-district-teaser-6-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- `--districts=IL-04,MD-03,TX-35,NC-01,LA-02` overrides the line-up (any
+  count — the `hoop` scene's duration scales automatically, `N_SHOTS × 2.6s`).
+- Everything — the arc trajectory, scale/blur curve, hoop/net SVG, per-shot
+  timing (`SHOT_DUR`/`ARC_DUR`/`MORPH_START`) — lives in
+  `social/teaser-6/teaser.template.html`; the district selection lives in
+  `build-teaser-6.mjs` (`DEFAULT_IDS`).
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline |
+| 2 | `hoop` | 2.7s | Ball arcs in (3D grow/shrink + spin), swishes through the district-as-net, shape morphs to the next district, repeats for each district in the line-up (5 × 2.6s by default) |
+| 3 | `cta` | 15.7s | Wordmark + "Play to win." + end-card confetti |
+
+Total loop: **~25.2s** with the default 5-district line-up; scales with
+`--districts=`.
+
+---
+
+## 4f. Teaser #7 — Wordle for geography nerds (standalone)
+
+The comparison hook, aimed squarely at the Wordle audience: the wordmark
+("Wordle for map nerds"), a kinetic **"ONE PUZZLE. / SIX GUESSES. / NO
+LETTERS."** beat (same zoom-word mechanic as teaser #5), the real results-modal
+**guess rows** (borrowed verbatim from teaser #3 — a cold miss, a hot guess,
+then the win), then the app's actual **"copy results" share text** (`✗ ○ ✓`,
+"solved in 3/6 guesses") rendered as a Wordle-style tile row (gray miss / gold
+"close" / green win), then wordmark + CTA + end-card confetti. ~22 s, **1:1**
+by default.
+
+```bash
+node build-teaser-7.mjs                       # 1:1
+node render-mp4.mjs social/teaser-7/teaser-7.html \
+  social/teaser-7/out/daily-district-teaser-7-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- The illustrative guess sequence (Texas → cold, Virginia → hot, WV-01 → win)
+  lives in `build-teaser-7.mjs` (`GUESSES`); all copy, the zoom words, and the
+  share-card tile styling live in `social/teaser-7/teaser.template.html`.
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline ("Wordle for map nerds") |
+| 2 | `sixguesses` | 2.6s | Kinetic zoom words — "ONE PUZZLE." / "SIX GUESSES." / "NO LETTERS." |
+| 3 | `guesses` | 5.5s | Results-modal "Guesses" list (cold → hot → win) |
+| 4 | `share` | 8.8s | The real "copy results" text as a Wordle-style tile row (`✗ ○ ✓`, solved in 3/6) |
+| 5 | `cta` | 12.4s | Wordmark + CTA + end-card confetti |
+
+Total loop: **~22.0s**.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`teaser-1*.html`, `teaser-2/3/4/5.html`) can
+Every built page (`teaser-1*.html`, `teaser-2/3/4/5/6/7.html`) can
 export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/teaser-2/teaser-2.html`) in **Chrome**.
@@ -428,12 +528,18 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
   `build-teaser-4.mjs`.
 - **Teaser #5** — everything (copy, zoom words, calendar size, timings) lives in
   `social/teaser-5/teaser.template.html`. Rebuild with `build-teaser-5.mjs`.
+- **Teaser #6** — the ball arc/scale/hoop visuals and per-shot timing live in
+  `social/teaser-6/teaser.template.html`; the district line-up in
+  `build-teaser-6.mjs` (`DEFAULT_IDS`). Rebuild with `build-teaser-6.mjs`.
+- **Teaser #7** — copy/timing/motion and the share-card tile styling live in
+  `social/teaser-7/teaser.template.html`; the illustrative guess sequence in
+  `build-teaser-7.mjs` (`GUESSES`). Rebuild with `build-teaser-7.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and
 re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these pages.
 
-**Every video's section above (§3, §4, §4b–d) has a numbered Scenes table** —
+**Every video's section above (§3, §4, §4b–f) has a numbered Scenes table** —
 `#`, `data-scene` name, start time, and what it shows. Use those to point at a
 specific beat instead of describing it ("scene 4 of teaser #5" / "the `hist`
 scene in teaser #3"). **When you add a new teaser, add the same kind of table

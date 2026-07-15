@@ -15,6 +15,8 @@
     "teaser3": "node build-teaser-3.mjs",
     "teaser4": "node build-teaser-4.mjs",
     "teaser5": "node build-teaser-5.mjs",
+    "teaser6": "node build-teaser-6.mjs",
+    "teaser7": "node build-teaser-7.mjs",
     "render": "node render-mp4.mjs",
     "card": "node build-social-card.mjs",
     "recap:dry": "DRY_RUN=1 node daily-recap.mjs"

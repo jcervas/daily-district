@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily District — Teaser #7 (Wordle for Geography Nerds)</title>
+<style>
+/*{{FONTS_CSS}}*/
+
+:root{
+  --red:#C41230; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
+  --line:#e7e4e0; --blue:#2f6fd0; --green:#1f7a3d; --gold:#F4B733; --chip:#f6eef0;
+  --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
+  font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0e0e11;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+
+#stage{position:relative;width:var(--stageW);height:var(--stageH);background:var(--bg);
+  overflow:hidden;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5);
+  transform-origin:center center;perspective:1500px}
+body.clean{background:#f4f3f1}
+body.clean #stage{border-radius:0;box-shadow:none}
+
+/* end-card confetti (shared pattern) */
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:12;opacity:0}
+.cf{position:absolute;left:0;top:0;will-change:transform,opacity}
+
+#bg{position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% -12%, #ffffff 0%, rgba(255,255,255,0) 52%),
+    radial-gradient(70% 70% at 8% 6%, rgba(196,18,48,.10) 0%, rgba(196,18,48,0) 46%),
+    radial-gradient(70% 70% at 94% 96%, rgba(196,18,48,.12) 0%, rgba(196,18,48,0) 50%),
+    linear-gradient(160deg,#f8f6f4 0%,#eeeae6 100%)}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  will-change:transform,filter,opacity;backface-visibility:hidden;opacity:0}
+.scene .wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+[data-anim]{opacity:0;will-change:transform,opacity}
+
+/* wordmark scenes */
+.wordmark{color:var(--red);display:block}
+.wordmark svg{display:block;width:100%;height:auto}
+.eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:84%;line-height:1.25}
+.redword{color:var(--red)}
+.cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+
+/* caption */
+.cap{position:absolute;left:0;right:0;bottom:64px;text-align:center;font-weight:800;font-size:30px;color:var(--ink);z-index:15}
+.cap .redword{color:var(--red)}
+
+/* zoom-at-the-watcher words ("ONE PUZZLE." / "SIX GUESSES." / "NO LETTERS.") */
+.zoomwrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.zword{position:absolute;font-weight:900;font-size:150px;letter-spacing:-4px;color:var(--ink);
+  opacity:0;will-change:transform,opacity,filter;white-space:nowrap}
+.zword.red{color:var(--red)}
+
+/* results-modal-style guess rows (borrowed verbatim from teaser #3) */
+.panel{width:840px;background:var(--card);border:1px solid var(--line);border-radius:26px;
+  box-shadow:0 44px 100px rgba(40,20,25,.20);padding:30px 34px 34px}
+.panel-head{font-weight:900;font-size:26px;color:var(--ink);letter-spacing:-.4px;margin-bottom:20px;
+  display:flex;align-items:center;gap:12px}
+.panel-head::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--red)}
+.solved-line{font-weight:800;font-size:24px;color:var(--muted);margin-bottom:16px}
+.solved-line b{font-weight:900;font-size:34px;color:var(--green)}
+.guess-row{display:flex;align-items:center;gap:16px;padding:14px 18px;border:1px solid var(--line);
+  border-radius:14px;margin-bottom:12px;background:#fbfafa}
+.guess-row .gn{width:34px;height:34px;border-radius:9px;background:var(--chip);color:var(--red);
+  font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.guess-row .gname{font-weight:800;font-size:26px;color:var(--ink);flex:1}
+.gpill{font-weight:900;font-size:16px;letter-spacing:.5px;padding:6px 16px;border-radius:999px;text-transform:uppercase}
+.gpill.cold{background:#e7eef7;color:#2f6fd0}
+.gpill.hot{background:#fdeaa6;color:#8a6a00}
+.gpill.win{background:#e3f3e8;color:var(--green)}
+.guess-row.win{border-color:var(--green);background:#f3faf5}
+.gmap{width:46px;height:46px;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(40,20,25,.16))}
+.gmap path{fill:#c9c2bd}
+.gmap.cold path{fill:#2f6fd0}
+.gmap.hot path{fill:#d99a00}
+.gmap.win path{fill:#1f7a3d}
+
+/* share card — the app's real "copy results" text, rendered as a tile row */
+.sharecard{width:760px;background:var(--card);border:1px solid var(--line);border-radius:26px;
+  box-shadow:0 44px 100px rgba(40,20,25,.20);padding:34px 40px 36px}
+.sc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.sc-title{font-weight:900;font-size:27px;color:var(--ink);letter-spacing:-.3px}
+.sc-mode{font-weight:800;font-size:15px;letter-spacing:.4px;color:var(--muted);background:var(--chip);
+  padding:7px 15px;border-radius:999px}
+.sc-line{font-weight:800;font-size:30px;color:var(--ink);margin-bottom:24px}
+.sc-line b{color:var(--red);font-weight:900}
+.sc-tiles{display:flex;gap:16px;margin-bottom:26px}
+.sc-tile{width:88px;height:88px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+  font-size:46px;font-weight:900;color:#fff;box-shadow:0 10px 24px rgba(40,20,25,.18)}
+.sc-tile.miss{background:#8a8a92}
+.sc-tile.warm{background:var(--gold);color:#5c4200}
+.sc-tile.win{background:var(--green)}
+.sc-brag{font-weight:700;font-size:23px;color:var(--muted)}
+.sc-copy{margin-top:24px;display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#fff;
+  font-weight:800;font-size:21px;padding:13px 24px;border-radius:13px}
+
+/* controls */
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
+  border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
+body.clean #controls{display:none}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button.primary{background:var(--red)}
+#controls button:hover{filter:brightness(1.12)}
+#controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
+#hint-cue{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
+body.clean #hint-cue{display:none}
+
+/* portrait 9:16 (1080×1920) */
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+body[data-aspect="9x16"] .zword{font-size:190px}
+body[data-aspect="9x16"] .panel{width:960px}
+body[data-aspect="9x16"] .sharecard{width:960px;padding:40px 46px 42px}
+body[data-aspect="9x16"] .sc-title{font-size:31px}
+body[data-aspect="9x16"] .sc-mode{font-size:17px}
+body[data-aspect="9x16"] .sc-line{font-size:36px}
+body[data-aspect="9x16"] .sc-tile{width:104px;height:104px;font-size:54px;border-radius:20px}
+body[data-aspect="9x16"] .sc-brag{font-size:27px}
+body[data-aspect="9x16"] .sc-copy{font-size:24px;padding:15px 28px}
+body[data-aspect="9x16"] .cap{bottom:180px;font-size:38px}
+body[data-aspect="9x16"] .cta-url{font-size:72px}
+
+/* landscape 16:9 (1280×720) */
+body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .eyebrow{font-size:17px}
+body[data-aspect="16x9"] .sub{font-size:24px}
+body[data-aspect="16x9"] .zword{font-size:112px}
+body[data-aspect="16x9"] .panel{width:780px;padding:22px 28px 26px;border-radius:20px}
+body[data-aspect="16x9"] .panel-head{font-size:21px;margin-bottom:14px}
+body[data-aspect="16x9"] .solved-line{font-size:19px;margin-bottom:10px}
+body[data-aspect="16x9"] .solved-line b{font-size:26px}
+body[data-aspect="16x9"] .guess-row{padding:9px 14px;margin-bottom:9px}
+body[data-aspect="16x9"] .guess-row .gname{font-size:21px}
+body[data-aspect="16x9"] .gmap{width:36px;height:36px}
+body[data-aspect="16x9"] .sharecard{width:640px;padding:24px 28px 28px;border-radius:20px}
+body[data-aspect="16x9"] .sc-title{font-size:21px}
+body[data-aspect="16x9"] .sc-mode{font-size:13px;padding:5px 12px}
+body[data-aspect="16x9"] .sc-line{font-size:22px;margin-bottom:16px}
+body[data-aspect="16x9"] .sc-tiles{gap:11px;margin-bottom:16px}
+body[data-aspect="16x9"] .sc-tile{width:60px;height:60px;font-size:31px;border-radius:13px}
+body[data-aspect="16x9"] .sc-brag{font-size:17px}
+body[data-aspect="16x9"] .sc-copy{font-size:15px;padding:9px 17px;margin-top:16px;border-radius:10px}
+body[data-aspect="16x9"] .cta-url{font-size:48px}
+body[data-aspect="16x9"] .cap{bottom:22px;font-size:22px}
+</style>
+</head>
+<body data-aspect="{{ASPECT}}">
+
+<div id="stage">
+  <div id="bg"></div>
+  <div id="confetti"></div>
+
+  <!-- 1 · INTRO -->
+  <section class="scene" data-scene="intro">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="slideL" data-d="0.05" data-exit="L">Wordle for map nerds</span>
+      <div class="wordmark" data-anim="zoomIn" data-d="0.18" data-exit="Z" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="slideR" data-d="0.42" data-exit="R">Same daily habit. <b class="redword">A whole country to guess.</b></div>
+    </div>
+  </section>
+
+  <!-- 2 · SIX GUESSES (kinetic zoom words) -->
+  <section class="scene" data-scene="sixguesses">
+    <div class="zoomwrap">
+      <span class="zword" data-z="0">ONE PUZZLE.</span>
+      <span class="zword" data-z="1">SIX GUESSES.</span>
+      <span class="zword red" data-z="2">NO LETTERS.</span>
+    </div>
+  </section>
+
+  <!-- 3 · GUESSES (borrowed results-modal pattern) -->
+  <section class="scene" data-scene="guesses">
+    <div class="wrap">
+      <div class="panel" data-anim="pop" data-d="0.05">
+        <div class="panel-head">Guesses</div>
+        <div class="solved-line" data-anim="rise" data-d="0.14">Solved in <b>3</b> guesses / 6</div>
+        <div id="guess-rows"></div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.5">Six guesses. <span class="redword">Every one a clue.</span></div>
+  </section>
+
+  <!-- 4 · SHARE (the app's real copy-results text, as a tile row) -->
+  <section class="scene" data-scene="share">
+    <div class="wrap">
+      <div class="sharecard" data-anim="pop" data-d="0.05">
+        <div class="sc-head">
+          <span class="sc-title">🗺️ Daily District</span>
+          <span class="sc-mode">🔒 Hard mode</span>
+        </div>
+        <div class="sc-line" data-anim="rise" data-d="0.16">Solved in <b>3</b>/6 guesses</div>
+        <div class="sc-tiles">
+          <span class="sc-tile miss" data-anim="pop" data-d="0.30">✗</span>
+          <span class="sc-tile warm" data-anim="pop" data-d="0.42">○</span>
+          <span class="sc-tile win"  data-anim="pop" data-d="0.54">✓</span>
+        </div>
+        <div class="sc-brag" data-anim="rise" data-d="0.68">Can you beat me?</div>
+        <div class="sc-copy" data-anim="rise" data-d="0.82">⧉ Copy results</div>
+      </div>
+    </div>
+    <div class="cap" data-anim="rise" data-d="0.98">Share your grid. <span class="redword">Brag rights included.</span></div>
+  </section>
+
+  <!-- 5 · CTA -->
+  <section class="scene" data-scene="cta">
+    <div class="wrap">
+      <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="color:var(--ink)">Free to play. <b class="redword">Out-guess your friends.</b></div>
+      <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
+    </div>
+  </section>
+</div>
+
+<div id="hint-cue">▶ Teaser #7 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="controls">
+  <button class="primary" id="btn-rec">● Record video</button>
+  <button id="btn-restart">↻ Restart</button>
+  <button id="btn-clean">Hide UI</button>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #7</span>
+</div>
+
+<script>
+const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+
+// ── Guess rows: state / district outline + name + hot/cold pill ─────────────
+const GUESSES={{GUESSES_JSON}}, GBOX={{GBOX}};
+(function(){
+  const wrap=document.getElementById('guess-rows'), label={cold:'Cold',hot:'Hot',win:'Correct ✓'};
+  GUESSES.forEach((g,i)=>{
+    const row=document.createElement('div');
+    row.className='guess-row'+(g.pill==='win'?' win':'');
+    row.setAttribute('data-anim','rise'); row.setAttribute('data-d',(0.24+i*0.12).toFixed(2));
+    row.innerHTML=`<span class="gn">${g.n}</span>`
+      +`<svg class="gmap ${g.pill}" viewBox="0 0 ${GBOX} ${GBOX}" aria-hidden="true"><path d="${g.path}"/></svg>`
+      +`<span class="gname">${g.name}</span>`
+      +`<span class="gpill ${g.pill}">${label[g.pill]}</span>`;
+    wrap.appendChild(row);
+  });
+})();
+
+// ── Zoom words: dolly in toward the viewer, then fly past the camera ───────
+// (the last word arrives and stays)
+const ZWORDS=[...document.querySelectorAll('.zword')].map((el,i)=>({el,start:0.30+i*0.72}));
+const Z_ARRIVE=0.34, Z_HOLD=0.18, Z_DEPART=0.30;
+
+// ── End-card confetti: fires part-way into the (held) CTA scene and keeps
+//    falling through the hold, so the final frame is logo + confetti. ────────
+const SW={{STAGE_W}}, SH={{STAGE_H}};
+const CONF_FIRE=2.0;                                   // s into the CTA scene
+const CONF_COLORS=['#C41230','#2b6cb0','#2f9e44','#FDB515','#1a1a1a','#e64980','#ffffff'];
+const confettiLayer=document.getElementById('confetti');
+const CONFETTI=(function(){
+  const arr=[]; let seed=1337; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=0;i<72;i++){
+    const el=document.createElement('div'); el.className='cf';
+    const w=8+rnd()*12, h=8+rnd()*14;
+    el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+    el.style.width=w.toFixed(1)+'px'; el.style.height=h.toFixed(1)+'px';
+    el.style.borderRadius=(rnd()<0.3?'50%':'2px');
+    confettiLayer.appendChild(el);
+    arr.push({el, x0:-0.05*SW+rnd()*1.10*SW, y0:-0.12*SH-rnd()*0.10*SH,
+      dist:SH*1.20+rnd()*0.1*SH, delay:rnd()*1.4, fall:2.0+rnd()*1.3,
+      damp:12+rnd()*60, dfreq:1.4+rnd()*2.4, phase:rnd()*6.283,
+      rot0:rnd()*360, spin:(rnd()-0.5)*720});
+  }
+  return arr;
+})();
+// Run the end card until every piece has landed, then hold the logo +3s more.
+const CONF_END = CONF_FIRE + Math.max(...CONFETTI.map(c=>c.delay+c.fall));
+const CTA_DUR = CONF_END + 3;
+function renderConfetti(active, elapsed){
+  if(!active){ if(confettiLayer.style.opacity!=='0') confettiLayer.style.opacity='0'; return; }
+  confettiLayer.style.opacity='1';
+  for(const c of CONFETTI){
+    if(elapsed<c.delay){ c.el.style.opacity='0'; continue; }
+    const p=clamp((elapsed-c.delay)/c.fall,0,1);
+    const y=c.y0+c.dist*(0.35*p+0.65*p*p);
+    const x=c.x0+Math.sin(elapsed*c.dfreq+c.phase)*c.damp;
+    const rot=c.rot0+elapsed*c.spin;
+    const op = p<0.12 ? p/0.12 : p>0.9 ? (1-p)/0.1 : 1;
+    c.el.style.opacity=op.toFixed(2);
+    c.el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(1)}deg)`;
+  }
+}
+
+// scene name, duration, whip axis/direction, and optional behaviours
+const DEF=[
+  {name:'intro',      dur:2.6, ax:'y', dir: 1, scatterOut:true, dynamicIntro:true},
+  {name:'sixguesses', dur:2.9, ax:'x', dir: 1, zoom:true},
+  {name:'guesses',    dur:3.3, ax:'x', dir:-1},
+  {name:'share',      dur:3.6, ax:'x', dir: 1},
+  {name:'cta',        dur:CTA_DUR, ax:'x', dir:-1, hold:true},
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
+const CTA=SCENES.find(s=>s.name==='cta');
+const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
+
+SCENES.forEach(s=>{
+  s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
+});
+
+function revealKids(s,lt){
+  for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
+    let tf='', fl='';
+    if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`;
+    else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
+    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;   // fly in from the left
+    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;    // fly in from the right
+    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }  // rushes at the viewer
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf;
+    if(k.type==='zoomIn') k.n.style.filter=fl; }
+}
+
+// scatterOut scenes fly each child off in its own direction (data-exit: L/R/U/D)
+// or zoom past the camera (Z) instead of the block sliding off as one piece.
+const SCATTER_DUR=0.7, SCATTER_TRAVEL=820, SCATTER_ZOOM=5.5, SCATTER_ZBLUR=22;
+function scatterKids(s,lt,dur){
+  if(lt<=dur-SCATTER_DUR) return;
+  const p=easeIn(clamp((lt-(dur-SCATTER_DUR))/SCATTER_DUR,0,1)), T=SCATTER_TRAVEL;
+  for(const k of s.kids){ let x=0,y=0; const e=k.exit;
+    if(e==='L')x=-T*p; else if(e==='R')x=T*p; else if(e==='U')y=-T*p; else if(e==='D')y=T*p;
+    if(e==='Z'){ k.n.style.transform=`scale(${(1+p*SCATTER_ZOOM).toFixed(2)})`; k.n.style.filter=`blur(${(p*SCATTER_ZBLUR).toFixed(1)}px)`; }
+    else k.n.style.transform=`translate3d(${x.toFixed(0)}px,${y.toFixed(0)}px,0)`;
+    k.n.style.opacity=clamp(1-p*1.5,0,1).toFixed(3); }
+}
+
+let startTs=null, paused=false, pauseAt=0;
+window.__teaser={seek:t=>{paused=true;pauseAt=((t%LOOP)+LOOP)%LOOP;},play:()=>{paused=false;startTs=null;},loop:()=>LOOP};
+
+function frame(ts){
+  if(startTs===null) startTs=ts;
+  const t = paused ? pauseAt : ((ts-startTs)/1000)%LOOP;
+  for(const s of SCENES){
+    const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
+    if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
+    let x=0,y=0,sc=1,bl=0,op=1,ry=0;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=s.dynamicIntro?0:(1-p)*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(s.hold){ /* settle and hold — static logo, never swipes out (confetti scene) */ }
+    else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
+    else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
+    el.style.opacity=op.toFixed(3);
+    el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
+    el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
+    revealKids(s,lt);
+    if(s.scatterOut) scatterKids(s,lt,dur);
+
+    if(s.zoom){
+      // Each word dollies in from far away (tiny → full size), holds, then
+      // blows past the camera (scales huge + blurs + fades). Last word stays.
+      ZWORDS.forEach((w,i)=>{
+        const wl=lt-w.start, last=i===ZWORDS.length-1;
+        let o=0, scw=0.1, blw=0;
+        if(wl>0){
+          if(wl<Z_ARRIVE){ const p=easeOut(clamp(wl/Z_ARRIVE,0,1)); scw=lerp(0.1,1,p); o=clamp(p*1.8,0,1); }
+          else if(last || wl<Z_ARRIVE+Z_HOLD){ scw=1; o=1; }
+          else if(wl<Z_ARRIVE+Z_HOLD+Z_DEPART){ const p=easeIn(clamp((wl-Z_ARRIVE-Z_HOLD)/Z_DEPART,0,1));
+            scw=lerp(1,6.5,p); o=1-p; blw=10*p; }
+          else { o=0; scw=6.5; }
+        }
+        w.el.style.opacity=o.toFixed(3);
+        w.el.style.transform=`scale(${scw.toFixed(3)})`;
+        w.el.style.filter=blw>0.05?`blur(${blw.toFixed(1)}px)`:'none';
+      });
+    }
+  }
+  // End-card confetti — driven purely by the CTA scene's local time (so it's
+  // deterministic under render-mp4's frame-by-frame seek).
+  const ctaLt=t-CTA.t0, ctaOn=(t>=CTA.t0-0.02 && t<CTA.t1+0.02);
+  renderConfetti(ctaOn && ctaLt>=CONF_FIRE, ctaLt-CONF_FIRE);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Controls + record ───────────────────────────────────────────────────────
+const statusEl=document.getElementById('status');
+document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
+document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); if(paused){paused=false;startTs=performance.now()-pauseAt*1000;} else {paused=true;pauseAt=((performance.now()-(startTs||performance.now()))/1000)%LOOP;}}
+  if(e.key==='r'||e.key==='R'){startTs=null;paused=false;}
+  if(e.key==='h'||e.key==='H'){document.body.classList.toggle('clean');fit();}
+});
+
+let rec, chunks=[];
+document.getElementById('btn-rec').onclick=async ()=>{
+  try{
+    statusEl.textContent='Choose “This Tab”…';
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:{{STAGE_W}},height:{{STAGE_H}}},audio:false,preferCurrentTab:true});
+    document.body.classList.add('clean'); fit(); startTs=null; paused=false; chunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12_000_000});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-7.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
+    rec.start();
+    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    statusEl.textContent='● Recording '+left+'s…';
+    const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
+    setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);
+    stream.getVideoTracks()[0].onended=()=>{if(rec&&rec.state!=='inactive')rec.stop();};
+  }catch(err){statusEl.textContent='Record cancelled';document.body.classList.remove('clean');fit();}
+};
+
+function fit(){
+  const pad=document.body.classList.contains('clean')?0:56;
+  const s=Math.min(1,(window.innerWidth-pad)/{{STAGE_W}},(window.innerHeight-pad)/{{STAGE_H}});
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+</script>
+</body>
+</html>
