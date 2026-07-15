@@ -155,26 +155,44 @@ body[data-aspect="9x16"] .footer .wm{width:420px}
 })();
 
 // ── Confetti: a frozen burst (deterministic, static — no animation) ─────────
-(function(){
+// Pieces that would land over the centred content (badge, silhouette, title,
+// stat cards, footer) or an edge tile pill are skipped, so no confetti ever
+// sits on the text. Keep-out boxes are measured from the real layout in
+// stage-local % (scale-invariant — stage and elements share fit()'s transform),
+// so it holds across aspects, districts and modes.
+function buildConfetti(){
   const COLORS=['#C41230','#F4B733','#1f7a3d','#2f6fd0','#e01a3c','#111'];
   const box=document.getElementById('confetti');
+  box.innerHTML='';
+  const stage=document.getElementById('stage').getBoundingClientRect();
+  const M=14;                                       // px margin kept clear of content
+  const zones=[...document.querySelectorAll(
+    '#wrap .badge,#wrap .sil,#wrap .title,#wrap .stats,#wrap .footer,#tiles .tile')].map(el=>{
+    const r=el.getBoundingClientRect();
+    return [(r.left-stage.left-M)/stage.width*100, (r.top-stage.top-M)/stage.height*100,
+            (r.right-stage.left+M)/stage.width*100, (r.bottom-stage.top+M)/stage.height*100];
+  });
+  const blocked=(x,y)=>zones.some(([x0,y0,x1,y1])=>x>=x0&&x<=x1&&y>=y0&&y<=y1);
   const N=94;
-  for(let i=0;i<N;i++){
+  for(let i=0,placed=0;placed<N&&i<N*8;i++){
     const h=(i*2654435761)>>>0;                     // cheap deterministic hash
     const x=(h%1000)/10;                            // 0..100 %
     // Bias vertically toward the upper burst, thinning lower down.
     const yr=((h>>10)%1000)/1000;
     const y=Math.pow(yr,1.7)*88 + 1;                // 1..~89 %
+    if(blocked(x,y)) continue;                      // don't cover content / tiles
     const rot=((h>>3)%360);
     const sc=0.7+((h>>7)%60)/100;
     const c=document.createElement('div');c.className='conf';
     c.style.left=x+'%';c.style.top=y+'%';
-    c.style.background=COLORS[i%COLORS.length];
+    c.style.background=COLORS[placed%COLORS.length];
     c.style.transform='rotate('+rot+'deg) scale('+sc.toFixed(2)+')';
     c.style.opacity=(0.78+((h>>5)%22)/100).toFixed(2);
     box.appendChild(c);
+    placed++;
   }
-})();
+}
+buildConfetti();
 
 // Full-bleed capture mode (no dark frame / shadow) when exporting a PNG.
 if(location.hash==='#shot'||location.search.includes('shot')) document.body.classList.add('clean');
@@ -186,7 +204,9 @@ function fit(){
   document.getElementById('stage').style.transform='scale('+s+')';
 }
 window.addEventListener('resize',fit);fit();
-if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+// Rebuild confetti once fonts are ready so the text keep-out boxes use real
+// Barlow metrics (the first pass runs with fallback-font widths).
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{buildConfetti();fit();});}
 </script>
 </body>
 </html>
