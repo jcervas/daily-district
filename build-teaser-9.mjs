@@ -1,23 +1,25 @@
 // ============================================================
-// build-teaser-6.mjs   (Teaser #6 — "Play to win" / basketball)
+// build-teaser-9.mjs   ("Sudden Death" — soccer / free-kick shootout)
 //
-// A playful, high-energy standalone promo: a basketball dives in from a
-// random direction each shot (3D — grows as it approaches camera, spins,
-// motion-blurs, tilts away in perspective) and sinks directly INTO a district
-// silhouette — the district itself is the basket, no separate hoop graphic —
-// with an entry-ring flash at the point of impact and a quick "+1" popup,
-// then the shape flubber-morphs fast into the next district and the next
-// ball dives in. Fast-paced, rapid-fire cuts through a lineup of districts.
-// Reuses the shared dynamic-intro scene and the shared end-card confetti/hold
-// pattern verbatim from the other teasers.
-// Tagline: "Play to win at daily-district.com".
+// A standalone promo built for the soccer/World-Cup moment: a ball curls in
+// on a bending free-kick path each round (3D — grows as it "approaches
+// camera", spins, motion-blurs, tilts away in perspective) and rips directly
+// INTO a district silhouette rendered as a net (diagonal net-mesh over the
+// shape) — the district itself is the goal, no separate frame graphic — with
+// a net-ripple + "GOAL" flash at the point of impact, then the shape
+// flubber-morphs fast into the next district and the next kick fires. A
+// running shootout scoreboard (one dot per round, filling in as each kick
+// scores) ties the loop structurally to Daily District's own guess-limit
+// mechanic. Reuses the shared dynamic-intro scene and the shared end-card
+// confetti/hold pattern verbatim from the other teasers.
+// Tagline: "Sudden death, every day." at daily-district.com
 //
 // Usage:
-//   node build-teaser-6.mjs                        # default line-up, 1:1
-//   node build-teaser-6.mjs --aspect=9x16          # 1x1 (default) | 9x16 | 16x9
-//   node build-teaser-6.mjs --districts=IL-04,MD-03,TX-35,NC-01,LA-02
+//   node build-teaser-9.mjs                        # default line-up, 1:1
+//   node build-teaser-9.mjs --aspect=9x16          # 1x1 (default) | 9x16 | 16x9
+//   node build-teaser-9.mjs --districts=IL-04,MD-03,TX-35,NC-01,LA-02
 //
-// Output: social/teaser-6/teaser-6.html  (or teaser-6-<aspect>.html)
+// Output: social/teaser-9/teaser-9.html  (or teaser-9-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
 // ============================================================
 
@@ -40,9 +42,9 @@ const [STAGE_W, STAGE_H] = ASPECTS[ASPECT];
 
 const STATE_NAMES = { AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming' };
 
-// Curated default line-up: recognizable, visually striking (irregular) shapes
-// so each "make" reads clearly and morphs into something distinct-looking.
-const DEFAULT_IDS = ['IL-04', 'MD-03', 'TX-35', 'NC-01', 'LA-02', 'AK-01', 'NY-13', 'GA-05', 'WY-01'];
+// Curated default line-up: recognizable, visually striking (irregular) shapes.
+// Five, on purpose — mirrors a standard penalty-shootout round count.
+const DEFAULT_IDS = ['IL-04', 'MD-03', 'TX-35', 'NC-01', 'LA-02'];
 const ids = arg('districts')
   ? arg('districts').toUpperCase().split(',').map(s => { const [st, d] = s.split('-'); return `${st}-${String(d).padStart(2, '0')}`; })
   : DEFAULT_IDS;
@@ -65,8 +67,8 @@ function fitFeatureOf(feature) {
 }
 const SIL_BOX = 400;
 // Path + the shape's actual visual centroid (not just its bounding-box
-// center) so the ball genuinely converges into the red area, even for
-// elongated/irregular districts like LA-02 or NC-01.
+// center) so the ball genuinely converges into the net, even for elongated/
+// irregular districts like LA-02 or NC-01.
 function silOf(f) {
   const ff = fitFeatureOf(f);
   const proj = geoAlbersUsa().fitExtent([[18, 18], [SIL_BOX - 18, SIL_BOX - 18]], ff);
@@ -94,27 +96,21 @@ const fontsCss = Object.entries(FONT_WEIGHTS).map(([name, weight]) => {
 }).join('\n');
 const wordmarkInner = read('wordmark.svg').replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '').trim();
 
-// Basketball photo (Freepik, by macrovector — asset #10603057/42545, licensed
-// under the user's Freepik premium subscription, no attribution required).
-// Extracted to an isolated, transparent PNG with the source's baked-in drop
-// shadow removed (the promo renders its own ball-shadow underneath instead).
-const ballImgB64 = fs.readFileSync(path.join(DIR, 'social', 'teaser-6', 'assets', 'basketball.png')).toString('base64');
-
 // ── Assemble ─────────────────────────────────────────────────────────────────
+// (Ball is a hand-drawn vector in the template — no bitmap asset to inline.)
 const flubberJs = read('node_modules/flubber/build/flubber.min.js');
-let html = read('social/teaser-6/teaser.template.html')
+let html = read('social/teaser-9/teaser.template.html')
   .replace('/*{{FONTS_CSS}}*/', () => fontsCss)
   .replace('/*{{FLUBBER_JS}}*/', () => flubberJs);
 const repl = {
   WORDMARK: wordmarkInner, STAGE_W: String(STAGE_W), STAGE_H: String(STAGE_H), ASPECT,
   SIL_BOX: String(SIL_BOX), SIL_PATH0, SIL_PATHS_JSON, DISTRICTS_META_JSON,
-  BALL_IMG_B64: ballImgB64,
 };
 for (const [k, v] of Object.entries(repl)) html = html.replaceAll(`{{${k}}}`, v);
 
-const outDir = path.join(DIR, 'social', 'teaser-6');
+const outDir = path.join(DIR, 'social', 'teaser-9');
 fs.mkdirSync(path.join(outDir, 'out'), { recursive: true });
-const outName = ASPECT === '1x1' ? 'teaser-6.html' : `teaser-6-${ASPECT}.html`;
+const outName = ASPECT === '1x1' ? 'teaser-9.html' : `teaser-9-${ASPECT}.html`;
 fs.writeFileSync(path.join(outDir, outName), html);
 const leftover = html.match(/\{\{[A-Z_0-9]+\}\}/g);
 console.log(`${outName} written @ ${STAGE_W}×${STAGE_H} — ${DISTRICTS.map(d=>d.id).join(', ')} (${(html.length/1024).toFixed(0)} KB)`);

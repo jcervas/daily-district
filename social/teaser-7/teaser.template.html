@@ -249,7 +249,7 @@ const GUESSES={{GUESSES_JSON}}, GBOX={{GBOX}};
 })();
 
 // ── Zoom words: dolly in toward the viewer, then fly past the camera ───────
-// (the last word arrives and stays)
+// (all three exit the same way, including the last)
 const ZWORDS=[...document.querySelectorAll('.zword')].map((el,i)=>({el,start:0.30+i*0.72}));
 const Z_ARRIVE=0.34, Z_HOLD=0.18, Z_DEPART=0.30;
 
@@ -363,11 +363,11 @@ function frame(ts){
       // Each word dollies in from far away (tiny → full size), holds, then
       // blows past the camera (scales huge + blurs + fades). Last word stays.
       ZWORDS.forEach((w,i)=>{
-        const wl=lt-w.start, last=i===ZWORDS.length-1;
+        const wl=lt-w.start;
         let o=0, scw=0.1, blw=0;
         if(wl>0){
           if(wl<Z_ARRIVE){ const p=easeOut(clamp(wl/Z_ARRIVE,0,1)); scw=lerp(0.1,1,p); o=clamp(p*1.8,0,1); }
-          else if(last || wl<Z_ARRIVE+Z_HOLD){ scw=1; o=1; }
+          else if(wl<Z_ARRIVE+Z_HOLD){ scw=1; o=1; }
           else if(wl<Z_ARRIVE+Z_HOLD+Z_DEPART){ const p=easeIn(clamp((wl-Z_ARRIVE-Z_HOLD)/Z_DEPART,0,1));
             scw=lerp(1,6.5,p); o=1-p; blw=10*p; }
           else { o=0; scw=6.5; }

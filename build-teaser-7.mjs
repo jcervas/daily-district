@@ -63,7 +63,7 @@ const sdPath = sd => fitPath(dists.find(f => f.properties['state-district'] === 
 const GUESSES = [
   { n: 1, name: 'Texas',    pill: 'cold', path: stPath('TX') },
   { n: 2, name: 'Virginia', pill: 'hot',  path: stPath('VA') },
-  { n: 3, name: 'WV-01',    pill: 'win',  path: sdPath('WV-01') },
+  { n: 3, name: 'VA-08',    pill: 'win',  path: sdPath('VA-08') },
 ];
 
 // ── Fonts + wordmark (shared with the other promos) ─────────────────────────

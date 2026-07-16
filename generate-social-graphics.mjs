@@ -19,7 +19,7 @@
 //   node generate-social-graphics.mjs --all           every base district (435)
 //   node generate-social-graphics.mjs --out=some/dir  output directory
 //
-// Output: social/out/<district>-16x9.png and <district>-9x16.png
+// Output: social/daily-district-card/<district>-16x9.png and <district>-9x16.png
 // ============================================================
 
 import fs from 'node:fs';
@@ -192,7 +192,7 @@ async function renderPng(svg, outW) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const arg = k => process.argv.find(a => a.startsWith(`--${k}`));
-  const outDir = arg('out=') ? arg('out=').slice(6) : path.join(DIR, 'social', 'out');
+  const outDir = arg('out=') ? arg('out=').slice(6) : path.join(DIR, 'social', 'daily-district-card');
   fs.mkdirSync(outDir, { recursive: true });
 
   const topo = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));

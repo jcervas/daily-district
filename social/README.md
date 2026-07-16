@@ -42,10 +42,18 @@ social/
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-6*.html               built pages  (git-ignored)
 │    out/daily-district-teaser-6-<aspect>[-2160].mp4   (git-ignored)
-└─ teaser-7/                        ← teaser #7 (Wordle for geography nerds)
+├─ teaser-7/                        ← teaser #7 (Wordle for geography nerds)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-7*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-7-<aspect>[-2160].mp4   (git-ignored)
+├─ teaser-8/                        ← teaser #8 (Drawing the district)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-8*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-8-<aspect>[-2160].mp4   (git-ignored)
+└─ teaser-9/                        ← teaser #9 (Sudden Death — soccer)
      teaser.template.html         template (edit copy / motion)
-     teaser-7*.html               built pages  (git-ignored)
-     out/daily-district-teaser-7-<aspect>[-2160].mp4   (git-ignored)
+     teaser-9*.html               built pages  (git-ignored)
+     out/daily-district-teaser-9-<aspect>[-2160].mp4   (git-ignored)
 ```
 
 Every video ships in all three aspects — **16:9** (X timeline / YouTube),
@@ -64,9 +72,10 @@ that block verbatim into a new teaser to keep the ending consistent.
 `build-teaser-1.mjs` (gameplay promo), `build-teaser-2.mjs` (teaser #2),
 `build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
 `build-teaser-5.mjs` (teaser #5), `build-teaser-6.mjs` (teaser #6),
-`build-teaser-7.mjs` (teaser #7), `render-mp4.mjs` (HTML → MP4).
+`build-teaser-7.mjs` (teaser #7), `build-teaser-8.mjs` (teaser #8),
+`build-teaser-9.mjs` (teaser #9), `render-mp4.mjs` (HTML → MP4).
 
-**Two teasers (#4 and #6) morph one district silhouette into another** using
+**Three teasers (#4, #6, #9) morph one district silhouette into another** using
 the `flubber` npm package (already a project dependency — `node_modules/flubber/build/flubber.min.js`
 is read and inlined into the built HTML by their build scripts, so the output
 page has no external dependency at runtime). Pattern: precompute
@@ -113,6 +122,12 @@ npm run teaser6                                   # 1:1 (also --aspect=9x16 | 16
 
 # ── Teaser #7 (Wordle for geography nerds) → social/teaser-7/teaser-7*.html ──
 npm run teaser7                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #8 (Drawing the district) → social/teaser-8/teaser-8*.html ──
+npm run teaser8                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #9 (Sudden Death — soccer) → social/teaser-9/teaser-9*.html ──
+npm run teaser9                                   # 1:1 (also --aspect=9x16 | 16x9)
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 # args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
@@ -482,7 +497,7 @@ node render-mp4.mjs social/teaser-7/teaser-7.html \
 
 - `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
   cheat-sheet args.
-- The illustrative guess sequence (Texas → cold, Virginia → hot, WV-01 → win)
+- The illustrative guess sequence (Texas → cold, Virginia → hot, VA-08 → win)
   lives in `build-teaser-7.mjs` (`GUESSES`); all copy, the zoom words, and the
   share-card tile styling live in `social/teaser-7/teaser.template.html`.
 
@@ -500,9 +515,193 @@ Total loop: **~22.0s**.
 
 ---
 
+## 4g. Teaser #8 — Drawing the district (standalone)
+
+The reveal hook. It opens cold — no wordmark intro, straight onto a slow,
+oversized **comet racing the full screen right-to-left**, joined by another
+**left-to-right**, then a **vertical** sweep (top-to-bottom) — pure kinetic
+buildup, not tied to any real geometry. Each is a glowing spark + fading tail
+with flying, fading embers — the same visual language as the live game's
+post-game "spark trace" (`script.js` `_runGameoverSparkTrace`/`emitEmber`), not
+a flat line — and each travels far enough past its own margin that the *whole*
+comet, tail included, is off-stage before it's hidden (a bare margin around the
+head alone still left long tails visibly hanging on screen).
+
+**The fourth line isn't a comet at all — it's the district itself**, already
+drawing, with its tip starting outside the viewBox and flying in (bottom → top)
+to dead centre. That's the whole trick, and it's why there's no hand-off left to
+get wrong: the trail streaming behind that tip *is* the real boundary, so the
+line that flies in and the line that keeps drawing are literally the same
+object. Earlier versions had a synthetic 4th comet land on the spark and pass
+the baton, which meant two separate things had to agree on an angle to the
+degree — and when they didn't, it visibly "started drawing in a different
+direction". One object can't disagree with itself.
+
+Two camera modes make that work, joined seamlessly at `FLY_LEN`:
+
+- **Fly-in** — the district is held *static* and only the ink grows, so the tip
+  walks its own boundary in from off-stage and the trail lies exactly along the
+  tip's path. (Locking the tip at centre during the fly-in instead — the obvious
+  thing — makes the ink swing *around* the tip rather than trail it, and it
+  reads as a squiggle sliding sideways, not a line flying in.)
+- **Tip-locked** — thereafter **the spark holds still at dead center and the
+  district turns underneath it**: the content is translated, scaled, and rotated
+  (driven by the boundary's own smoothed, unwrapped tangent angle, so one full
+  lap spins the view a full turn) to keep the current point under that fixed
+  spark.
+
+At the join both modes place `pt(FLY_LEN)` at centre with the same rotation
+(`ROT_K` carries the fly-in's rotation across, then unwinds over the zoom-out so
+the base term's exact −360°-per-lap still lands the shape upright). The reveal runs in
+**two beats**: for the first `ZOOM_START` (9 s) the camera just holds its tight
+crop and follows the spark, so the comet fills the frame and the drawing reads
+as genuinely *happening* (the already-drawn part simply runs off the frame at
+that zoom — `.draw-svg` is `overflow:visible`, so it's clipped by the stage's
+own edge like a camera panning across a big drawing, not by an inner box edge).
+Only then does the camera start **zooming out**, over the remaining 9 s,
+bringing the off-frame strokes home — so the pull-back *is* the reveal, and the
+last stroke and the full zoom-out land together.
+
+Then, once the code + state have popped in
+and had a beat to be read, the fully-revealed shape doesn't just disappear:
+it **morphs** (shrinks + fades) directly into the faint outline that frames
+the wordmark for the rest of the video, so the cta scene starts exactly as
+the morph finishes — one continuous element the whole way through, not a
+hand-off between two separate ones. Slow and deliberate throughout (long
+comet sweeps, an 18 s reveal — the boundary-drawing beat is deliberately the
+slowest part of the whole video) and the district fills as much of the
+frame as it can — on **9:16** the district is fit to its own natural (usually
+landscape) aspect ratio and the whole box is **rotated 90°** so a wide
+district still runs the full height of the tall frame, rather than being
+squeezed into the narrow width. ~39 s, **1:1** by default.
+
+Throughout the reveal the pen holds **one steady pace** — `drawP` is
+deliberately linear. An ease there eases *out* as well as in, and made the line
+visibly crawl to a halt over the closing stretch: `easeInOut` drew only ~1.9 %
+of the boundary in its final sixth versus ~35 % mid-stroke, an ~18× swing.
+The camera is what eases; the hand doesn't. Two earlier attempts at the
+zoom/reveal failed instructively, and are worth not re-inventing: ramping the
+zoom from t=0 left the view already wide while only a short comet tail was ever
+visible — a tiny squiggle adrift in a big empty frame, which read as "nothing
+is being built"; and lighting only a trailing window that *widened* during the
+pull-back meant the start of the visible dash slid backwards as it opened,
+which read as the district building itself **in reverse**. Hence the current
+shape of it: the dash only ever grows forward from 0, and `overflow:visible`
+does the job the moving window used to.
+
+Two more traps around the fly-in, both of which look right on paper:
+
+**`FLY_LEN` is solved, not chosen.** The pen's pace is fixed (linear), so how
+long the fly-in lasts and how far off-stage it starts are the *same* number —
+you can't pick them independently. The code walks forward to the first length
+where `START_PT` clears the frame and stops there. Overshooting isn't harmless:
+it starts the tip proportionally further out and buys dead seconds of empty
+frame before anything appears.
+
+**The chord has to cross two scales, and the edge distance is directional.**
+Getting `START_PT` off-stage means converting viewBox units → stage px through
+*both* the zoom (`TRACE_SCALE`) **and** the svg's own viewBox→css `SVG_SCALE`;
+missing the second put the tip 1254 px below a 720 px-tall stage. And the
+distance to the edge along the flight heading is *not* the half-diagonal —
+for a vertical entry the diagonal overshoots ~1.8×, hence `FLY_EDGE`. Both
+`SVG_SCALE` and `FLY_EDGE` differ per aspect, so this is solved per aspect
+rather than fixed: 16:9 lands on a 1.26 s fly-in starting 142 px below the
+stage, 9:16 on 2.27 s starting 156 px below — each just barely off-stage.
+
+```bash
+node build-teaser-8.mjs                       # default district (MD-03), 1:1
+node render-mp4.mjs social/teaser-8/teaser-8.html \
+  social/teaser-8/out/daily-district-teaser-8-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- `--district=NC-01` swaps the featured district (any district code; defaults
+  to `MD-03`). The build script fits it to its own aspect ratio and decides
+  per-output-aspect whether to rotate 90° — no manual tuning needed per district.
+- The three synthetic comets' sizing and timing (`COMETS`, `N_EMBER`), the
+  district's fly-in (`FLY_TRAVEL` — the heading it enters on; `FLY_EDGE`/`FLY_D`
+  /`FLY_LEN`/`FLY_DUR`, all *derived* from it so they can't disagree; `ROT_STATIC`
+  rotates the shape onto that heading and `ROT_K` carries it across the join),
+  the reveal's timing/zoom
+  (`REVEAL_DUR`, `ZOOM_START` — how long it draws tight-zoomed before the
+  pull-back begins — `TRACE_TIGHT`, `ROT_SMOOTH`), and the morph
+  timing (`MORPH_HOLD`, `MORPH_DUR`, `MORPH_SMALL_SCALE`) live in
+  `social/teaser-8/teaser.template.html`; the district's natural-aspect fit +
+  rotation decision (`TRACE_VB_W/H`, `ROTATE`) and the default district live
+  in `build-teaser-8.mjs`.
+- The persistent shape (`#shape-overlay` in the template) is rendered outside
+  the normal per-scene system entirely, updated every frame regardless of
+  which `.scene` is visible — that's what lets it stay mounted and morph
+  smoothly across the draw→cta boundary instead of two separate elements
+  (a big reveal + a separate static cta-frame) handing off.
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `draw` | 0.0s | Three spark-and-ember comets sweep the full screen (horizontal ×2, vertical ×1), then the **district itself** is the 4th line — tip starting outside the viewBox, drawing as it flies in bottom→top to centre. From there the spark holds at centre and the district turns underneath it, drawing tight-zoomed until 9 s in, before the camera pulls back over the next 9 s to bring it all into frame; fills, code + state pop in, then morphs into the CTA's background frame |
+| 2 | `cta` | 29.4s | Wordmark + CTA, the just-morphed district outline framing the logo, + end-card confetti |
+
+Total loop: **~38.9s**.
+
+**This is the one teaser with no `intro` scene** — it opens cold on the comets
+rather than on the wordmark, so the lines are the first thing on screen. (The
+`draw` scene therefore carries `dynamicIntro:true`, which suppresses the shared
+engine's slide-in so the opening scene doesn't whip in from the side out of
+nowhere.) The wordmark still closes the video on the `cta` scene as usual.
+
+---
+
+## 4h. Teaser #9 — Sudden Death (standalone, soccer / free-kick shootout)
+
+The soccer take on teaser #6's shot-loop, built for the World Cup moment: the
+wordmark ("Bend it in"), then a ball **curls in on a bending free-kick path**
+(3D — grows as it "approaches camera" mid-flight, spins, motion-blurs, tilts
+away in perspective) and rips directly INTO a district silhouette rendered as
+a **net** (a diagonal net-mesh pattern over the shape — the district itself is
+the goal, no separate frame graphic), with a **net-ripple + "GOAL" flash** at
+impact and a **running shootout scoreboard** (one dot per round, filling gold
+as each kick scores — a nod to Daily District's own guess-limit mechanic), and
+the shape **flubber-morphs** into the next district for the next kick —
+repeated for a curated 5-district line-up (mirroring a standard penalty
+shootout) — then wordmark + CTA ("Sudden death, every day.") + end-card
+confetti. The ball is a vector (true pentagon/hexagon seam layout, white
+sphere shading) — no photo asset. ~20 s, **1:1** by default. Copy is
+evergreen (no date/team references) so the asset stays usable beyond any
+single tournament.
+
+```bash
+node build-teaser-9.mjs                       # default line-up, 1:1
+node render-mp4.mjs social/teaser-9/teaser-9.html \
+  social/teaser-9/out/daily-district-teaser-9-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- `--districts=IL-04,MD-03,TX-35,NC-01,LA-02` overrides the line-up (any
+  count — the `goal` scene's duration scales automatically, `N_SHOTS × 1.5s`).
+- Everything — the curl trajectory, scale/blur curve, net-mesh pattern,
+  scoreboard dots, per-round timing (`SHOT_DUR`/`ARC_DUR`/`MORPH_START`) —
+  lives in `social/teaser-9/teaser.template.html`; the district selection
+  lives in `build-teaser-9.mjs` (`DEFAULT_IDS`).
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline ("Bend it in") |
+| 2 | `goal` | 2.7s | Ball curls in (3D grow/shrink + spin), rips into the district-as-net, net ripples, "GOAL" flash, scoreboard dot fills, shape morphs to the next district, repeats for each district in the line-up (5 × 1.5s by default) |
+| 3 | `cta` | 10.2s | Wordmark + "Sudden death, every day." + end-card confetti |
+
+Total loop: **~19.9s** with the default 5-district line-up; scales with
+`--districts=`.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`teaser-1*.html`, `teaser-2/3/4/5/6/7.html`) can
+Every built page (`teaser-1*.html`, `teaser-2/3/4/5/6/7/8/9.html`) can
 export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/teaser-2/teaser-2.html`) in **Chrome**.
@@ -534,12 +733,20 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
 - **Teaser #7** — copy/timing/motion and the share-card tile styling live in
   `social/teaser-7/teaser.template.html`; the illustrative guess sequence in
   `build-teaser-7.mjs` (`GUESSES`). Rebuild with `build-teaser-7.mjs`.
+- **Teaser #8** — the comet sweeps, reveal camera/timing, and CTA frame
+  styling live in `social/teaser-8/teaser.template.html`; the featured
+  district via `--district=` (default in `build-teaser-8.mjs`). Rebuild with
+  `build-teaser-8.mjs`.
+- **Teaser #9** — the ball curl/scale/net-mesh visuals, scoreboard dots, and
+  per-round timing live in `social/teaser-9/teaser.template.html`; the
+  district line-up in `build-teaser-9.mjs` (`DEFAULT_IDS`). Rebuild with
+  `build-teaser-9.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
 JSON into the template. After any template/script change, re-run the build (and
 re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these pages.
 
-**Every video's section above (§3, §4, §4b–f) has a numbered Scenes table** —
+**Every video's section above (§3, §4, §4b–h) has a numbered Scenes table** —
 `#`, `data-scene` name, start time, and what it shows. Use those to point at a
 specific beat instead of describing it ("scene 4 of teaser #5" / "the `hist`
 scene in teaser #3"). **When you add a new teaser, add the same kind of table
