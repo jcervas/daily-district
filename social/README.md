@@ -546,40 +546,110 @@ Two camera modes make that work, joined seamlessly at `FLY_LEN`:
   reads as a squiggle sliding sideways, not a line flying in.)
 - **Tip-locked** — thereafter **the spark holds still at dead center and the
   district turns underneath it**: the content is translated, scaled, and rotated
-  (driven by the boundary's own smoothed, unwrapped tangent angle, so one full
-  lap spins the view a full turn) to keep the current point under that fixed
-  spark.
+  to keep the current point under that fixed spark. The turn (`TURN`/`turnSince`)
+  starts as the boundary's own smoothed, unwrapped tangent — so the ink trails
+  straight out behind the spark — and blends to an even one-lap-per-length turn
+  as the spark fades and the pen picks up speed. Either way it winds exactly one
+  lap (`LAP`), which is what lands the shape upright for the morph.
 
 At the join both modes place `pt(FLY_LEN)` at centre with the same rotation
 (`ROT_K` carries the fly-in's rotation across, then unwinds over the zoom-out so
-the base term's exact −360°-per-lap still lands the shape upright). The reveal runs in
-**two beats**: for the first `ZOOM_START` (9 s) the camera just holds its tight
-crop and follows the spark, so the comet fills the frame and the drawing reads
-as genuinely *happening* (the already-drawn part simply runs off the frame at
-that zoom — `.draw-svg` is `overflow:visible`, so it's clipped by the stage's
-own edge like a camera panning across a big drawing, not by an inner box edge).
-Only then does the camera start **zooming out**, over the remaining 9 s,
-bringing the off-frame strokes home — so the pull-back *is* the reveal, and the
-last stroke and the full zoom-out land together.
+the base term's exact one-lap turn still lands the shape upright). The reveal
+runs in **three beats**:
+
+1. **Tight** (`ZOOM_START`, 4 s) — the camera holds its tight crop and follows
+   the spark, so the comet fills the frame and the drawing reads as genuinely
+   *happening*. The already-drawn part simply runs off the frame at that zoom —
+   `.draw-svg` is `overflow:visible`, so it's clipped by the stage's own edge
+   like a camera panning across a big drawing, not by an inner box edge.
+2. **Zoom** (`DRAW_T2`, ~2.2 s) — the camera pulls back, bringing the off-frame
+   strokes home, and completes at `ZOOM_MID` (**half the path drawn**). The pen's
+   *apparent* speed does not change at all across this, by construction.
+3. **Sprint** (`DRAW_T3`, ~1.8 s) — camera parked at 1×; now, and only now, the
+   pen genuinely accelerates to `DRAW_BOOST`.
+
+Zoom first, *then* sprint. Doing both at once (the obvious single blended
+pull-back) gives the speed-up nothing to be measured against — and, because the
+camera tracks the tangent, it whips the frame around every zigzag exactly when
+the pen is fastest. Separated, the pull-back reads as a reveal and the speed-up
+reads as a speed-up.
 
 Then, once the code + state have popped in
 and had a beat to be read, the fully-revealed shape doesn't just disappear:
 it **morphs** (shrinks + fades) directly into the faint outline that frames
 the wordmark for the rest of the video, so the cta scene starts exactly as
 the morph finishes — one continuous element the whole way through, not a
-hand-off between two separate ones. Slow and deliberate throughout (long
-comet sweeps, an 18 s reveal — the boundary-drawing beat is deliberately the
-slowest part of the whole video) and the district fills as much of the
+hand-off between two separate ones. The district fills as much of the
 frame as it can — on **9:16** the district is fit to its own natural (usually
 landscape) aspect ratio and the whole box is **rotated 90°** so a wide
 district still runs the full height of the tall frame, rather than being
-squeezed into the narrow width. ~39 s, **1:1** by default.
+squeezed into the narrow width. ~26 s, **1:1** by default.
 
-Throughout the reveal the pen holds **one steady pace** — `drawP` is
-deliberately linear. An ease there eases *out* as well as in, and made the line
-visibly crawl to a halt over the closing stretch: `easeInOut` drew only ~1.9 %
-of the boundary in its final sixth versus ~35 % mid-stroke, an ~18× swing.
-The camera is what eases; the hand doesn't. Two earlier attempts at the
+**The pen's pace is derived, not dialled** (`drawProgress()`). `PEN_PACE` — the
+linear rate while zoomed in — is the only speed chosen by eye; every other rate
+and *every duration* falls out of an integral. Beat 2's rate is held proportional
+to `1/scale`, so as the camera retreats `TRACE_SCALE`× the same arc-length covers
+proportionally less screen and path progress speeds up by exactly that factor
+*for free*, with apparent speed provably flat. Beat 3 then ramps to a genuine
+`DRAW_BOOST` (1.7×) with the camera parked. `DRAW_T2` is exactly as long as it
+takes to draw from `DRAW_FRAC` to `ZOOM_MID` at steady apparent speed — that's
+what pins "fully zoomed out" to "about half drawn" — and `DRAW_T3` likewise
+finishes the path. The pen's pace and how long the reveal takes are the same
+fact. **`ZOOM_START` is the one dial**, and it has a floor (the fly-in must land
+first; 9x16 needs ~2.3 s) and a ceiling (`DRAW_T2` goes negative past ~9 s).
+Re-check all three aspects if you touch it — 16x9 alone will not tell you.
+
+Traps here, all of which looked fine on paper:
+
+- **Don't hand-pick the beat-2 curve.** A quadratic matched to beat 1's rate
+  at the join surged to **1.8× mid-pull-back and then slowed again** — the eased
+  zoom lags a quadratic draw, so they don't cancel. Deriving the rate from the
+  very `scale()` the camera uses makes them cancel by construction. (If you
+  change `zoomP`'s easing, `P2_SCALE` must change with it.)
+- **Never hardcode the lap as ±360°** (`LAP`). Which sign the boundary winds is a
+  property of the ring's orientation in the source geometry — MD-03 winds **+360**.
+  Assuming −360 set the rotation target spinning the wrong way and dumped ~720°
+  of extra spin into the sprint. It still landed **upright** (±360 both read as
+  0°), and `settledRotMod360` still said `0` — nothing caught it but the spin
+  itself. Read the lap off `UNWRAPPED`.
+- **Wrap `ROT_K` to ±180°.** Any `ROT_K±360k` puts the district in the identical
+  pose at both ends of the unwind, so no assertion downstream can see the
+  difference — but unwrapped it spins a needless extra revolution during the
+  pull-back (**1x1 turned −391° where −32° reaches the same place**). Aspects
+  differ: `ROT_STATIC` depends on the fly-in heading, so 16x9 landed inside ±180°
+  by luck and looked fine while 1x1 and 9x16 did not.
+- **To smooth the camera at speed, low-pass the turn RATE — not the heading, and
+  not the turn value.** Tangent-tracking costs (turn per unit length) × (pen
+  speed *along the path*), and that rises 4× through the pull-back even though
+  apparent speed never changes. Widening `ROT_SMOOTH` is a low-pass on the
+  *heading*: only the wiggle's amplitude falls while its rate still climbs with
+  the pen. Lerping the turn *value* between two targets is worse — they drift
+  ~100° apart mid-path, so crossing between them sweeps the camera through that
+  gap on top of the real turn (**spiked the pull-back to 308°/s**). Blend the
+  rate and integrate (`TURN`): that can only change how much each increment of
+  length turns the view.
+- **The fast rotation target has to be `UNIFORM`, not a low-passed tangent.**
+  This district has hairpin tendrils that turn ~180° within a few samples; any
+  window still narrow enough to *be* the tangent leaves those in, and at sprint
+  speed one hairpin alone whips the frame **~700°/s**. Uniform is the only target
+  with no hairpin left in it, and it costs nothing real: it lands within ~2° of
+  the low-passed tangent's total turn (−219° vs −241°) with **zero reversals**.
+- **Hand the tangent off when the SPARK fades, not at `ZOOM_MID`.** The tangent's
+  entire job is making the ink trail behind the spark; every frame it stays on
+  past the spark's death is wiggle at a pen speed that's already climbing.
+  Carrying it to `ZOOM_MID` left ~70% tangent while the pen was at 2× — **526°/s
+  on 1x1**. `ROT_FAST_TO` is derived from `SPARK_FADE` so the two can't drift.
+- **Never ease the draw itself.** An ease eases *out* as well as in: `easeInOut`
+  drew only ~1.9 % of the boundary in its final sixth versus ~35 % mid-stroke,
+  an ~18× swing, and the line visibly crawled to a halt. The camera eases; the
+  hand doesn't.
+- **Don't ease the comets either.** They dawdle at both ends — and both ends are
+  off-stage — so each burnt ~2/3 of its schedule invisible, leaving **4.4 s of
+  dead frame in a 7.4 s opening**. Linear travel plus a *negative* `COMET_GAP`
+  (they overlap) cut that to 0.76 s and nearly doubled each one's time on screen
+  without changing its duration.
+
+Two earlier attempts at the
 zoom/reveal failed instructively, and are worth not re-inventing: ramping the
 zoom from t=0 left the view already wide while only a short comet tail was ever
 visible — a tiny squiggle adrift in a big empty frame, which read as "nothing
@@ -623,9 +693,10 @@ node render-mp4.mjs social/teaser-8/teaser-8.html \
   district's fly-in (`FLY_TRAVEL` — the heading it enters on; `FLY_EDGE`/`FLY_D`
   /`FLY_LEN`/`FLY_DUR`, all *derived* from it so they can't disagree; `ROT_STATIC`
   rotates the shape onto that heading and `ROT_K` carries it across the join),
-  the reveal's timing/zoom
-  (`REVEAL_DUR`, `ZOOM_START` — how long it draws tight-zoomed before the
-  pull-back begins — `TRACE_TIGHT`, `ROT_SMOOTH`), and the morph
+  the reveal's timing/zoom (`ZOOM_START` — the one dial, how long it draws
+  tight-zoomed before the pull-back begins; `ZOOM_MID`/`PEN_PACE`/`DRAW_BOOST`,
+  with `DRAW_T2`/`DRAW_T3`/`REVEAL_DUR` all *derived*; `TRACE_TIGHT`,
+  `ROT_SMOOTH`/`LAP`/`TURN` for the camera's turn), and the morph
   timing (`MORPH_HOLD`, `MORPH_DUR`, `MORPH_SMALL_SCALE`) live in
   `social/teaser-8/teaser.template.html`; the district's natural-aspect fit +
   rotation decision (`TRACE_VB_W/H`, `ROTATE`) and the default district live
@@ -640,10 +711,10 @@ node render-mp4.mjs social/teaser-8/teaser-8.html \
 
 | # | Scene | ~Start | What it shows |
 |---|---|---|---|
-| 1 | `draw` | 0.0s | Three spark-and-ember comets sweep the full screen (horizontal ×2, vertical ×1), then the **district itself** is the 4th line — tip starting outside the viewBox, drawing as it flies in bottom→top to centre. From there the spark holds at centre and the district turns underneath it, drawing tight-zoomed until 9 s in, before the camera pulls back over the next 9 s to bring it all into frame; fills, code + state pop in, then morphs into the CTA's background frame |
-| 2 | `cta` | 29.4s | Wordmark + CTA, the just-morphed district outline framing the logo, + end-card confetti |
+| 1 | `draw` | 0.0s | Three spark-and-ember comets sweep the full screen (horizontal ×2, vertical ×1), then the **district itself** is the 4th line — tip starting outside the viewBox, drawing as it flies in bottom→top to centre (lands by 1.3–2.3 s, per aspect). From there the spark holds at centre and the district turns underneath it, drawing tight-zoomed until 9.8 s, then the camera pulls back at unchanged apparent speed and is fully out by 12.0 s / **half the path**; only then does the pen sprint to 1.7×, finishing the boundary at 13.8 s. Fills, code + state pop in, then morphs into the CTA's background frame |
+| 2 | `cta` | 16.2s | Wordmark + CTA, the just-morphed district outline framing the logo, + end-card confetti |
 
-Total loop: **~38.9s**.
+Total loop: **~25.7s** (the boundary itself draws in 8.0 s, `REVEAL_DUR`).
 
 **This is the one teaser with no `intro` scene** — it opens cold on the comets
 rather than on the wordmark, so the lines are the first thing on screen. (The

@@ -230,21 +230,18 @@ const wrapLen=len=>((len%PATH_LEN)+PATH_LEN)%PATH_LEN;
 const ptAt=len=>refPath.getPointAtLength(wrapLen(len));
 const ROT_SMOOTH=Math.max(14, PATH_LEN*0.022);   // smooth over local zigzags, keep the net turn
 function rawAngleAt(len){ const a=ptAt(len-ROT_SMOOTH), b=ptAt(len+ROT_SMOOTH); return Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI; }
-// Precompute an unwrapped (no ±180° snap) angle curve once, so any lookup
-// during rendering is a plain interpolation — deterministic under seeking.
+// Precompute an unwrapped (no ±180° snap) angle curve once, so any lookup during
+// rendering is a plain interpolation — deterministic under seeking.
 const ANGLE_SAMPLES=240;
 const UNWRAPPED=[rawAngleAt(0)];
 for(let i=1;i<=ANGLE_SAMPLES;i++){
-  const raw=rawAngleAt(PATH_LEN*i/ANGLE_SAMPLES);
-  let d=raw-rawAngleAt(PATH_LEN*(i-1)/ANGLE_SAMPLES);
+  let d=rawAngleAt(PATH_LEN*i/ANGLE_SAMPLES)-rawAngleAt(PATH_LEN*(i-1)/ANGLE_SAMPLES);
   while(d>180) d-=360; while(d<-180) d+=360;
   UNWRAPPED.push(UNWRAPPED[i-1]+d);
 }
-function unwrappedAngleAt(len){
-  const t=clamp(len/PATH_LEN,0,1)*ANGLE_SAMPLES, i0=Math.floor(t), i1=Math.min(i0+1,ANGLE_SAMPLES);
-  return lerp(UNWRAPPED[i0],UNWRAPPED[i1],t-i0);
-}
-const ANGLE0=UNWRAPPED[0];
+// turnSince() — the camera's total turn at a given arc length — is built from
+// UNWRAPPED further down, once the pen's pace is known: how much of the tangent
+// it keeps depends on how fast the pen gets, and that's decided there.
 const START_PT=refPath.getPointAtLength(0);
 
 // ── The FOURTH LINE IS THE DISTRICT ITSELF ────────────────────────────────
@@ -295,13 +292,19 @@ const COMETS=[
   {x1:-M,      y1:SH*0.58, x2:SW+M+hTailL,      y2:SH*0.58, dur:3.0,  tail:hTailL, w:22, headR:16}, // horizontal, left → right
   {x1:SW*0.62, y1:-M,      x2:SW*0.62,  y2:SH+M+vTailD,     dur:2.4,  tail:vTailD, w:16, headR:13}, // vertical, top → bottom
 ];
-const COMET_GAP=0.2;
+// Negative: the sweeps OVERLAP rather than queueing politely. By the time one
+// is this close to done its head is already off-stage and only the tail is
+// still clearing, so starting the next early costs nothing and buys back the
+// dead air between them.
+const COMET_GAP=-1.0;
 (function(){
   let t=0;
   COMETS.forEach((c,i)=>{ if(i>0) t+=COMET_GAP; c.t0=t; c.t1=t+c.dur; t=c.t1; });
 })();
-// The district's own fly-in starts a beat after the last synthetic sweep leaves.
-const COMET_END=COMETS[COMETS.length-1].t1+COMET_GAP;
+// The district's fly-in starts as the last sweep's HEAD leaves the stage, not
+// when its tail finally finishes clearing — otherwise there's ~0.6s of empty
+// frame while we wait on something already off-screen.
+const COMET_END=COMETS[COMETS.length-1].t1-0.6;
 
 const N_EMBER=7;
 COMETS.forEach(c=>{
@@ -329,8 +332,10 @@ COMETS.forEach(c=>{
     el.setAttribute('class','ember');
     cometsG.appendChild(el);
     const tAlong=(i+0.5)/N_EMBER;
+    // linear to match the head's own (now linear) travel — an eased position
+    // here would spawn embers where the head isn't
     c.embers.push({el, tAlong, ang:(i*137.5)*Math.PI/180, dist:c.headR*(1.8+(i%3)*0.7), life:0.34,
-      ox:lerp(c.x1,c.x2,easeInOut(tAlong)), oy:lerp(c.y1,c.y2,easeInOut(tAlong)), spawnT:c.t0+c.dur*tAlong});
+      ox:lerp(c.x1,c.x2,tAlong), oy:lerp(c.y1,c.y2,tAlong), spawnT:c.t0+c.dur*tAlong});
   }
 });
 
@@ -341,7 +346,12 @@ function updateComets(lt){
     c.line.style.opacity=on?'1':'0';
     c.head.style.opacity=on?'1':'0';
     if(on){
-      const hx=lerp(c.x1,c.x2,easeInOut(p)), hy=lerp(c.y1,c.y2,easeInOut(p));
+      // LINEAR, not eased. A comet flying past doesn't decelerate — and more to
+      // the point, an ease dawdles at both ends, which for these is entirely
+      // off-stage: each one burnt ~2/3 of its schedule invisible, leaving 4.4s
+      // of dead frame in a 7.4s opening. Constant speed nearly doubles the time
+      // each is actually on screen without changing its duration.
+      const hx=lerp(c.x1,c.x2,p), hy=lerp(c.y1,c.y2,p);
       const dx=c.x2-c.x1, dy=c.y2-c.y1, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len;
       const tx=hx-ux*c.tail, ty=hy-uy*c.tail;
       c.line.setAttribute('x1',tx.toFixed(1)); c.line.setAttribute('y1',ty.toFixed(1));
@@ -371,14 +381,137 @@ function updateComets(lt){
 // turn — then it un-rotates and zooms out "somewhat slowly" to settle on the
 // complete, upright shape.
 const TRACE_TIGHT=Math.min(TRACE_VB_W,TRACE_VB_H)*0.25;
-// One continuous reveal, in two beats: the boundary draws tight-zoomed for
-// ZOOM_START seconds, then the camera zooms out over the rest while the
-// drawing finishes — the full zoom-out and the last stroke land together, so
-// it's still a single unbroken move (no separate pull-back phase), just with
-// the pull-back held back long enough that the drawing reads clearly first.
-const REVEAL_DUR=18, ZOOM_START=9;
-const DRAW_T0=COMET_END;
 const TRACE_SCALE=Math.min(TRACE_VB_W,TRACE_VB_H)/TRACE_TIGHT;
+// One continuous reveal, in two beats: the boundary draws tight-zoomed for
+// ZOOM_START seconds, then the camera zooms out, and only once it's all the way
+// out does the pen actually sprint. ZOOM_START is the one timing dial here;
+// every duration below is derived from it.
+//
+// It has a floor: the fly-in has to land before the zoom starts, and FLY_DUR is
+// per-aspect (9x16 needs the longest, ~2.3s, since a tall stage puts the tip
+// further out). It also has a ceiling: raising it eats the zoom, which must
+// still reach ZOOM_MID (DRAW_T2 goes negative past ~9). Re-check all three
+// aspects if you touch it — 16x9 alone will not tell you.
+const ZOOM_START=4;
+const DRAW_T0=COMET_END;
+
+// ── The pen's pace, in three beats ───────────────────────────────────────────
+// The rates are DERIVED from the camera, not guessed. Do NOT substitute a
+// hand-picked curve: a quadratic (matched to beat 1's rate at the join, so it
+// looked right) surged to 1.8× mid-pull-back and then slowed again — an eased
+// zoom lags a quadratic draw, so the two don't cancel. Deriving the rate from
+// the very scale() the camera uses is what makes them cancel by construction.
+//
+//  1 · TIGHT   — dead linear at PEN_PACE, the pace that reads well up close.
+//  2 · ZOOM    — rate held proportional to 1/scale, so the pen's *apparent*
+//                (screen) speed stays exactly PEN_PACE's. As the camera pulls
+//                back TRACE_SCALE×, the same arc-length covers proportionally
+//                less screen, so path progress speeds up by that factor for
+//                free — and the viewer reads no speed change at all.
+//  3 · SPRINT  — camera parked at 1×; now, and only now, the pen genuinely
+//                gains speed, ramping to DRAW_BOOST.
+//
+// Keeping the boost out of beat 2 is deliberate. Zooming and accelerating at
+// once gave the pen nothing to be measured against — and, because the camera's
+// rotation tracks the tangent, it whipped the view around every zigzag exactly
+// when the pen was fastest. Zoom first, then sprint: the pull-back reads as a
+// reveal, and the speed-up reads as a speed-up.
+const PEN_PACE=0.39/7;         // progress/s at the tight crop (0.39 of the path
+                               // in 7s was tuned by eye there; the ratio is the
+                               // part that matters, and it's what's preserved)
+const ZOOM_MID=0.5;            // path drawn when the pull-back completes
+const DRAW_BOOST=1.7;          // how much faster the pen looks by the end
+const SPARK_FADE=0.25;         // spark is gone this far into the pull-back
+const DRAW_FRAC=PEN_PACE*ZOOM_START;          // drawn when the zoom starts
+const PEN_WIDE=PEN_PACE*TRACE_SCALE;          // progress/s at 1× for that same apparent speed
+const P2_N=240;
+const P2_SCALE=u=>lerp(TRACE_SCALE,1,easeInOut(u));
+const P2_RATE=u=>PEN_WIDE/P2_SCALE(u);        // apparent speed held constant
+const P3_BOOST=v=>1+(DRAW_BOOST-1)*easeInOut(v);
+const P3_RATE=v=>PEN_WIDE*P3_BOOST(v);
+const mean=(f,n)=>{ let s=0; for(let i=0;i<n;i++) s+=f((i+0.5)/n)/n; return s; };
+// Durations fall out of the integrals; they aren't chosen. The zoom lasts
+// exactly as long as it takes to draw from DRAW_FRAC to ZOOM_MID at a steady
+// apparent speed — that's what pins "fully zoomed out" to "about half drawn".
+const DRAW_T2=(ZOOM_MID-DRAW_FRAC)/mean(P2_RATE,P2_N);
+const DRAW_T3=(1-ZOOM_MID)/mean(P3_RATE,P2_N);
+const REVEAL_DUR=ZOOM_START+DRAW_T2+DRAW_T3;
+// Cumulative progress per beat, so lookup is a plain interpolation and stays
+// deterministic under render-mp4's frame-by-frame seek.
+const cum=(f,dur,n)=>{ const a=[0]; let s=0; for(let i=0;i<n;i++){ s+=f((i+0.5)/n)*(dur/n); a.push(s); } return a; };
+const P2_CUM=cum(P2_RATE,DRAW_T2,P2_N), P3_CUM=cum(P3_RATE,DRAW_T3,P2_N);
+const lookup=(cumArr,p)=>{ const x=clamp(p,0,1)*P2_N, i=Math.min(P2_N-1,Math.floor(x)); return lerp(cumArr[i],cumArr[i+1],x-i); };
+function drawProgress(traceLt){
+  if(traceLt<ZOOM_START) return PEN_PACE*traceLt;
+  if(traceLt<ZOOM_START+DRAW_T2) return clamp(DRAW_FRAC+lookup(P2_CUM,(traceLt-ZOOM_START)/DRAW_T2),0,1);
+  return clamp(ZOOM_MID+lookup(P3_CUM,(traceLt-ZOOM_START-DRAW_T2)/DRAW_T3),0,1);
+}
+// ── How far the camera has turned since the pen started ──────────────────────
+// Blended between two ways of deciding that, by how fast the pen is moving:
+//
+//   slow · TANGENT — turn with the boundary's own heading, so the ink always
+//          trails straight out behind the spark. This is the effect; beat 1 is
+//          where it's on show, and there it's exact.
+//   fast · UNIFORM — the lap spread evenly over arc length. Constant turn per
+//          unit drawn, no wiggle at all.
+//
+// Tangent-tracking costs (turn per unit length) × (pen speed *along the path*),
+// and that rises 4× through the pull-back even though the apparent speed never
+// changes. A district boundary is not smooth — its heading rocks constantly — so
+// at speed the tangent stops reading as "following the line" and just rocks the
+// whole frame. Widening ROT_SMOOTH doesn't fix it: that's a low-pass on the
+// heading, so only the wiggle's *amplitude* falls while its rate still climbs
+// with the pen. Low-passing the turn RATE is what actually removes it.
+//
+// Uniform, not merely a wider ROT_SMOOTH and not a low-passed tangent. This
+// district has hairpin tendrils that turn ~180° within a few samples; any window
+// narrow enough to still be "the tangent" leaves those intact, and at sprint
+// speed one hairpin alone whips the frame ~700°/s. Uniform is the only target
+// with no hairpin left in it.
+//
+// The handoff finishes when the SPARK does. The tangent's whole job is making
+// the ink trail straight out behind the spark, so once the spark has faded there
+// is nothing left for it to buy — and every frame it stays on past that is a
+// frame of wiggle at a pen speed that's already climbing. Carrying it to ZOOM_MID
+// instead left ~70% tangent while the pen was at 2×, whipping 1x1 to 526°/s.
+//
+// Keyed to arc length, not time: it's per unit *drawn* that the tangent costs
+// its wiggle, and the integral below needs it in those terms anyway.
+const ROT_FAST_TO=drawProgress(ZOOM_START+SPARK_FADE*DRAW_T2);
+const fastOfLen=len=>clamp((len/PATH_LEN-DRAW_FRAC)/(ROT_FAST_TO-DRAW_FRAC),0,1);
+// The lap the boundary actually winds: ±360°, and WHICH is a property of the
+// ring's orientation in the source geometry, not a constant. Read it off the
+// tangent — never hardcode it. Assuming -360 against a ring that winds +360 set
+// the uniform target spinning the wrong way and dumped ~720° into the sprint.
+// The shape still landed upright (±360 both read as 0°), so nothing caught it
+// except the spin itself.
+const LAP=UNWRAPPED[ANGLE_SAMPLES]-UNWRAPPED[0];
+// Blend the turn RATE and integrate — never the turn VALUE. Lerping the values
+// makes the blend itself sweep the camera: the two curves drift ~100° apart
+// mid-path, and crossing between them traverses that gap on top of the real
+// turn, which spiked the pull-back to 308°/s. Rate-blending can't do that; it
+// only ever changes how much each increment of length turns the view.
+const TURN=(function(){
+  const dUni=LAP/ANGLE_SAMPLES, a=[0], w=[0];
+  for(let i=1;i<=ANGLE_SAMPLES;i++){
+    const f=fastOfLen(PATH_LEN*(i-0.5)/ANGLE_SAMPLES);
+    a.push(a[i-1]+lerp(UNWRAPPED[i]-UNWRAPPED[i-1], dUni, f));
+    w.push(w[i-1]+f);
+  }
+  // Tangent and uniform each wind a full lap, but a rate blend of them need not:
+  // it drops turn wherever it favours uniform over a tangent that was busy
+  // there. Hand the shortfall back as a rate offset weighted by fastness — it
+  // lands only in the smoothed stretch, where a slight even change of turn rate
+  // is invisible, and leaves beat 1 exactly tangent. That's what still lands the
+  // shape upright to the degree.
+  const resid=a[ANGLE_SAMPLES]-LAP, wTot=w[ANGLE_SAMPLES]||1;
+  for(let i=0;i<=ANGLE_SAMPLES;i++) a[i]-=resid*w[i]/wTot;
+  return a;
+})();
+function turnSince(len){
+  const t=clamp(len/PATH_LEN,0,1)*ANGLE_SAMPLES, i0=Math.floor(t), i1=Math.min(i0+1,ANGLE_SAMPLES);
+  return lerp(TURN[i0],TURN[i1],t-i0);
+}
 
 // ── Fly-in geometry. Two camera modes, joined seamlessly at FLY_LEN:
 //    • before it, the district is held STATIC and its tip walks its own
@@ -408,7 +541,10 @@ const FLY_LEN=(function(){
   }
   return PATH_LEN*0.15;   // fallback: shape too compact to ever clear the frame
 })();
-const FLY_DUR=REVEAL_DUR*FLY_LEN/PATH_LEN;      // derived: the pen's pace is fixed
+// Derived from BEAT 1's pace specifically — the fly-in always finishes long
+// before the zoom starts, so it runs entirely at the linear PEN_PACE. Deriving
+// it from REVEAL_DUR would silently be wrong now that the back half accelerates.
+const FLY_DUR=(FLY_LEN/PATH_LEN)/PEN_PACE;
 const FLY_A=refPath.getPointAtLength(FLY_LEN);  // the point that lands at centre
 // Rotate so the chord FLY_A→START_PT points *back* along the flight heading —
 // i.e. the district enters travelling FLY_TRAVEL, trailing its start behind it.
@@ -418,7 +554,18 @@ const FLY_CHORD_ANG=Math.atan2(START_PT.y-FLY_A.y, START_PT.x-FLY_A.x);
 const ROT_STATIC=(FLY_TRAVEL+Math.PI-FLY_CHORD_ANG-(TRACE_ROTATE?Math.PI/2:0))*180/Math.PI;
 // Hand the static rotation to the tip-locked formula so rotDeg is continuous at
 // FLY_LEN; it then unwinds across the zoom-out so the shape still ends upright.
-const ROT_K=ROT_STATIC+(unwrappedAngleAt(FLY_LEN)-ANGLE0);
+// Must read turnSince(), not the raw tangent: TURN carries a residual offset
+// that the tangent doesn't know about, and any gap between them is a visible
+// snap at the join.
+//
+// Wrapped to the short way round, because this is the distance the camera
+// actually sweeps as the term unwinds. Any ROT_K±360k puts the district in the
+// identical pose at both ends, so nothing downstream can tell — but unwrapped it
+// spun a needless extra revolution during the pull-back (1x1 turned -391° where
+// -31° gets to the same place). Aspects differ here: ROT_STATIC depends on the
+// fly-in heading, so 16x9 landed inside ±180° by luck and looked fine.
+const wrap180=a=>a-360*Math.round(a/360);
+const ROT_K=wrap180(ROT_STATIC+turnSince(FLY_LEN));
 // The boundary stays lit from its very first point all the way to the spark —
 // the whole stroke, permanently, exactly like ink. It used to be a short
 // trailing window that widened during the pull-back, to keep the lit part
@@ -433,8 +580,10 @@ const TRACE_EMBER_INTERVAL=0.22, TRACE_EMBER_LIFE=0.42;
 const TRACE_EMBERS=[];
 (function(){
   let i=0;
-  // stop spawning when the spark itself fades out (a quarter into the zoom-out)
-  for(let t=0.15;t<ZOOM_START+(REVEAL_DUR-ZOOM_START)*0.25;t+=TRACE_EMBER_INTERVAL,i++){
+  // stop spawning when the spark itself fades out (SPARK_FADE into the zoom-out).
+  // Must scale by DRAW_T2, the zoom's own length — not REVEAL_DUR-ZOOM_START,
+  // which now also covers the sprint and would outlive the spark by ~0.5s.
+  for(let t=0.15;t<ZOOM_START+SPARK_FADE*DRAW_T2;t+=TRACE_EMBER_INTERVAL,i++){
     const el=document.createElementNS(SVGNS,'circle');
     el.setAttribute('class','trace-ember');
     traceEmbersG.appendChild(el);
@@ -483,13 +632,11 @@ function updateShape(lt){
     drawSvg.style.transform=`translate(-50%,-50%)${rotateCss}`;
     return;
   }
-  const p=clamp(traceLt/REVEAL_DUR,0,1);
-  // Linear, deliberately: the pen holds one steady pace from the first stroke
-  // to the last. An ease here (it used to be easeInOut) eases *out* as well as
-  // in, so the drawing visibly crawled to a halt over the closing stretch —
-  // the camera is what should be easing, not the hand. Only the zoom-out below
-  // is eased.
-  const drawP=p;
+  // Linear while zoomed in, then accelerating in step with the pull-back so the
+  // pen's apparent speed holds steady — see drawProgress(). Never an ease-out:
+  // that eases at *both* ends and the line visibly crawled to a halt over the
+  // closing stretch. The camera eases; the hand doesn't.
+  const drawP=drawProgress(traceLt);
   // Two distinct beats rather than one blended ramp: DRAW tight for the first
   // ZOOM_START seconds (the camera holds its close crop and just follows the
   // spark, so the comet fills the frame and the drawing reads as *happening*),
@@ -497,13 +644,14 @@ function updateShape(lt){
   // was already wide while only a short comet tail was ever visible — a tiny
   // squiggle adrift in a big empty frame, which is what read as "nothing is
   // being built" and made the motion feel jerky.
-  const zoomRaw=clamp((traceLt-ZOOM_START)/(REVEAL_DUR-ZOOM_START),0,1);
-  const zoomP=easeInOut(zoomRaw);
+  const zoomRaw=clamp((traceLt-ZOOM_START)/DRAW_T2,0,1);
+  const zoomP=easeInOut(zoomRaw);   // must stay identical to P2_SCALE's easing —
+                                    // the pen's phase-2 rate is derived from it
   const curLen=PATH_LEN*drawP;
   const pt=refPath.getPointAtLength(curLen);
   // The spark fades out over the first stretch of the zoom-out; recentering
   // waits until it's gone, so it never visibly drifts off the boundary tip.
-  const sparkOp=clamp(1-zoomRaw/0.25,0,1);
+  const sparkOp=clamp(1-zoomRaw/SPARK_FADE,0,1);
   const posP=easeInOut(clamp((zoomRaw-0.25)/0.75,0,1));
   let scale, rotDeg, px, py;
   if(curLen<FLY_LEN){
@@ -516,7 +664,7 @@ function updateShape(lt){
     // over the zoom-out, leaving the base term's exact -360° per lap to land the
     // shape upright.
     scale=lerp(TRACE_SCALE,1,zoomP);
-    rotDeg=-(unwrappedAngleAt(curLen)-ANGLE0)+ROT_K*(1-zoomP);
+    rotDeg=-turnSince(curLen)+ROT_K*(1-zoomP);
     // Track the tip exactly while zoomed in; only blend toward the box's true
     // centre once zooming out, so the settled shape lands properly centred.
     px=lerp(pt.x,cx,posP); py=lerp(pt.y,cy,posP);
