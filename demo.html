@@ -55,7 +55,7 @@
     <h1>
       <button id="title-home-btn" class="title-home-btn" title="Back to welcome screen">
         <img src="logo.svg" class="game-logo" alt="" aria-hidden="true" />
-        <span class="header-wordmark">Daily District</span> <span class="beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
+        <span class="header-wordmark">Daily District</span>
       </button>
     </h1>
     <!-- Timer + account + donate link on the right -->
@@ -174,6 +174,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </div>
+      <label class="profile-checkbox"><input id="login-marketing" type="checkbox" checked /> Email me occasional updates</label>
       <div class="login-error" id="login-error"></div>
       <button type="submit" class="login-submit" id="login-signin">Sign in</button>
       <button type="button" class="login-secondary" id="login-signup">Create an account</button>
@@ -246,7 +247,6 @@
     </div>
     <div class="welcome-wordmark">
       <img src="wordmark.svg" class="welcome-wordmark-svg" alt="Daily District" />
-      <span class="beta-badge welcome-beta-badge"><span class="beta-label">Beta</span><span class="beta-version">–</span></span>
       <span class="welcome-back-text" id="welcome-back-text" hidden>Welcome Back</span>
     </div>
     <div class="welcome-slogan">Identify the district from its shape</div>
@@ -406,7 +406,8 @@
     <p>Daily District is an educational game that challenges players to identify all 435 U.S. House districts through geographic, map-based, and contextual clues. Created through a partnership between <a href="https://jonathancervas.com" target="_blank" rel="noopener">Dr. Jonathan Cervas of Carnegie Mellon University</a> and <a href="https://x.com/RedistrictNet" target="_blank" rel="noopener">Jason Fierman of the Redistrict Network</a>, Daily District is an interactive way to learn about redistricting and how congressional districts shape American democracy, building civic knowledge and understanding for curious people of all backgrounds.</p>
     <p>Daily District is committed to making civic education interactive, approachable, and fun. Donations to the Carnegie Mellon Institute for Strategy &amp; Technology support research and help make educational projects like Daily District possible. Daily District is also seeking sponsors and organizational partners to support ongoing updates and maintenance of the game. If your organization is interested in sponsoring or partnering with Daily District, please contact <a href="mailto:RedistrictNetwork@gmail.com">RedistrictNetwork@gmail.com</a>.</p>
     <p>Want to dig deeper? <a href="/districts/">Browse profiles of all 435 U.S. House districts</a> — each with its current representative, Census demographics, election results, and geography.</p>
-    <p>Follow <a href="https://x.com/daily_district_" target="_blank" rel="noopener">@daily_district_ on X (Twitter)</a> for each day's puzzle and the latest updates.</p>    <div class="how-to-footer">
+    <p>Follow <a href="https://x.com/daily_district_" target="_blank" rel="noopener">@daily_district_ on X (Twitter)</a> for each day's puzzle and the latest updates.</p>
+    <div class="how-to-footer">
       <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&a=10546035"
          class="got-it-btn donate-modal-cta" target="_blank" rel="noopener">
         Donate to CMU
@@ -738,7 +739,7 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=24" defer></script>
 <script src="login.js?v=21" defer></script>
-<script src="script.js?v=2.15.0" defer></script>
+<script src="script.js?v=1.0.0" defer></script>
 
 <style>
   body.demo #demo-bar {
