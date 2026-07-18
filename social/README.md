@@ -50,10 +50,14 @@ social/
 │    teaser.template.html         template (edit copy / motion)
 │    teaser-8*.html               built pages  (git-ignored)
 │    out/daily-district-teaser-8-<aspect>[-2160].mp4   (git-ignored)
-└─ teaser-9/                        ← teaser #9 (Sudden Death — soccer)
+├─ teaser-9/                        ← teaser #9 (Sudden Death — soccer)
+│    teaser.template.html         template (edit copy / motion)
+│    teaser-9*.html               built pages  (git-ignored)
+│    out/daily-district-teaser-9-<aspect>[-2160].mp4   (git-ignored)
+└─ teaser-10/                       ← teaser #10 (Sign up & win)
      teaser.template.html         template (edit copy / motion)
-     teaser-9*.html               built pages  (git-ignored)
-     out/daily-district-teaser-9-<aspect>[-2160].mp4   (git-ignored)
+     teaser-10*.html              built pages  (git-ignored)
+     out/daily-district-teaser-10-<aspect>[-2160].mp4   (git-ignored)
 ```
 
 Every video ships in all three aspects — **16:9** (X timeline / YouTube),
@@ -73,7 +77,8 @@ that block verbatim into a new teaser to keep the ending consistent.
 `build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
 `build-teaser-5.mjs` (teaser #5), `build-teaser-6.mjs` (teaser #6),
 `build-teaser-7.mjs` (teaser #7), `build-teaser-8.mjs` (teaser #8),
-`build-teaser-9.mjs` (teaser #9), `render-mp4.mjs` (HTML → MP4).
+`build-teaser-9.mjs` (teaser #9), `build-teaser-10.mjs` (teaser #10),
+`render-mp4.mjs` (HTML → MP4).
 
 **Three teasers (#4, #6, #9) morph one district silhouette into another** using
 the `flubber` npm package (already a project dependency — `node_modules/flubber/build/flubber.min.js`
@@ -128,6 +133,9 @@ npm run teaser8                                   # 1:1 (also --aspect=9x16 | 16
 
 # ── Teaser #9 (Sudden Death — soccer) → social/teaser-9/teaser-9*.html ──
 npm run teaser9                                   # 1:1 (also --aspect=9x16 | 16x9)
+
+# ── Teaser #10 (Sign up & win) → social/teaser-10/teaser-10*.html ──
+npm run teaser10                                  # 1:1 (also --aspect=9x16 | 16x9)
 
 # ── Render any built page → MP4  (needs render deps — see §1) ──────────
 # args: <input.html> <output.mp4> <cssW> <cssH> <dsf> <fps>
@@ -770,9 +778,66 @@ Total loop: **~19.9s** with the default 5-district line-up; scales with
 
 ---
 
+## 4i. Teaser #10 — Sign up & win (standalone, pre-launch giveaway)
+
+The pre-launch hook, aimed at growing the sign-up list before Daily District
+opens: the wordmark ("Sign up now — before we launch."), a kinetic zoom-words
+beat (same dolly-in/blow-past mechanic as teaser #5/#7 — "SIGN UP." / "WIN
+PRIZES." / "BE FIRST.", **every word including the last blows past the
+camera**, unlike #5/#7 where the last word holds), a **giveaway card** (a flat
+vector gift box — box, lid, ribbon, bow, all in the brand's red/gold/ink
+palette — "Sign up for a chance to win prizes"), a **launch-alert card** (a
+flat vector bell with two ring lines — "Be the first to know when District #1
+launches"), then wordmark + CTA + end-card confetti. No district-specific
+data — this one's evergreen and doesn't need `--district=`. ~23 s, **1:1** by
+default.
+
+```bash
+node build-teaser-10.mjs                      # 1:1
+node render-mp4.mjs social/teaser-10/teaser-10.html \
+  social/teaser-10/out/daily-district-teaser-10-1x1.mp4 1080 1080 1 30
+```
+
+- `--aspect=` → `1x1` (default) | `9x16` | `16x9` — all tuned; render with the
+  cheat-sheet args.
+- All copy, the zoom words, and the gift/bell icon SVGs live in
+  `social/teaser-10/teaser.template.html`. Rebuild with `build-teaser-10.mjs`.
+- **`.zword` font-size is tuned tight for this teaser's longer words** ("WIN
+  PRIZES." is 11 characters, longer than any zoom word teaser #5/#7 used) —
+  105px (1x1), 108px (9x16), 112px (16x9). Don't copy a larger zoom-word size
+  from another teaser without re-checking: at the original 150px/190px sizing
+  "WIN PRIZES." visibly clipped at the 9x16 stage edges. Verify any change by
+  seeking to a word's hold window (`window.__teaser.seek(...)`) and screenshotting
+  — `getBoundingClientRect` measurements taken while the animation loop is still
+  running mid-flight are unreliable (stale parent transforms skew the numbers);
+  only trust a measurement taken immediately after an explicit `seek()`.
+- **Every zoom word exits the same way, including the last** — the shared
+  `s.zoom` driver borrowed from #5/#7 special-cased the last word to just hold
+  (`last || wl<Z_ARRIVE+Z_HOLD`); here that special case is removed so "BE
+  FIRST." blows past the camera too, for a consistent rhythm across all three
+  words. Because of that, the `zoom` scene's `dur` (3.3s, up from the 2.9s
+  #5/#7 use) is deliberately longer than the words' own schedule needs — the
+  last word's full arrive→hold→depart cycle (ends at local 2.56s) has to clear
+  before the generic scene-level swipe-out starts (`dur-EXIT` = 2.84s), or the
+  word's own depart and the block's exit overlap.
+
+**Scenes:**
+
+| # | Scene | ~Start | What it shows |
+|---|---|---|---|
+| 1 | `intro` | 0.0s | Wordmark + tagline ("Sign up now — before we launch.") |
+| 2 | `zoom` | 2.7s | Kinetic zoom words — "SIGN UP." / "WIN PRIZES." / "BE FIRST." — every word blows past the camera, including the last |
+| 3 | `prize` | 6.0s | Giveaway card — gift icon, "Sign up for a chance to win prizes" |
+| 4 | `notify` | 9.6s | Launch-alert card — bell icon, "Be the first to know when District #1 launches" |
+| 5 | `cta` | 13.2s | Wordmark + "Free to join. Prizes for early sign-ups." + end-card confetti |
+
+Total loop: **~22.7s**.
+
+---
+
 ## 5. Alternative: record a video in the browser (no render deps)
 
-Every built page (`teaser-1*.html`, `teaser-2/3/4/5/6/7/8/9.html`) can
+Every built page (`teaser-1*.html`, `teaser-2/3/4/5/6/7/8/9/10.html`) can
 export a video itself — no `render-mp4.mjs`, no ffmpeg:
 
 1. Open the built HTML (e.g. `social/teaser-2/teaser-2.html`) in **Chrome**.
@@ -812,12 +877,17 @@ export a video itself — no `render-mp4.mjs`, no ffmpeg:
   per-round timing live in `social/teaser-9/teaser.template.html`; the
   district line-up in `build-teaser-9.mjs` (`DEFAULT_IDS`). Rebuild with
   `build-teaser-9.mjs`.
+- **Teaser #10** — copy, zoom words, and the gift/bell icon SVGs all live in
+  `social/teaser-10/teaser.template.html` (no district data — evergreen).
+  Rebuild with `build-teaser-10.mjs`.
 
 Both read the topojson + `data/reps_out.json` and inject `{{PLACEHOLDER}}`s /
-JSON into the template. After any template/script change, re-run the build (and
-re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these pages.
+JSON into the template (teaser #10 is the exception — it has no
+district-specific data). After any template/script change, re-run the build
+(and re-render if you need fresh MP4s). `render-mp4.mjs` works on any of these
+pages.
 
-**Every video's section above (§3, §4, §4b–h) has a numbered Scenes table** —
+**Every video's section above (§3, §4, §4b–i) has a numbered Scenes table** —
 `#`, `data-scene` name, start time, and what it shows. Use those to point at a
 specific beat instead of describing it ("scene 4 of teaser #5" / "the `hist`
 scene in teaser #3"). **When you add a new teaser, add the same kind of table
