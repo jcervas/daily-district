@@ -81,11 +81,17 @@
   function signInWithEmail(email, password) {
     return client().auth.signInWithPassword({ email, password });
   }
-  function signUpWithEmail(email, password, username) {
+  function signUpWithEmail(email, password, username, marketingOptIn) {
+    const data = {};
+    if (username) data.username = username;
+    // Read by the handle_new_user trigger to seed profiles.marketing_opt_in at
+    // creation — captured here (opt-in checkbox on the sign-up form) so it's
+    // recorded even if the player never reaches/completes the later profile modal.
+    if (marketingOptIn != null) data.marketing_opt_in = !!marketingOptIn;
     return client().auth.signUp({
       email, password,
       options: {
-        data: username ? { username } : {},
+        data,
         // With "Confirm email" enabled in Supabase Auth, the confirmation link
         // sends the user back here; implicit flow + detectSessionInUrl then
         // establishes their session and onAuthChange fires SIGNED_IN.
