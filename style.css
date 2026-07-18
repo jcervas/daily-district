@@ -259,6 +259,15 @@ header h1 {
   letter-spacing: inherit;
   white-space: inherit;
 }
+/* Usually a <button>, but an <a> on the pre-launch teaser (no game JS to intercept the
+   click) — the global link-underline rule further down (`a:not(...)`) would otherwise
+   draw its hover underline across the whole logo+wordmark lockup. This selector's
+   specificity (0,2,2) beats that rule's (0,2,1) regardless of source order. */
+header .header-inner a.title-home-btn {
+  text-decoration: none;
+  background: none;
+  padding-bottom: 0;
+}
 .game-logo {
   width: 44px;
   height: auto;
