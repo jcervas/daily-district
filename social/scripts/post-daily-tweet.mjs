@@ -10,10 +10,10 @@
 //   X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 //
 // Usage:
-//   node post-daily-tweet.mjs                  post today's puzzle
-//   DRY_RUN=1 node post-daily-tweet.mjs        render daily-tweet-preview.png + print text, no post
-//   node post-daily-tweet.mjs --date=2026-07-04   override the puzzle date (testing)
-//   node post-daily-tweet.mjs --delete-tweet=<id>  delete a tweet from the account (needs creds)
+//   node social/scripts/post-daily-tweet.mjs                  post today's puzzle
+//   DRY_RUN=1 node social/scripts/post-daily-tweet.mjs        render daily-tweet-preview.png + print text, no post
+//   node social/scripts/post-daily-tweet.mjs --date=2026-07-04   override the puzzle date (testing)
+//   node social/scripts/post-daily-tweet.mjs --delete-tweet=<id>  delete a tweet from the account (needs creds)
 // ============================================================
 
 import fs from 'node:fs';
@@ -21,9 +21,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoBounds } from 'd3-geo';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from '../../scripts/puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const SITE_URL = 'https://daily-district.com';
 
 // Rotating teaser messages — one is picked at random each day.

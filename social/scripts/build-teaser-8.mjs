@@ -12,9 +12,9 @@
 // Tagline: "Every district has a shape. Learn it, every day."
 //
 // Usage:
-//   node build-teaser-8.mjs                       # default district, 1:1
-//   node build-teaser-8.mjs --aspect=9x16         # 1x1 (default) | 9x16 | 16x9
-//   node build-teaser-8.mjs --district=NC-01      # feature a different district
+//   node social/scripts/build-teaser-8.mjs                       # default district, 1:1
+//   node social/scripts/build-teaser-8.mjs --aspect=9x16         # 1x1 (default) | 9x16 | 16x9
+//   node social/scripts/build-teaser-8.mjs --district=NC-01      # feature a different district
 //
 // Output: social/teaser-8/teaser-8.html  (or teaser-8-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 const round = (s, p = 1) => s.replace(/-?\d+\.?\d*/g, n => {

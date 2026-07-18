@@ -9,8 +9,8 @@
 // swapping districts is a one-flag change.
 //
 // Usage:
-//   node build-teaser-1.mjs                     # default district (below)
-//   node build-teaser-1.mjs --district=CA-19    # a specific district
+//   node social/scripts/build-teaser-1.mjs                     # default district (below)
+//   node social/scripts/build-teaser-1.mjs --district=CA-19    # a specific district
 //
 // Inputs:  districts-core.topojson (geometry + stats), districts-map.topojson
 //          (simplified state/district outlines), data/reps_out.json (rep names),
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 

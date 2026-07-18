@@ -2,7 +2,7 @@
 // build-demo.mjs
 // Generates demo.html from index.html so the two never drift.
 //
-//   node build-demo.mjs
+//   node scripts/build-demo.mjs
 //
 // demo.html is the same app as index.html, but with window.DD_DEMO = true set
 // before the deferred scripts run. That flag makes:
@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DIR = dirname(fileURLToPath(import.meta.url));
+const DIR = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 let html = readFileSync(join(DIR, 'index.html'), 'utf8');
 
 // Guard: while the pre-launch teaser is live, index.html is NOT the game — regenerating

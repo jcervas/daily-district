@@ -13,10 +13,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-GEOJSON="$SCRIPT_DIR/national-cd-2026.geojson"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"   # repo root (script lives in scripts/)
+GEOJSON="$ROOT_DIR/national-cd-2026.geojson"
 ROADS="/Users/cervas/Library/CloudStorage/GoogleDrive-jcervas@andrew.cmu.edu/My Drive/GitHub/createMaps/us_can_roads.json"
 URBAN="/Users/cervas/Library/CloudStorage/GoogleDrive-jcervas@andrew.cmu.edu/My Drive/GitHub/createMaps/us-urban.json"
-OUT_DIR="$SCRIPT_DIR/previews"
+OUT_DIR="$ROOT_DIR/previews"
 
 mkdir -p "$OUT_DIR"
 

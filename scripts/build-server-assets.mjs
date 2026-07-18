@@ -12,14 +12,14 @@
 // The states.topojson step shells out to mapshaper (≥ 0.6), which prunes arcs not
 // referenced by the states layer — district boundaries are NOT included.
 //
-//   node build-server-assets.mjs
+//   node scripts/build-server-assets.mjs
 // ============================================================
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const DIR  = path.dirname(fileURLToPath(import.meta.url));
+const DIR  = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const CORE = path.join(DIR, 'districts-core.topojson');
 
 // 1. states.topojson — states layer only, clean arcs. Bake each state's interior point

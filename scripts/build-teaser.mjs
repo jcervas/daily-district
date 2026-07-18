@@ -12,10 +12,10 @@
 // "Coming soon" copy — so an undecided launch date simply reads "coming soon".
 //
 // Usage:
-//   node build-teaser.mjs                      # render from the constants
-//   node build-teaser.mjs --check              # print what would change, write nothing
-//   node build-teaser.mjs --epoch=2026-08-03   # preview a different date (no constant edit)
-//   node build-teaser.mjs --announced=false    # preview the dateless "coming soon" copy
+//   node scripts/build-teaser.mjs                      # render from the constants
+//   node scripts/build-teaser.mjs --check              # print what would change, write nothing
+//   node scripts/build-teaser.mjs --epoch=2026-08-03   # preview a different date (no constant edit)
+//   node scripts/build-teaser.mjs --announced=false    # preview the dateless "coming soon" copy
 // ============================================================
 
 import fs from 'node:fs';
@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LAUNCH_EPOCH, LAUNCH_ANNOUNCED } from './puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const CHECK = process.argv.includes('--check');
 

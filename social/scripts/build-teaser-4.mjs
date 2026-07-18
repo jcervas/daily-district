@@ -14,8 +14,8 @@
 // game's interactive maps use.
 //
 // Usage:
-//   node build-teaser-4.mjs                 # 1:1
-//   node build-teaser-4.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
+//   node social/scripts/build-teaser-4.mjs                 # 1:1
+//   node social/scripts/build-teaser-4.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
 //
 // Output: social/teaser-4/teaser-4.html  (or teaser-4-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 const round = (s, p = 1) => s.replace(/-?\d+\.?\d*/g, n => {

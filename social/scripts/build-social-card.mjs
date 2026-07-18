@@ -11,12 +11,12 @@
 // baked art.
 //
 // Usage:
-//   node build-social-card.mjs                     # YESTERDAY's puzzle district
-//   node build-social-card.mjs --date=2026-07-09   # the puzzle for a date
-//   node build-social-card.mjs --district=WV-01    # a specific district
-//   node build-social-card.mjs --aspect=1x1        # 1x1 (default) | 9x16
-//   node build-social-card.mjs --badge="Today's District"
-//   node build-social-card.mjs --png               # also render a PNG (headless Chrome)
+//   node social/scripts/build-social-card.mjs                     # YESTERDAY's puzzle district
+//   node social/scripts/build-social-card.mjs --date=2026-07-09   # the puzzle for a date
+//   node social/scripts/build-social-card.mjs --district=WV-01    # a specific district
+//   node social/scripts/build-social-card.mjs --aspect=1x1        # 1x1 (default) | 9x16
+//   node social/scripts/build-social-card.mjs --badge="Today's District"
+//   node social/scripts/build-social-card.mjs --png               # also render a PNG (headless Chrome)
 //
 // Inputs:  districts-core.topojson, data/reps_out.json, wordmark.svg,
 //          social/fonts/Barlow-*.ttf, social/card.template.html
@@ -28,9 +28,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from '../../scripts/puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 const flag = k => process.argv.includes(`--${k}`);

@@ -21,7 +21,7 @@ out for when you (or a future session) want to do it manually.
 
 ## Where the launch date lives
 
-**`puzzle-schedule.mjs`** (top of the file) — two settings, and everything else
+**`scripts/puzzle-schedule.mjs`** (top of the file) — two settings, and everything else
 reads from them:
 
 | Setting | What it does |
@@ -50,7 +50,7 @@ other script picks it up automatically.
 The game still shows the teaser after this — you're just setting the date and
 putting it back on the "Coming soon" page. Go-live is the next section.
 
-1. **Set the date.** In `puzzle-schedule.mjs`:
+1. **Set the date.** In `scripts/puzzle-schedule.mjs`:
    ```js
    export const LAUNCH_EPOCH = '2026-09-07';   // ← your date
    export const LAUNCH_ANNOUNCED = true;       // ← show it publicly
@@ -63,7 +63,7 @@ putting it back on the "Coming soon" page. Go-live is the next section.
    "Launching <weekday>, <date>". Preview first with `npm run teaser -- --check`.)
 3. **Reseed the puzzle database** so puzzle No. 1 lands on that date:
    ```sh
-   node seed-puzzles.mjs 2026-09-07 436 > puzzles.sql
+   node scripts/seed-puzzles.mjs 2026-09-07 436 > puzzles.sql
    ```
    Then run `puzzles.sql` against the Supabase project (or ask Claude to apply it).
 4. **Commit + push `main`** (this deploys the dated teaser):
@@ -113,7 +113,7 @@ gh workflow enable daily-tweet.yml    # daily puzzle teaser image post
 
 Nothing to do — you're already here. If you ever need to reset to it:
 ```js
-export const LAUNCH_ANNOUNCED = false;   // in puzzle-schedule.mjs
+export const LAUNCH_ANNOUNCED = false;   // in scripts/puzzle-schedule.mjs
 ```
 ```sh
 npm run teaser

@@ -94,7 +94,7 @@ One-shot loaders that (re)populate `puzzles` / `district_geometries`. Guarded by
 2026-07-08 rotation (the old value was hardcoded in the function source and had to
 go before committing the source publicly), so both loaders currently return 403 —
 set `LOAD_SECRET` before the next seeding run, or load via SQL instead
-(`seed-puzzles.mjs` can emit upsert SQL).
+(`scripts/seed-puzzles.mjs` can emit upsert SQL).
 
 ### `POST /functions/v1/today`
 Returns the current puzzle for the signed-in user. Playtest accounts allowed to
@@ -159,7 +159,7 @@ Exercised with a real signed-in JWT against the live functions:
 
 - ✅ Schema + RLS + signup trigger (advisor-clean).
 - ✅ `today` + `guess` Edge Functions (verified above; 401 without auth).
-- ✅ Puzzle-seeding loader `seed-puzzles.mjs` — replicates the client schedule
+- ✅ Puzzle-seeding loader `scripts/seed-puzzles.mjs` — replicates the client schedule
   (`seededIndex/dateSeed`) + FACT_DEFS clue text exactly by extracting the real
   maps from `script.js`. **Launch reseed (v2.14.0):** DB wiped (puzzles/results/
   telemetry; accounts kept) and refilled with a full 436-day non-repeating cycle,
@@ -184,7 +184,7 @@ Exercised with a real signed-in JWT against the live functions:
    - Keep `districts.topojson` shapes/names client-side (not spoilers).
    - Drop the client `seededIndex/dateSeed` answer pick and the once-per-day
      `localStorage` gate (server is now authoritative).
-3. **Extend the puzzle runway** — re-run `node seed-puzzles.mjs <startDate> <days>`
+3. **Extend the puzzle runway** — re-run `node scripts/seed-puzzles.mjs <startDate> <days>`
    periodically (or as a scheduled job) so `puzzles` always has upcoming dates.
    Currently filled through **2027-09-21** (No. 436).
 4. **Move the Census API key** in `acs_by_state.R` / `acs_by_district.R` to the

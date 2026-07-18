@@ -2,7 +2,7 @@
 // JS timeline (window.__promo.seek) frame-by-frame in headless Chrome, then
 // encoding the PNG frames with ffmpeg (H.264, yuv420p — universally playable).
 //
-// Usage: node render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <dsf> [fps] [crf]
+// Usage: node social/scripts/render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <dsf> [fps] [crf]
 //   crf defaults to 18 (near-lossless). For flat motion graphics, 20–23 looks
 //   identical but is much smaller — good for high-res (2160) posts.
 import fs from 'node:fs';

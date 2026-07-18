@@ -8,17 +8,17 @@
 // (GitHub repo secrets — export them into your shell to post locally.)
 //
 // Usage:
-//   DRY_RUN=1 node post-social-cards.mjs                 # print text + list media, post nothing
-//   node post-social-cards.mjs                           # post the two 1:1 recap cards
-//   node post-social-cards.mjs --images=a.png,b.png      # post specific images (max 4)
-//   node post-social-cards.mjs --text="..."              # custom caption
+//   DRY_RUN=1 node social/scripts/post-social-cards.mjs                 # print text + list media, post nothing
+//   node social/scripts/post-social-cards.mjs                           # post the two 1:1 recap cards
+//   node social/scripts/post-social-cards.mjs --images=a.png,b.png      # post specific images (max 4)
+//   node social/scripts/post-social-cards.mjs --text="..."              # custom caption
 // ============================================================
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 
 // Default: the two square recap cards (profile facts + gameplay stats).

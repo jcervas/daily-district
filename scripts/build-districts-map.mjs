@@ -13,17 +13,21 @@
  *     state, loaded on demand when the map zooms into that state so district
  *     boundaries are crisp up close. Source: districts.topojson (full detail).
  *
- * Requires mapshaper on PATH (npm i -g mapshaper). Run: node build-districts-map.mjs
+ * Requires mapshaper on PATH (npm i -g mapshaper). Run: node scripts/build-districts-map.mjs
  */
 import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SRC = 'districts-core.topojson';
-const OUT = 'districts-map.topojson';
-const DETAIL_SRC = 'districts.topojson';   // full-detail source (gitignored)
-const DETAIL_DIR = 'districts-detail';
+// Anchor everything to the repo root (script lives in scripts/) so this works
+// regardless of the cwd it's invoked from.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SRC = join(ROOT, 'districts-core.topojson');
+const OUT = join(ROOT, 'districts-map.topojson');
+const DETAIL_SRC = join(ROOT, 'districts.topojson');   // full-detail source (gitignored)
+const DETAIL_DIR = join(ROOT, 'districts-detail');
 const SIMPLIFY = '8%'; // visvalingam; keep-shapes so no district collapses
 
 const t = JSON.parse(readFileSync(SRC, 'utf8'));

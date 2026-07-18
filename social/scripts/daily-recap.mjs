@@ -15,10 +15,10 @@
 // launch day), so there's just one launch date to set, in puzzle-schedule.mjs.
 //
 // Usage:
-//   DRY_RUN=1 node daily-recap.mjs            # build + print plan, post nothing
-//   node daily-recap.mjs                      # post yesterday's recap (if >= LAUNCH_EPOCH)
-//   node daily-recap.mjs --date=2026-07-20    # recap a specific date (testing)
-//   node daily-recap.mjs --force              # bypass the launch-date guard
+//   DRY_RUN=1 node social/scripts/daily-recap.mjs            # build + print plan, post nothing
+//   node social/scripts/daily-recap.mjs                      # post yesterday's recap (if >= LAUNCH_EPOCH)
+//   node social/scripts/daily-recap.mjs --date=2026-07-20    # recap a specific date (testing)
+//   node social/scripts/daily-recap.mjs --force              # bypass the launch-date guard
 // ============================================================
 
 import fs from 'node:fs';
@@ -26,9 +26,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle, puzzleNumberFor, LAUNCH_EPOCH } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor, LAUNCH_EPOCH } from '../../scripts/puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=').slice(1).join('=');
 const flag = k => process.argv.includes(`--${k}`);
 
@@ -79,7 +79,7 @@ async function fetchStats(date) {
 }
 
 function build(cardArgs) {
-  const r = spawnSync('node', ['build-social-card.mjs', ...cardArgs, '--png'], { cwd: DIR, stdio: ['ignore', 'pipe', 'inherit'] });
+  const r = spawnSync('node', [path.join(DIR, 'social', 'scripts', 'build-social-card.mjs'), ...cardArgs, '--png'], { cwd: DIR, stdio: ['ignore', 'pipe', 'inherit'] });
   if (r.status !== 0) throw new Error(`build-social-card failed: ${cardArgs.join(' ')}`);
   return r.stdout.toString();
 }

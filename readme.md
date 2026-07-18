@@ -42,11 +42,11 @@ with one bash wrapper (`build-map.sh`) tying the mapshaper steps together.
                     2. tools/census/  (make census reps clues pop2020 ...)
                        → *_update.sql, pushed to `puzzles.census` / `.clues`
                                             │
-                    3. build-server-assets.mjs
+                    3. scripts/build-server-assets.mjs
                        → states.topojson, district-names.json,
                          /tmp/dd_adj_update.sql (→ district_geometries.adj)
                                             │
-                    4. seed-puzzles.mjs  →  puzzles.sql  →  psql
+                    4. scripts/seed-puzzles.mjs  →  puzzles.sql  →  psql
                        (schedules districts onto calendar dates,
                         writes puzzles.clues + puzzles.census fresh)
                                             │
@@ -195,10 +195,10 @@ Rscript compactness.R "../../districts-core.topojson" compactness_out.csv
   by any script.** If the *set* of census fields changes, this file needs a
   manual edit — `push-derived` just replays whatever's currently in it.
 
-## Step 3: `build-server-assets.mjs` — client-safe geometry + adjacency
+## Step 3: `scripts/build-server-assets.mjs` — client-safe geometry + adjacency
 
 ```bash
-node build-server-assets.mjs
+node scripts/build-server-assets.mjs
 ```
 
 Reads `districts-core.topojson`, writes:
@@ -218,21 +218,21 @@ Reads `districts-core.topojson`, writes:
   hot/cold guess feedback) keyed by the same `district_id` string
   (`"NV-02"`-style) that `puzzles.district_id` uses.
 
-## Step 4: `seed-puzzles.mjs` — put districts on the calendar
+## Step 4: `scripts/seed-puzzles.mjs` — put districts on the calendar
 
 ```bash
-node seed-puzzles.mjs [startDate] [days] > puzzles.sql
+node scripts/seed-puzzles.mjs [startDate] [days] > puzzles.sql
 psql "$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f puzzles.sql
 ```
 
 - Defaults: `startDate` = today (UTC, shifted back one day for timezone
   spread), `days` = 63.
 - For a full fresh non-repeating cycle of all 435 districts:
-  `node seed-puzzles.mjs 2026-06-22 436`
+  `node scripts/seed-puzzles.mjs 2026-06-22 436`
 - `--json` emits a JSON array instead of SQL (for POSTing to a load-puzzles
   function, if you have one, instead of `psql`).
 
-**Scheduling math** (in `puzzle-schedule.mjs`, imported by this script):
+**Scheduling math** (in `scripts/puzzle-schedule.mjs`, imported by this script):
 
 1. `baseIds(topo)` pulls every `state-district` out of
    `districts-core.topojson`'s `districts` layer, drops any `DC-*` id, and
@@ -250,7 +250,7 @@ psql "$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f puzzles.sql
 reproduce the live schedule byte-for-byte. Changing it reshuffles every date
 that's ever been seeded.
 
-For each date, `seed-puzzles.mjs` looks up that date's district in
+For each date, `scripts/seed-puzzles.mjs` looks up that date's district in
 `districts-core.topojson`'s properties and writes a fresh
 `puzzles.clues`/`puzzles.census` from scratch (its own `buildStateClues` /
 `buildDistrictClues` / `buildCensus` functions — **not** `tools/census/build_clues.py`;
@@ -265,15 +265,15 @@ on conflict (date) do update set
   census = excluded.census;
 ```
 
-`build-puzzle-order.mjs` (`node build-puzzle-order.mjs [cycle]` →
+`scripts/build-puzzle-order.mjs` (`node scripts/build-puzzle-order.mjs [cycle]` →
 `puzzle-order.json`) is **documentation only** — a human-readable dump of what
-one cycle's shuffle looks like. `seed-puzzles.mjs` does not read
+one cycle's shuffle looks like. `scripts/seed-puzzles.mjs` does not read
 `puzzle-order.json`; it always recomputes the schedule live from
-`puzzle-schedule.mjs`. Don't bother regenerating it unless you specifically
+`scripts/puzzle-schedule.mjs`. Don't bother regenerating it unless you specifically
 want to eyeball an order.
 
 **Extending the calendar** (no map change, just more scheduled days) is just
-step 4 — re-run `seed-puzzles.mjs` periodically (or on a scheduled job)
+step 4 — re-run `scripts/seed-puzzles.mjs` periodically (or on a scheduled job)
 so `puzzles` always has upcoming dates.
 
 ---
@@ -298,10 +298,10 @@ DRA update):
    (in the order the Makefile already encodes: compactness before derived).
    Then separately run `make lang push-lang` if you want the language field
    too (see the Step 2 gotcha above — it's excluded from `all`).
-4. `node build-server-assets.mjs` — refreshes `states.topojson`,
+4. `node scripts/build-server-assets.mjs` — refreshes `states.topojson`,
    `district-names.json`, and applies `/tmp/dd_adj_update.sql` against
    Supabase (`district_geometries.adj`).
-5. `node seed-puzzles.mjs 2026-06-22 436 > puzzles.sql` (or whatever date
+5. `node scripts/seed-puzzles.mjs 2026-06-22 436 > puzzles.sql` (or whatever date
    range makes sense) then `psql "$DATABASE_URL" -f puzzles.sql` — this
    reschedules every date across the new district set and rewrites
    `puzzles.clues`/`puzzles.census` fresh for all of them.
@@ -316,17 +316,17 @@ DRA update):
 
 - **`district_geometries.geometry` (the actual polygon Supabase serves back to
   a player mid-game once they've solved the state) has no generating script
-  anywhere in this repo.** `build-server-assets.mjs` only ever touches
+  anywhere in this repo.** `scripts/build-server-assets.mjs` only ever touches
   `district_geometries.adj`. Find and document how that column's initial load
   happened (likely a one-off manual import) before relying on this runbook
   for a real redistricting cycle — right now step 5 above reschedules
   `puzzles` correctly, but nothing here proves `district_geometries.geometry`
   gets refreshed to match the new boundaries.
 - **Two different, independent clue-generation implementations exist for the
-  same `puzzles.clues` column**: `seed-puzzles.mjs`'s own
+  same `puzzles.clues` column**: `scripts/seed-puzzles.mjs`'s own
   `buildStateClues`/`buildDistrictClues` (used at seed time, JS) vs.
   `tools/census/build_clues.py` (used for later refreshes, Python + SQL). They
-  pick different fields and different wording. Re-running `seed-puzzles.mjs`
+  pick different fields and different wording. Re-running `scripts/seed-puzzles.mjs`
   after `make clues push-clues` has already run **will overwrite that day's
   clues with the seed script's own version** — know which one you want to be
   authoritative before running both.
@@ -336,7 +336,7 @@ DRA update):
   `Margin2024Pres`, `DemPct2024Pres`, `RepPct2024Pres`, `rep`, `pct`). Trust
   the code over the prose until someone updates the README.
 - `BACKEND.md`'s documented `puzzles` table schema omits the `census` jsonb
-  column that `seed-puzzles.mjs` clearly populates — that doc reads as a
+  column that `scripts/seed-puzzles.mjs` clearly populates — that doc reads as a
   point-in-time snapshot, not current schema.
 - `build_reps.py` scrapes house.gov's HTML directly (regex against specific
   CSS class names); it will silently break if house.gov's markup changes.
@@ -353,23 +353,23 @@ DRA update):
 | `districts-core.topojson`, `districts-overlay.topojson`, `districts.topojson` | `build-map.sh` | no |
 | `state-svgs/*.svg` | `build-map.sh` | no |
 | `state-acs.json` | `build-map.sh`, from `createMaps/acs_by_state.csv` | no |
-| `states.topojson`, `district-names.json` | `build-server-assets.mjs` | no |
+| `states.topojson`, `district-names.json` | `scripts/build-server-assets.mjs` | no |
 | `counties-lines.topojson` | *(none found in this repo)* | **yes — treat as static/externally produced** until a generator turns up |
-| `puzzle-order.json` | `build-puzzle-order.mjs` | no, but also unused by `seed-puzzles.mjs` (documentation artifact only) |
+| `puzzle-order.json` | `scripts/build-puzzle-order.mjs` | no, but also unused by `scripts/seed-puzzles.mjs` (documentation artifact only) |
 | `tools/census/*_out.json`, `*_out.csv`, `*_update.sql` | the matching `tools/census/*.py` / `.R` script | no, except `derived_update.sql` (static, hand-written) |
-| `puzzles.sql` (not committed — you generate it) | `seed-puzzles.mjs` | no |
+| `puzzles.sql` (not committed — you generate it) | `scripts/seed-puzzles.mjs` | no |
 
 ## Reference: Supabase tables touched by this pipeline
 
 - **`puzzles`** — one row per calendar date: `date` (PK), `puzzle_number`,
   `district_id`, `state`, `neighbors`, `state_neighbors`, `clues` (jsonb —
   `{state:[...], district:[...]}`, 6 cards each), `census` (jsonb demographic
-  snapshot). Written by `seed-puzzles.mjs` (whole row) and by every
+  snapshot). Written by `scripts/seed-puzzles.mjs` (whole row) and by every
   `tools/census/push-*` target (`census`/`clues` fields only, matched by
   `district_id` across every scheduled date that district appears on).
 - **`district_geometries`** — keyed by `district_id` (same `"NV-02"`-style
   string as `puzzles.district_id`). `adj` is written by
-  `build-server-assets.mjs`; the actual `geometry` column's pipeline is the
+  `scripts/build-server-assets.mjs`; the actual `geometry` column's pipeline is the
   open gap noted above.
 - Both `today`/`guess`/`state-shapes` Edge Functions read these tables live —
   no redeploy is needed after a data push, only after an Edge Function code

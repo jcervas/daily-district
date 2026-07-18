@@ -8,9 +8,9 @@
 // FACT_DEFS in script.js EXACTLY, by extracting the real STATE_* maps + props so
 // they never drift.
 //
-//   node seed-puzzles.mjs [startDate] [days]  > puzzles.sql
+//   node scripts/seed-puzzles.mjs [startDate] [days]  > puzzles.sql
 //   defaults: startDate = today (UTC), days = 63 (yesterday .. +61)
-//   For a full non-repeating cycle: node seed-puzzles.mjs 2026-07-14 436
+//   For a full non-repeating cycle: node scripts/seed-puzzles.mjs 2026-07-14 436
 //
 // Then run puzzles.sql against the daily-district Supabase project.
 // ============================================================
@@ -19,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SCRIPT = fs.readFileSync(path.join(DIR, 'script.js'), 'utf8');
 const TOPO = JSON.parse(fs.readFileSync(path.join(DIR, 'districts-core.topojson'), 'utf8'));
 const STATE_ACS = path.join(DIR, 'data/acs_by_state.csv');

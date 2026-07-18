@@ -9,7 +9,7 @@
 // facts card → CTA. Self-contained except Barlow via Google Fonts (same as the
 // live teaser). Add #intro / #sil / #facts / #cta to the URL to freeze a scene.
 //
-//   node generate-teaser-education.mjs
+//   node social/scripts/generate-teaser-education.mjs
 // ============================================================
 
 import fs from 'node:fs';
@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 
 // Districts shown in the morphing silhouette scene (varied, recognisable shapes).
 const SIL_IDS = ['LA-02', 'IL-03', 'TX-07', 'MD-06', 'CA-38'];

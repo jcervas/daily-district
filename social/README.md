@@ -1,13 +1,16 @@
 # Social & promo media
 
 Everything for making Daily District's shareable media — static graphics and
-the animated promo videos. All the **scripts live at the repo root** (next to
-the other `build-*.mjs`), and everything they generate lands under `social/`.
+the animated promo videos. All the **scripts live in `social/scripts/`** (the
+site/data build scripts live in `scripts/`), and everything they generate lands
+under `social/`.
 
 **Easiest way to run everything: the `npm run` scripts in the [TL;DR](#tldr--the-commands)
 below — they work from _any_ folder in the project (`cd`ing into `social/` is
 fine).** The raw `node …` commands in the later sections are equivalent but must
-be run **from the project root**.
+be run **from the project root** (the build scripts anchor their own file access
+to the repo, but `render-mp4.mjs`'s input/output arguments resolve against the
+folder you run it from).
 
 ```
 social/
@@ -72,7 +75,7 @@ settled logo. This lives in each `teaser.template.html` as the
 `CONFETTI`/`renderConfetti` block + a `{name:'cta', …, hold:true}` scene — copy
 that block verbatim into a new teaser to keep the ending consistent.
 
-**Build scripts at the repo root:** `generate-social-graphics.mjs` (PNG cards),
+**Build scripts in `social/scripts/`:** `generate-social-graphics.mjs` (PNG cards),
 `build-teaser-1.mjs` (gameplay promo), `build-teaser-2.mjs` (teaser #2),
 `build-teaser-3.mjs` (teaser #3), `build-teaser-4.mjs` (teaser #4),
 `build-teaser-5.mjs` (teaser #5), `build-teaser-6.mjs` (teaser #6),
@@ -200,11 +203,11 @@ recorder (§5).
 the topojson — a 16:9 link/preview card and a 9:16 Reels/Stories card.
 
 ```bash
-node generate-social-graphics.mjs                  # today's puzzle district
-node generate-social-graphics.mjs --district=IL-3  # a specific district (IL-3 or IL-03)
-node generate-social-graphics.mjs --date=2026-07-04 # the district for a given date
-node generate-social-graphics.mjs --all            # every base district (all 435)
-node generate-social-graphics.mjs --out=some/dir   # override output directory
+node social/scripts/generate-social-graphics.mjs                  # today's puzzle district
+node social/scripts/generate-social-graphics.mjs --district=IL-3  # a specific district (IL-3 or IL-03)
+node social/scripts/generate-social-graphics.mjs --date=2026-07-04 # the district for a given date
+node social/scripts/generate-social-graphics.mjs --all            # every base district (all 435)
+node social/scripts/generate-social-graphics.mjs --out=some/dir   # override output directory
 ```
 
 **Output** → `social/out/<DISTRICT>-16x9.png` (3200 px wide) and
@@ -236,9 +239,9 @@ hold; see §"end-card confetti" note above).
 ### 3a. Build the HTML
 
 ```bash
-node build-teaser-1.mjs --district=CA-19               # 16:9  (default aspect)
-node build-teaser-1.mjs --district=CA-19 --aspect=9x16 # 9:16  (Reels / TikTok / Stories)
-node build-teaser-1.mjs --district=CA-19 --aspect=1x1  # 1:1   (square feed)
+node social/scripts/build-teaser-1.mjs --district=CA-19               # 16:9  (default aspect)
+node social/scripts/build-teaser-1.mjs --district=CA-19 --aspect=9x16 # 9:16  (Reels / TikTok / Stories)
+node social/scripts/build-teaser-1.mjs --district=CA-19 --aspect=1x1  # 1:1   (square feed)
 ```
 
 - `--district=` accepts `CA-19` or `CA-9`. Defaults to `CA-19` if omitted.
@@ -255,18 +258,18 @@ win-screen stats) is generated from `districts-core.topojson`,
 ### 3b. Render to MP4
 
 ```bash
-# node render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <deviceScaleFactor> [fps]
+# node social/scripts/render-mp4.mjs <input.html> <output.mp4> <cssW> <cssH> <deviceScaleFactor> [fps]
 
 # 16:9 → rendered at 1.5× for true 1080p
-node render-mp4.mjs social/teaser-1/teaser-1.html \
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1.html \
   social/teaser-1/out/daily-district-CA-19-16x9.mp4 1280 720 1.5 30
 
 # 9:16 → native 1080×1920
-node render-mp4.mjs social/teaser-1/teaser-1-9x16.html \
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1-9x16.html \
   social/teaser-1/out/daily-district-CA-19-9x16.mp4 1080 1920 1 30
 
 # 1:1 → native 1080×1080
-node render-mp4.mjs social/teaser-1/teaser-1-1x1.html \
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1-1x1.html \
   social/teaser-1/out/daily-district-CA-19-1x1.mp4 1080 1080 1 30
 ```
 
@@ -279,12 +282,12 @@ and **1** for the already-1080 portrait/square. Output is H.264 / yuv420p /
 
 ```bash
 D=FL-14
-node build-teaser-1.mjs --district=$D
-node build-teaser-1.mjs --district=$D --aspect=9x16
-node build-teaser-1.mjs --district=$D --aspect=1x1
-node render-mp4.mjs social/teaser-1/teaser-1.html      social/teaser-1/out/daily-district-$D-16x9.mp4 1280 720 1.5 30
-node render-mp4.mjs social/teaser-1/teaser-1-9x16.html social/teaser-1/out/daily-district-$D-9x16.mp4 1080 1920 1  30
-node render-mp4.mjs social/teaser-1/teaser-1-1x1.html  social/teaser-1/out/daily-district-$D-1x1.mp4  1080 1080 1  30
+node social/scripts/build-teaser-1.mjs --district=$D
+node social/scripts/build-teaser-1.mjs --district=$D --aspect=9x16
+node social/scripts/build-teaser-1.mjs --district=$D --aspect=1x1
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1.html      social/teaser-1/out/daily-district-$D-16x9.mp4 1280 720 1.5 30
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1-9x16.html social/teaser-1/out/daily-district-$D-9x16.mp4 1080 1920 1  30
+node social/scripts/render-mp4.mjs social/teaser-1/teaser-1-1x1.html  social/teaser-1/out/daily-district-$D-1x1.mp4  1080 1080 1  30
 ```
 
 ---
@@ -319,8 +322,8 @@ times below reflect the **default 5-district line-up**:
 Total loop: **~25.4s** with the default line-up; changes with `--districts=`.
 
 ```bash
-node build-teaser-2.mjs                      # default line-up, 1:1
-node render-mp4.mjs social/teaser-2/teaser-2.html \
+node social/scripts/build-teaser-2.mjs                      # default line-up, 1:1
+node social/scripts/render-mp4.mjs social/teaser-2/teaser-2.html \
   social/teaser-2/out/daily-district-teaser-2-1x1.mp4 1080 1080 1 30
 ```
 
@@ -360,8 +363,8 @@ until every confetti piece has landed, +3 s). ~24 s, **1:1** by default.
 Total loop: **~23.9s**.
 
 ```bash
-node build-teaser-3.mjs                  # 1:1
-node render-mp4.mjs social/teaser-3/teaser-3.html \
+node social/scripts/build-teaser-3.mjs                  # 1:1
+node social/scripts/render-mp4.mjs social/teaser-3/teaser-3.html \
   social/teaser-3/out/daily-district-teaser-3-1x1.mp4 1080 1080 1 30
 ```
 
@@ -398,8 +401,8 @@ runs 10s to let the morph breathe).
 Total loop: **~34.6s**.
 
 ```bash
-node build-teaser-4.mjs                       # 1:1
-node render-mp4.mjs social/teaser-4/teaser-4.html \
+node social/scripts/build-teaser-4.mjs                       # 1:1
+node social/scripts/render-mp4.mjs social/teaser-4/teaser-4.html \
   social/teaser-4/out/daily-district-teaser-4-1x1.mp4 1080 1080 1 30
 ```
 
@@ -435,8 +438,8 @@ the logo until every piece has landed, +3 s). ~22 s, **1:1** by default.
 Total loop: **~22.3s**.
 
 ```bash
-node build-teaser-5.mjs                       # 1:1
-node render-mp4.mjs social/teaser-5/teaser-5.html \
+node social/scripts/build-teaser-5.mjs                       # 1:1
+node social/scripts/render-mp4.mjs social/teaser-5/teaser-5.html \
   social/teaser-5/out/daily-district-teaser-5-1x1.mp4 1080 1080 1 30
 ```
 
@@ -459,8 +462,8 @@ for a curated line-up — then wordmark + CTA ("Play to win.") + end-card
 confetti. ~25 s, **1:1** by default.
 
 ```bash
-node build-teaser-6.mjs                       # default line-up, 1:1
-node render-mp4.mjs social/teaser-6/teaser-6.html \
+node social/scripts/build-teaser-6.mjs                       # default line-up, 1:1
+node social/scripts/render-mp4.mjs social/teaser-6/teaser-6.html \
   social/teaser-6/out/daily-district-teaser-6-1x1.mp4 1080 1080 1 30
 ```
 
@@ -498,8 +501,8 @@ then the win), then the app's actual **"copy results" share text** (`✗ ○ ✓
 by default.
 
 ```bash
-node build-teaser-7.mjs                       # 1:1
-node render-mp4.mjs social/teaser-7/teaser-7.html \
+node social/scripts/build-teaser-7.mjs                       # 1:1
+node social/scripts/render-mp4.mjs social/teaser-7/teaser-7.html \
   social/teaser-7/out/daily-district-teaser-7-1x1.mp4 1080 1080 1 30
 ```
 
@@ -687,8 +690,8 @@ rather than fixed: 16:9 lands on a 1.26 s fly-in starting 142 px below the
 stage, 9:16 on 2.27 s starting 156 px below — each just barely off-stage.
 
 ```bash
-node build-teaser-8.mjs                       # default district (MD-03), 1:1
-node render-mp4.mjs social/teaser-8/teaser-8.html \
+node social/scripts/build-teaser-8.mjs                       # default district (MD-03), 1:1
+node social/scripts/render-mp4.mjs social/teaser-8/teaser-8.html \
   social/teaser-8/out/daily-district-teaser-8-1x1.mp4 1080 1080 1 30
 ```
 
@@ -751,8 +754,8 @@ evergreen (no date/team references) so the asset stays usable beyond any
 single tournament.
 
 ```bash
-node build-teaser-9.mjs                       # default line-up, 1:1
-node render-mp4.mjs social/teaser-9/teaser-9.html \
+node social/scripts/build-teaser-9.mjs                       # default line-up, 1:1
+node social/scripts/render-mp4.mjs social/teaser-9/teaser-9.html \
   social/teaser-9/out/daily-district-teaser-9-1x1.mp4 1080 1080 1 30
 ```
 
@@ -793,8 +796,8 @@ data — this one's evergreen and doesn't need `--district=`. ~23 s, **1:1** by
 default.
 
 ```bash
-node build-teaser-10.mjs                      # 1:1
-node render-mp4.mjs social/teaser-10/teaser-10.html \
+node social/scripts/build-teaser-10.mjs                      # 1:1
+node social/scripts/render-mp4.mjs social/teaser-10/teaser-10.html \
   social/teaser-10/out/daily-district-teaser-10-1x1.mp4 1080 1080 1 30
 ```
 

@@ -20,14 +20,14 @@
  *   districts/index.html         browse hub
  *   sitemap.xml, robots.txt
  *
- * Run: node build-district-pages.mjs
+ * Run: node scripts/build-district-pages.mjs
  */
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SITE = 'https://daily-district.com';
 const CSS_V = 6; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes

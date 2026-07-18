@@ -5,8 +5,8 @@
 // compactness) as white silhouettes on a Carnegie Red field, with the
 // Daily District wordmark centred. CMU colour scheme (Carnegie Red #C41230).
 //
-//   node generate-social-banner.mjs            → social/out/banner-twitter.png
-//   node generate-social-banner.mjs --n=9      → number of silhouettes in the frieze
+//   node social/scripts/generate-social-banner.mjs            → social/out/banner-twitter.png
+//   node social/scripts/generate-social-banner.mjs --n=9      → number of silhouettes in the frieze
 //
 // At-large / single-district states are excluded: their shape is the whole
 // state, not a redistricting choice.
@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const SITE = 'daily-district.com';
 
 // CMU palette.

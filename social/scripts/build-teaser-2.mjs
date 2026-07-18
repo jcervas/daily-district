@@ -13,9 +13,9 @@
 // the curated line-up below can be swapped freely.
 //
 // Usage:
-//   node build-teaser-2.mjs                       # default line-up, 1:1 (for X)
-//   node build-teaser-2.mjs --aspect=9x16         # 1:1 (default) | 9x16 | 16x9
-//   node build-teaser-2.mjs --districts=IL-04,AK-01,NY-13,GA-05,WY-01
+//   node social/scripts/build-teaser-2.mjs                       # default line-up, 1:1 (for X)
+//   node social/scripts/build-teaser-2.mjs --aspect=9x16         # 1:1 (default) | 9x16 | 16x9
+//   node social/scripts/build-teaser-2.mjs --districts=IL-04,AK-01,NY-13,GA-05,WY-01
 //
 // Output: social/teaser-2/teaser-2.html  (or teaser-2-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 const commas = n => Number(n).toLocaleString('en-US');

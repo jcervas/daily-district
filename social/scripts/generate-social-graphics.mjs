@@ -13,11 +13,11 @@
 // social/fonts/ and handed to resvg directly — system fonts are not used.
 //
 // Usage:
-//   node generate-social-graphics.mjs                 today's puzzle district
-//   node generate-social-graphics.mjs --district=IL-3 a specific district
-//   node generate-social-graphics.mjs --date=2026-07-04   the puzzle for a date
-//   node generate-social-graphics.mjs --all           every base district (435)
-//   node generate-social-graphics.mjs --out=some/dir  output directory
+//   node social/scripts/generate-social-graphics.mjs                 today's puzzle district
+//   node social/scripts/generate-social-graphics.mjs --district=IL-3 a specific district
+//   node social/scripts/generate-social-graphics.mjs --date=2026-07-04   the puzzle for a date
+//   node social/scripts/generate-social-graphics.mjs --all           every base district (435)
+//   node social/scripts/generate-social-graphics.mjs --out=some/dir  output directory
 //
 // Output: social/daily-district-card/<district>-16x9.png and <district>-9x16.png
 // ============================================================
@@ -27,9 +27,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { geoAlbersUsa, geoPath, geoArea } from 'd3-geo';
 import * as topojson from 'topojson-client';
-import { baseIds, districtIdForPuzzle, puzzleNumberFor } from './puzzle-schedule.mjs';
+import { baseIds, districtIdForPuzzle, puzzleNumberFor } from '../../scripts/puzzle-schedule.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const SITE = 'daily-district.com';
 
 // ── Brand tokens (from the design) ───────────────────────────────────────────

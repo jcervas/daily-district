@@ -1,10 +1,10 @@
 # Posts the daily "Yesterday's District" recap (two 1:1 cards, no link) to
-# https://x.com/daily_district_ via daily-recap.mjs.
+# https://x.com/daily_district_ via social/scripts/daily-recap.mjs.
 #
 # Requires the same repo secrets as daily-tweet.yml (X developer app, Read+Write
 # on @daily_district_): X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 #
-# Safe to enable before go-live: daily-recap.mjs has a LAUNCH_DATE guard and
+# Safe to enable before go-live: social/scripts/daily-recap.mjs has a LAUNCH_DATE guard and
 # will not post for recap dates before it (it simply no-ops).
 name: Daily recap post
 
@@ -39,7 +39,7 @@ jobs:
       - run: npm ci
       - name: Build and post recap
         run: >-
-          node daily-recap.mjs
+          node social/scripts/daily-recap.mjs
           ${{ inputs.date != '' && format('--date={0}', inputs.date) || '' }}
           ${{ inputs.force && '--force' || '' }}
         env:

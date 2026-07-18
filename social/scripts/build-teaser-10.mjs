@@ -11,8 +11,8 @@
 // fonts + wordmark and stamps the stage size.
 //
 // Usage:
-//   node build-teaser-10.mjs                 # 1:1
-//   node build-teaser-10.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
+//   node social/scripts/build-teaser-10.mjs                 # 1:1
+//   node social/scripts/build-teaser-10.mjs --aspect=9x16   # 1x1 (default) | 9x16 | 16x9
 //
 // Output: social/teaser-10/teaser-10.html  (or teaser-10-<aspect>.html)
 //         render to MP4 with render-mp4.mjs (see social/README.md)
@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // repo root (script lives in social/scripts/)
 const read = f => fs.readFileSync(path.join(DIR, f), 'utf8');
 const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1];
 
