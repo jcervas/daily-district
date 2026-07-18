@@ -325,8 +325,12 @@
       const email = $('login-email').value.trim();
       const pw = $('login-password').value;
       if (!email || pw.length < 6) { setErr('Enter an email and a 6+ character password.'); return; }
+      // Default to opted-OUT if some page loads login.js without this checkbox in its
+      // markup — never presume consent that no UI ever asked for.
+      const marketingEl = $('login-marketing');
+      const marketing = marketingEl ? marketingEl.checked : false;
       try {
-        const { data, error } = await B.signUpWithEmail(email, pw);
+        const { data, error } = await B.signUpWithEmail(email, pw, undefined, marketing);
         if (error) throw error;
         rememberEmail(email);
         // With email confirmation enforced, signUp returns a user but NO session
@@ -368,7 +372,9 @@
 
     // Close returns to the welcome splash (which still has the Sign-in button).
     $('login-close').addEventListener('click', () => { setErr(''); hideGate(); });
-    $('welcome-signin-btn').addEventListener('click', () => { setErr(''); showGate(); });
+    // Optional: pages without a welcome/splash screen (e.g. the pre-launch teaser) have
+    // no #welcome-signin-btn — the header button below is still wired either way.
+    signinBtn && signinBtn.addEventListener('click', () => { setErr(''); showGate(); });
     signinBtnHeader && signinBtnHeader.addEventListener('click', () => { setErr(''); showGate(); });
 
     // ---- React to auth state ------------------------------------------------

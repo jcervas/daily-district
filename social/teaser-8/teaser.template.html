@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily District — Teaser #8 (Drawing the District)</title>
+<style>
+/*{{FONTS_CSS}}*/
+
+:root{
+  --red:#C41230; --hot:#ff2d4d; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
+  --line:#e7e4e0;
+  --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
+  font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0e0e11;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+
+#stage{position:relative;width:var(--stageW);height:var(--stageH);background:var(--bg);
+  overflow:hidden;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5);
+  transform-origin:center center;perspective:1500px}
+body.clean{background:#f4f3f1}
+body.clean #stage{border-radius:0;box-shadow:none}
+
+/* end-card confetti (shared pattern — see social/README.md) */
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:12;opacity:0}
+.cf{position:absolute;left:0;top:0;will-change:transform,opacity}
+
+#bg{position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% -12%, #ffffff 0%, rgba(255,255,255,0) 52%),
+    radial-gradient(70% 70% at 8% 6%, rgba(196,18,48,.10) 0%, rgba(196,18,48,0) 46%),
+    radial-gradient(70% 70% at 94% 96%, rgba(196,18,48,.12) 0%, rgba(196,18,48,0) 50%),
+    linear-gradient(160deg,#f8f6f4 0%,#eeeae6 100%)}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  will-change:transform,filter,opacity;backface-visibility:hidden;opacity:0}
+.scene .wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+[data-anim]{opacity:0;will-change:transform,opacity}
+
+/* wordmark scenes */
+.wordmark{color:var(--red);display:block}
+.wordmark svg{display:block;width:100%;height:auto}
+.eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:84%;line-height:1.25}
+.redword{color:var(--red)}
+.cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+
+/* draw scene — comet sweeps span the full stage; the district box is separate.
+   The spark/ember look (glowing dot + flying fading embers) is borrowed from
+   the live game's post-game "spark trace" (script.js _runGameoverSparkTrace).
+   Glows are plain radial-gradient fills, not `filter:drop-shadow` — a filter
+   on a constantly-animated element inside a transformed ancestor makes Chrome
+   composite a visible rectangular "backing box" around it (see the flat-is-
+   cleaner note on .sil in teaser-4's CSS) — same root cause as the clipping
+   frame the trace camera used to show, so both are avoided here. */
+.comets-svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;z-index:1}
+.comets-svg .comet{stroke-linecap:round;opacity:0}
+.comets-svg .comet-head{opacity:0}
+.comets-svg .ember{fill:var(--hot);opacity:0}
+/* the persistent shape: full-stage, non-interactive, sits behind every
+   scene's own text (plain DOM order — scenes come after it, confetti has its
+   own explicit z-index) so it can stay mounted across the draw→cta boundary */
+#shape-overlay{position:absolute;inset:0;pointer-events:none}
+/* overflow:visible is load-bearing — while zoomed in tight the already-drawn
+   part of the boundary extends well beyond this svg's own box, and it must
+   spill and be clipped by #stage's edge (natural, like a camera panning over
+   a big drawing) rather than by an inner box edge (which reads as a frame). */
+.draw-svg{position:absolute;top:50%;left:50%;overflow:visible}
+.draw-svg .ref{fill:none;stroke:none}
+.draw-svg .dfill{fill:var(--red);opacity:0}
+.draw-svg .boundary{fill:none;stroke:var(--red);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.draw-svg .spark{opacity:0}
+.draw-svg .trace-ember{fill:var(--hot);opacity:0}
+.dhead{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px}
+.did{font-weight:900;font-size:60px;line-height:1;color:var(--ink);letter-spacing:-1px}
+.dstate{font-weight:700;font-size:22px;color:var(--muted)}
+
+/* controls */
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
+  border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
+body.clean #controls{display:none}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button.primary{background:var(--red)}
+#controls button:hover{filter:brightness(1.12)}
+#controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
+#hint-cue{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
+body.clean #hint-cue{display:none}
+
+/* portrait 9:16 (1080×1920) */
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+body[data-aspect="9x16"] .did{font-size:96px}
+body[data-aspect="9x16"] .dstate{font-size:28px}
+body[data-aspect="9x16"] .cta-url{font-size:72px}
+
+/* landscape 16:9 (1280×720) */
+body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .eyebrow{font-size:17px}
+body[data-aspect="16x9"] .sub{font-size:24px}
+body[data-aspect="16x9"] .dhead{margin-top:14px}
+body[data-aspect="16x9"] .did{font-size:44px}
+body[data-aspect="16x9"] .dstate{font-size:18px}
+body[data-aspect="16x9"] .cta-url{font-size:48px}
+</style>
+</head>
+<body data-aspect="{{ASPECT}}">
+
+<div id="stage">
+  <div id="bg"></div>
+
+  <!-- Persistent district shape — lives outside the scene system entirely so
+       it can stay on screen across the draw→cta boundary and MORPH (shrink +
+       fade) into the CTA background frame instead of disappearing and being
+       replaced by a separate element. Its own transform/opacity is driven
+       purely by elapsed time in updateShape(), every frame, regardless of
+       which .scene is currently visible. -->
+  <div id="shape-overlay">
+    <svg id="draw-svg" class="draw-svg" viewBox="0 0 {{TRACE_VB_W}} {{TRACE_VB_H}}" width="{{TRACE_CSS_W}}" height="{{TRACE_CSS_H}}" aria-hidden="true">
+      <defs id="trace-defs"></defs>
+      <g id="draw-content">
+        <path id="draw-ref" class="ref" d="{{TRACE_PATH}}"/>
+        <path id="draw-fill" class="dfill" d="{{TRACE_PATH}}"/>
+        <path id="draw-boundary" class="boundary" d="{{TRACE_PATH}}"/>
+      </g>
+      <g id="trace-embers"></g>
+      <circle id="draw-spark" class="spark" r="16"/>
+    </svg>
+  </div>
+
+  <div id="confetti"></div>
+
+  <!-- 1 · DRAW — opens cold on the comets; there is deliberately no wordmark
+       intro scene, this teaser starts straight on the lines. The real boundary
+       (shape-overlay, above) draws in and gradually zooms out behind this
+       scene's own label -->
+  <section class="scene" data-scene="draw">
+    <svg id="comets-svg" class="comets-svg" viewBox="0 0 {{STAGE_W}} {{STAGE_H}}" preserveAspectRatio="none" aria-hidden="true">
+      <defs id="draw-defs"></defs>
+      <g id="comets"></g>
+    </svg>
+    <div class="wrap">
+      <div class="draw-spacer" style="width:{{TRACE_BOX_W}}px;height:{{TRACE_BOX_H}}px"></div>
+      <div class="dhead">
+        <span class="did" data-anim="pop">{{DIST_ID}}</span>
+        <span class="dstate" data-anim="rise">{{STATE}}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · CTA — the shape-overlay has already morphed into the faint background frame by now -->
+  <section class="scene" data-scene="cta">
+    <div class="wrap">
+      <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="color:var(--ink)">One boundary. One guess. <b class="redword">Every day.</b></div>
+      <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
+    </div>
+  </section>
+</div>
+
+<div id="hint-cue">▶ Teaser #8 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="controls">
+  <button class="primary" id="btn-rec">● Record video</button>
+  <button id="btn-restart">↻ Restart</button>
+  <button id="btn-clean">Hide UI</button>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #8</span>
+</div>
+
+<script>
+const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
+const easeInOut=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+const SVGNS='http://www.w3.org/2000/svg';
+
+// scene-level entrance/exit timings (used below by the draw-scene duration
+// math, so declared ahead of everything else)
+const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
+const SW={{STAGE_W}}, SH={{STAGE_H}};
+
+// ── The reveal: slow, deliberate comet-tail lines sweep the full screen —
+//    horizontally right-to-left, then left-to-right, then vertically — pure
+//    kinetic buildup, not tied to the district's real shape. Once they've
+//    played, the camera pulls back while the ACTUAL boundary draws itself in,
+//    landing on the complete, filled district exactly as the pull-back
+//    finishes. Every value below is a pure function of the scene-local
+//    elapsed time so it stays correct under render-mp4's frame-by-frame
+//    seek. ─────────────────────────────────────────────────────────────────
+const TRACE_VB_W={{TRACE_VB_W}}, TRACE_VB_H={{TRACE_VB_H}};
+const TRACE_ROTATE={{TRACE_ROTATE}};
+const drawSvg=document.getElementById('draw-svg');
+const refPath=document.getElementById('draw-ref');
+const fillPath=document.getElementById('draw-fill');
+const boundaryPath=document.getElementById('draw-boundary');
+const cometsG=document.getElementById('comets');
+const defsEl=document.getElementById('draw-defs');
+const contentG=document.getElementById('draw-content');
+const sparkEl=document.getElementById('draw-spark');
+const traceDefsEl=document.getElementById('trace-defs');
+const traceEmbersG=document.getElementById('trace-embers');
+const PATH_LEN=refPath.getTotalLength();
+
+// A soft glow as a radial-gradient fill (white-hot core → hot → transparent)
+// on an oversized circle — not `filter:drop-shadow`, which Chrome can turn
+// into a visible rectangular backing box on a constantly-animated element.
+function makeGlow(parentDefs){
+  const grad=document.createElementNS(SVGNS,'radialGradient');
+  grad.id='glow'+Math.random().toString(36).slice(2);
+  const stops=[['0%','#fffdf7',1],['28%','var(--hot)',0.95],['65%','var(--red)',0.35],['100%','var(--red)',0]];
+  for(const [offset,color,op] of stops){
+    const s=document.createElementNS(SVGNS,'stop');
+    s.setAttribute('offset',offset); s.setAttribute('stop-color',color); s.setAttribute('stop-opacity',op);
+    grad.appendChild(s);
+  }
+  parentDefs.appendChild(grad);
+  return grad.id;
+}
+
+// ── The boundary's own tangent geometry. Computed up here, ahead of the
+//    comets, because the LAST comet is aimed along the district's own
+//    starting tangent and lands exactly on the spark — see HANDOFF below. ───
+const SPARK_R=16;
+sparkEl.setAttribute('cx', TRACE_VB_W/2); sparkEl.setAttribute('cy', TRACE_VB_H/2);
+sparkEl.setAttribute('r', SPARK_R);
+sparkEl.setAttribute('fill', `url(#${makeGlow(traceDefsEl)})`);
+const wrapLen=len=>((len%PATH_LEN)+PATH_LEN)%PATH_LEN;
+const ptAt=len=>refPath.getPointAtLength(wrapLen(len));
+const ROT_SMOOTH=Math.max(14, PATH_LEN*0.022);   // smooth over local zigzags, keep the net turn
+function rawAngleAt(len){ const a=ptAt(len-ROT_SMOOTH), b=ptAt(len+ROT_SMOOTH); return Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI; }
+// Precompute an unwrapped (no ±180° snap) angle curve once, so any lookup during
+// rendering is a plain interpolation — deterministic under seeking.
+const ANGLE_SAMPLES=240;
+const UNWRAPPED=[rawAngleAt(0)];
+for(let i=1;i<=ANGLE_SAMPLES;i++){
+  let d=rawAngleAt(PATH_LEN*i/ANGLE_SAMPLES)-rawAngleAt(PATH_LEN*(i-1)/ANGLE_SAMPLES);
+  while(d>180) d-=360; while(d<-180) d+=360;
+  UNWRAPPED.push(UNWRAPPED[i-1]+d);
+}
+// turnSince() — the camera's total turn at a given arc length — is built from
+// UNWRAPPED further down, once the pen's pace is known: how much of the tangent
+// it keeps depends on how fast the pen gets, and that's decided there.
+const START_PT=refPath.getPointAtLength(0);
+
+// ── The FOURTH LINE IS THE DISTRICT ITSELF ────────────────────────────────
+//    The first three sweeps are synthetic comets that fly past. The fourth
+//    isn't a comet at all — it's the district's own boundary, already drawing,
+//    with its tip starting outside the viewBox and flying in to dead centre.
+//
+//    That's the whole trick, and it's why there's no hand-off left to get
+//    wrong: the trail streaming behind that tip *is* the real boundary, so the
+//    line that flies in and the line that keeps drawing are literally the same
+//    object. Earlier versions had a synthetic 4th comet land on the spark and
+//    pass the baton, which meant two separate things had to agree on an angle
+//    to the degree — and when they didn't (the smoothed-tangent bug) it visibly
+//    "started drawing in a different direction". One object can't disagree
+//    with itself.
+//
+//    FLY_TRAVEL is the chosen heading (bottom → top, keeping the run's variety:
+//    horizontal, horizontal, vertical, vertical). The district is rotated by
+//    ROT_STATIC so it enters travelling along exactly that heading — see the
+//    fly-in geometry further down, next to REVEAL_DUR. ────────────────────────
+const M=130;
+const SVG_SCALE={{TRACE_CSS_W}}/TRACE_VB_W;             // viewBox units → stage px
+const FLY_TRAVEL=-Math.PI/2;                            // district flies in bottom → top
+// How far from centre the stage edge actually is *along the flight heading* —
+// not the half-diagonal, which is only right for a corner-to-corner entry. For
+// a vertical entry the diagonal overshoots by ~1.8x, which starts the tip miles
+// off-stage and buys a second of empty frame before it shows up.
+const FLY_EDGE=Math.min(
+  Math.abs(Math.cos(FLY_TRAVEL))<1e-6 ? Infinity : (SW/2)/Math.abs(Math.cos(FLY_TRAVEL)),
+  Math.abs(Math.sin(FLY_TRAVEL))<1e-6 ? Infinity : (SH/2)/Math.abs(Math.sin(FLY_TRAVEL)));
+const FLY_D=FLY_EDGE+M;                                 // START_PT must begin beyond this
+
+// The three synthetic sweeps. Each spans the entire stage width/height, not the
+// small district box — the two horizontal flashes are drawn extra-thick for
+// impact. Each carries a glowing head + a few flying, fading embers — the same
+// visual language as the live game's post-game "spark trace" (script.js
+// _runGameoverSparkTrace/emitEmber): a bright glow riding a comet, not a flat
+// line. The ENDING coordinate is pushed out an extra `tail` beyond the M
+// margin — the tail trails behind the head in the opposite direction of
+// travel, so once the head reaches a bare M-margin off-stage, the tail (often
+// longer than M) is still trailing back onto the visible stage. Pushing the
+// endpoint out by its own tail length guarantees the WHOLE comet, head to tail,
+// has cleared the frame by the time it's done.
+// (The fourth sweep isn't here — it's the district itself; see FLY_TRAVEL above.)
+const hTailR=0.36*SW, hTailL=0.36*SW, vTailD=0.30*SH;
+const COMETS=[
+  {x1:SW+M,    y1:SH*0.32, x2:-(M+hTailR),      y2:SH*0.32, dur:3.0,  tail:hTailR, w:22, headR:16}, // horizontal, right → left
+  {x1:-M,      y1:SH*0.58, x2:SW+M+hTailL,      y2:SH*0.58, dur:3.0,  tail:hTailL, w:22, headR:16}, // horizontal, left → right
+  {x1:SW*0.62, y1:-M,      x2:SW*0.62,  y2:SH+M+vTailD,     dur:2.4,  tail:vTailD, w:16, headR:13}, // vertical, top → bottom
+];
+// Negative: the sweeps OVERLAP rather than queueing politely. By the time one
+// is this close to done its head is already off-stage and only the tail is
+// still clearing, so starting the next early costs nothing and buys back the
+// dead air between them.
+const COMET_GAP=-1.0;
+(function(){
+  let t=0;
+  COMETS.forEach((c,i)=>{ if(i>0) t+=COMET_GAP; c.t0=t; c.t1=t+c.dur; t=c.t1; });
+})();
+// The district's fly-in starts as the last sweep's HEAD leaves the stage, not
+// when its tail finally finishes clearing — otherwise there's ~0.6s of empty
+// frame while we wait on something already off-screen.
+const COMET_END=COMETS[COMETS.length-1].t1-0.6;
+
+const N_EMBER=7;
+COMETS.forEach(c=>{
+  const grad=document.createElementNS(SVGNS,'linearGradient');
+  grad.id='cometGrad'+Math.random().toString(36).slice(2);
+  grad.setAttribute('gradientUnits','userSpaceOnUse');
+  const s0=document.createElementNS(SVGNS,'stop'); s0.setAttribute('offset','0%'); s0.setAttribute('stop-color','var(--hot)'); s0.setAttribute('stop-opacity','0');
+  const s1=document.createElementNS(SVGNS,'stop'); s1.setAttribute('offset','100%'); s1.setAttribute('stop-color','var(--hot)'); s1.setAttribute('stop-opacity','1');
+  grad.appendChild(s0); grad.appendChild(s1);
+  defsEl.appendChild(grad);
+  const line=document.createElementNS(SVGNS,'line');
+  line.setAttribute('class','comet');
+  line.setAttribute('stroke',`url(#${grad.id})`);
+  line.setAttribute('stroke-width', c.w);
+  cometsG.appendChild(line);
+  const head=document.createElementNS(SVGNS,'circle');
+  head.setAttribute('class','comet-head'); head.setAttribute('r', c.headR*1.8);
+  head.setAttribute('fill', `url(#${makeGlow(defsEl)})`);
+  cometsG.appendChild(head);
+  c.grad=grad; c.line=line; c.head=head;
+  // deterministic embers (golden-angle spread so they fan out evenly, not randomly)
+  c.embers=[];
+  for(let i=0;i<N_EMBER;i++){
+    const el=document.createElementNS(SVGNS,'circle');
+    el.setAttribute('class','ember');
+    cometsG.appendChild(el);
+    const tAlong=(i+0.5)/N_EMBER;
+    // linear to match the head's own (now linear) travel — an eased position
+    // here would spawn embers where the head isn't
+    c.embers.push({el, tAlong, ang:(i*137.5)*Math.PI/180, dist:c.headR*(1.8+(i%3)*0.7), life:0.34,
+      ox:lerp(c.x1,c.x2,tAlong), oy:lerp(c.y1,c.y2,tAlong), spawnT:c.t0+c.dur*tAlong});
+  }
+});
+
+function updateComets(lt){
+  for(const c of COMETS){
+    const p=clamp((lt-c.t0)/c.dur,0,1);
+    const on=p>0&&p<1;
+    c.line.style.opacity=on?'1':'0';
+    c.head.style.opacity=on?'1':'0';
+    if(on){
+      // LINEAR, not eased. A comet flying past doesn't decelerate — and more to
+      // the point, an ease dawdles at both ends, which for these is entirely
+      // off-stage: each one burnt ~2/3 of its schedule invisible, leaving 4.4s
+      // of dead frame in a 7.4s opening. Constant speed nearly doubles the time
+      // each is actually on screen without changing its duration.
+      const hx=lerp(c.x1,c.x2,p), hy=lerp(c.y1,c.y2,p);
+      const dx=c.x2-c.x1, dy=c.y2-c.y1, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len;
+      const tx=hx-ux*c.tail, ty=hy-uy*c.tail;
+      c.line.setAttribute('x1',tx.toFixed(1)); c.line.setAttribute('y1',ty.toFixed(1));
+      c.line.setAttribute('x2',hx.toFixed(1)); c.line.setAttribute('y2',hy.toFixed(1));
+      c.grad.setAttribute('x1',tx.toFixed(1)); c.grad.setAttribute('y1',ty.toFixed(1));
+      c.grad.setAttribute('x2',hx.toFixed(1)); c.grad.setAttribute('y2',hy.toFixed(1));
+      c.head.setAttribute('cx',hx.toFixed(1)); c.head.setAttribute('cy',hy.toFixed(1));
+    }
+    for(const e of c.embers){
+      const ep=clamp((lt-e.spawnT)/e.life,0,1);
+      if(lt<e.spawnT||ep>=1){ e.el.style.opacity='0'; continue; }
+      const eo=easeOut(1-ep), dd=e.dist*easeOut(ep);
+      e.el.setAttribute('cx',(e.ox+Math.cos(e.ang)*dd).toFixed(1));
+      e.el.setAttribute('cy',(e.oy+Math.sin(e.ang)*dd).toFixed(1));
+      e.el.setAttribute('r',(3.2*(1-ep*0.6)).toFixed(1));
+      e.el.style.opacity=eo.toFixed(2);
+    }
+  }
+}
+
+// The real reveal: the spark stays fixed at the center of the frame and the
+// district itself does the moving — the content <g> is translated, scaled
+// (tight zoom in) and ROTATED so the boundary's current point always lands
+// under the spark, "turning" the screen instead of moving a dot across it.
+// The rotation is driven by the path's own (smoothed, unwrapped) tangent
+// angle, so one full lap of the boundary naturally spins the view a full
+// turn — then it un-rotates and zooms out "somewhat slowly" to settle on the
+// complete, upright shape.
+const TRACE_TIGHT=Math.min(TRACE_VB_W,TRACE_VB_H)*0.25;
+const TRACE_SCALE=Math.min(TRACE_VB_W,TRACE_VB_H)/TRACE_TIGHT;
+// One continuous reveal, in two beats: the boundary draws tight-zoomed for
+// ZOOM_START seconds, then the camera zooms out, and only once it's all the way
+// out does the pen actually sprint. ZOOM_START is the one timing dial here;
+// every duration below is derived from it.
+//
+// It has a floor: the fly-in has to land before the zoom starts, and FLY_DUR is
+// per-aspect (9x16 needs the longest, ~2.3s, since a tall stage puts the tip
+// further out). It also has a ceiling: raising it eats the zoom, which must
+// still reach ZOOM_MID (DRAW_T2 goes negative past ~9). Re-check all three
+// aspects if you touch it — 16x9 alone will not tell you.
+const ZOOM_START=4;
+const DRAW_T0=COMET_END;
+
+// ── The pen's pace, in three beats ───────────────────────────────────────────
+// The rates are DERIVED from the camera, not guessed. Do NOT substitute a
+// hand-picked curve: a quadratic (matched to beat 1's rate at the join, so it
+// looked right) surged to 1.8× mid-pull-back and then slowed again — an eased
+// zoom lags a quadratic draw, so the two don't cancel. Deriving the rate from
+// the very scale() the camera uses is what makes them cancel by construction.
+//
+//  1 · TIGHT   — dead linear at PEN_PACE, the pace that reads well up close.
+//  2 · ZOOM    — rate held proportional to 1/scale, so the pen's *apparent*
+//                (screen) speed stays exactly PEN_PACE's. As the camera pulls
+//                back TRACE_SCALE×, the same arc-length covers proportionally
+//                less screen, so path progress speeds up by that factor for
+//                free — and the viewer reads no speed change at all.
+//  3 · SPRINT  — camera parked at 1×; now, and only now, the pen genuinely
+//                gains speed, ramping to DRAW_BOOST.
+//
+// Keeping the boost out of beat 2 is deliberate. Zooming and accelerating at
+// once gave the pen nothing to be measured against — and, because the camera's
+// rotation tracks the tangent, it whipped the view around every zigzag exactly
+// when the pen was fastest. Zoom first, then sprint: the pull-back reads as a
+// reveal, and the speed-up reads as a speed-up.
+const PEN_PACE=0.39/7;         // progress/s at the tight crop (0.39 of the path
+                               // in 7s was tuned by eye there; the ratio is the
+                               // part that matters, and it's what's preserved)
+const ZOOM_MID=0.5;            // path drawn when the pull-back completes
+const DRAW_BOOST=1.7;          // how much faster the pen looks by the end
+const SPARK_FADE=0.25;         // spark is gone this far into the pull-back
+const DRAW_FRAC=PEN_PACE*ZOOM_START;          // drawn when the zoom starts
+const PEN_WIDE=PEN_PACE*TRACE_SCALE;          // progress/s at 1× for that same apparent speed
+const P2_N=240;
+const P2_SCALE=u=>lerp(TRACE_SCALE,1,easeInOut(u));
+const P2_RATE=u=>PEN_WIDE/P2_SCALE(u);        // apparent speed held constant
+const P3_BOOST=v=>1+(DRAW_BOOST-1)*easeInOut(v);
+const P3_RATE=v=>PEN_WIDE*P3_BOOST(v);
+const mean=(f,n)=>{ let s=0; for(let i=0;i<n;i++) s+=f((i+0.5)/n)/n; return s; };
+// Durations fall out of the integrals; they aren't chosen. The zoom lasts
+// exactly as long as it takes to draw from DRAW_FRAC to ZOOM_MID at a steady
+// apparent speed — that's what pins "fully zoomed out" to "about half drawn".
+const DRAW_T2=(ZOOM_MID-DRAW_FRAC)/mean(P2_RATE,P2_N);
+const DRAW_T3=(1-ZOOM_MID)/mean(P3_RATE,P2_N);
+const REVEAL_DUR=ZOOM_START+DRAW_T2+DRAW_T3;
+// Cumulative progress per beat, so lookup is a plain interpolation and stays
+// deterministic under render-mp4's frame-by-frame seek.
+const cum=(f,dur,n)=>{ const a=[0]; let s=0; for(let i=0;i<n;i++){ s+=f((i+0.5)/n)*(dur/n); a.push(s); } return a; };
+const P2_CUM=cum(P2_RATE,DRAW_T2,P2_N), P3_CUM=cum(P3_RATE,DRAW_T3,P2_N);
+const lookup=(cumArr,p)=>{ const x=clamp(p,0,1)*P2_N, i=Math.min(P2_N-1,Math.floor(x)); return lerp(cumArr[i],cumArr[i+1],x-i); };
+function drawProgress(traceLt){
+  if(traceLt<ZOOM_START) return PEN_PACE*traceLt;
+  if(traceLt<ZOOM_START+DRAW_T2) return clamp(DRAW_FRAC+lookup(P2_CUM,(traceLt-ZOOM_START)/DRAW_T2),0,1);
+  return clamp(ZOOM_MID+lookup(P3_CUM,(traceLt-ZOOM_START-DRAW_T2)/DRAW_T3),0,1);
+}
+// ── How far the camera has turned since the pen started ──────────────────────
+// Blended between two ways of deciding that, by how fast the pen is moving:
+//
+//   slow · TANGENT — turn with the boundary's own heading, so the ink always
+//          trails straight out behind the spark. This is the effect; beat 1 is
+//          where it's on show, and there it's exact.
+//   fast · UNIFORM — the lap spread evenly over arc length. Constant turn per
+//          unit drawn, no wiggle at all.
+//
+// Tangent-tracking costs (turn per unit length) × (pen speed *along the path*),
+// and that rises 4× through the pull-back even though the apparent speed never
+// changes. A district boundary is not smooth — its heading rocks constantly — so
+// at speed the tangent stops reading as "following the line" and just rocks the
+// whole frame. Widening ROT_SMOOTH doesn't fix it: that's a low-pass on the
+// heading, so only the wiggle's *amplitude* falls while its rate still climbs
+// with the pen. Low-passing the turn RATE is what actually removes it.
+//
+// Uniform, not merely a wider ROT_SMOOTH and not a low-passed tangent. This
+// district has hairpin tendrils that turn ~180° within a few samples; any window
+// narrow enough to still be "the tangent" leaves those intact, and at sprint
+// speed one hairpin alone whips the frame ~700°/s. Uniform is the only target
+// with no hairpin left in it.
+//
+// The handoff finishes when the SPARK does. The tangent's whole job is making
+// the ink trail straight out behind the spark, so once the spark has faded there
+// is nothing left for it to buy — and every frame it stays on past that is a
+// frame of wiggle at a pen speed that's already climbing. Carrying it to ZOOM_MID
+// instead left ~70% tangent while the pen was at 2×, whipping 1x1 to 526°/s.
+//
+// Keyed to arc length, not time: it's per unit *drawn* that the tangent costs
+// its wiggle, and the integral below needs it in those terms anyway.
+const ROT_FAST_TO=drawProgress(ZOOM_START+SPARK_FADE*DRAW_T2);
+const fastOfLen=len=>clamp((len/PATH_LEN-DRAW_FRAC)/(ROT_FAST_TO-DRAW_FRAC),0,1);
+// The lap the boundary actually winds: ±360°, and WHICH is a property of the
+// ring's orientation in the source geometry, not a constant. Read it off the
+// tangent — never hardcode it. Assuming -360 against a ring that winds +360 set
+// the uniform target spinning the wrong way and dumped ~720° into the sprint.
+// The shape still landed upright (±360 both read as 0°), so nothing caught it
+// except the spin itself.
+const LAP=UNWRAPPED[ANGLE_SAMPLES]-UNWRAPPED[0];
+// Blend the turn RATE and integrate — never the turn VALUE. Lerping the values
+// makes the blend itself sweep the camera: the two curves drift ~100° apart
+// mid-path, and crossing between them traverses that gap on top of the real
+// turn, which spiked the pull-back to 308°/s. Rate-blending can't do that; it
+// only ever changes how much each increment of length turns the view.
+const TURN=(function(){
+  const dUni=LAP/ANGLE_SAMPLES, a=[0], w=[0];
+  for(let i=1;i<=ANGLE_SAMPLES;i++){
+    const f=fastOfLen(PATH_LEN*(i-0.5)/ANGLE_SAMPLES);
+    a.push(a[i-1]+lerp(UNWRAPPED[i]-UNWRAPPED[i-1], dUni, f));
+    w.push(w[i-1]+f);
+  }
+  // Tangent and uniform each wind a full lap, but a rate blend of them need not:
+  // it drops turn wherever it favours uniform over a tangent that was busy
+  // there. Hand the shortfall back as a rate offset weighted by fastness — it
+  // lands only in the smoothed stretch, where a slight even change of turn rate
+  // is invisible, and leaves beat 1 exactly tangent. That's what still lands the
+  // shape upright to the degree.
+  const resid=a[ANGLE_SAMPLES]-LAP, wTot=w[ANGLE_SAMPLES]||1;
+  for(let i=0;i<=ANGLE_SAMPLES;i++) a[i]-=resid*w[i]/wTot;
+  return a;
+})();
+function turnSince(len){
+  const t=clamp(len/PATH_LEN,0,1)*ANGLE_SAMPLES, i0=Math.floor(t), i1=Math.min(i0+1,ANGLE_SAMPLES);
+  return lerp(TURN[i0],TURN[i1],t-i0);
+}
+
+// ── Fly-in geometry. Two camera modes, joined seamlessly at FLY_LEN:
+//    • before it, the district is held STATIC and its tip walks its own
+//      boundary in from off-stage — so the ink left behind lies exactly along
+//      the tip's path. That's what makes it read as a 4th comet: the tail IS
+//      the flight path. (Locking the tip at centre during the fly-in instead —
+//      the obvious thing — makes the ink swing *around* the tip rather than
+//      trail it, and it reads as a squiggle sliding sideways, not a line
+//      flying in.)
+//    • after it, the tip locks to centre and the shape turns underneath it.
+//    At the join both modes place pt(FLY_LEN) at centre with the same rotation,
+//    so nothing jumps.
+// FLY_LEN is SOLVED, not hardcoded: walk forward until START_PT sits just far
+// enough back to be off-stage, and stop at the first length that clears it.
+// Overshooting is not harmless — the tip starts proportionally further out and
+// you get dead seconds of empty frame before it appears. Note the chord is in
+// viewBox units and has to cross BOTH scales to reach stage px (the zoom
+// TRACE_SCALE *and* the svg's own viewBox→css SVG_SCALE); missing the second
+// one is what put the tip 1254px below a 720px-tall stage. SVG_SCALE differs per
+// aspect, so this has to be solved per aspect rather than fixed.
+const FLY_NEED_VB=FLY_D/(TRACE_SCALE*SVG_SCALE);
+const FLY_LEN=(function(){
+  const step=PATH_LEN*0.002;
+  for(let L=step; L<PATH_LEN*0.5; L+=step){
+    const A=refPath.getPointAtLength(L);
+    if(Math.hypot(START_PT.x-A.x, START_PT.y-A.y)>=FLY_NEED_VB) return L;
+  }
+  return PATH_LEN*0.15;   // fallback: shape too compact to ever clear the frame
+})();
+// Derived from BEAT 1's pace specifically — the fly-in always finishes long
+// before the zoom starts, so it runs entirely at the linear PEN_PACE. Deriving
+// it from REVEAL_DUR would silently be wrong now that the back half accelerates.
+const FLY_DUR=(FLY_LEN/PATH_LEN)/PEN_PACE;
+const FLY_A=refPath.getPointAtLength(FLY_LEN);  // the point that lands at centre
+// Rotate so the chord FLY_A→START_PT points *back* along the flight heading —
+// i.e. the district enters travelling FLY_TRAVEL, trailing its start behind it.
+// (+90° when the box is rotated for a portrait aspect, since this is measured
+// in the svg's own frame.)
+const FLY_CHORD_ANG=Math.atan2(START_PT.y-FLY_A.y, START_PT.x-FLY_A.x);
+const ROT_STATIC=(FLY_TRAVEL+Math.PI-FLY_CHORD_ANG-(TRACE_ROTATE?Math.PI/2:0))*180/Math.PI;
+// Hand the static rotation to the tip-locked formula so rotDeg is continuous at
+// FLY_LEN; it then unwinds across the zoom-out so the shape still ends upright.
+// Must read turnSince(), not the raw tangent: TURN carries a residual offset
+// that the tangent doesn't know about, and any gap between them is a visible
+// snap at the join.
+//
+// Wrapped to the short way round, because this is the distance the camera
+// actually sweeps as the term unwinds. Any ROT_K±360k puts the district in the
+// identical pose at both ends, so nothing downstream can tell — but unwrapped it
+// spun a needless extra revolution during the pull-back (1x1 turned -391° where
+// -31° gets to the same place). Aspects differ here: ROT_STATIC depends on the
+// fly-in heading, so 16x9 landed inside ±180° by luck and looked fine.
+const wrap180=a=>a-360*Math.round(a/360);
+const ROT_K=wrap180(ROT_STATIC+turnSince(FLY_LEN));
+// The boundary stays lit from its very first point all the way to the spark —
+// the whole stroke, permanently, exactly like ink. It used to be a short
+// trailing window that widened during the pull-back, to keep the lit part
+// inside the tight viewBox; but that meant the *start* of the visible dash
+// slid backwards as the window opened, which read as the district building
+// itself in reverse. The fix isn't a shorter tail, it's letting the drawing
+// overflow: `.draw-svg` is `overflow:visible`, so at full zoom the earlier
+// strokes simply run off the frame like any camera panning across a big
+// drawing, and get clipped by #stage's edge rather than an inner box edge.
+// Nothing ever un-draws, and the pull-back brings the off-frame parts home.
+const TRACE_EMBER_INTERVAL=0.22, TRACE_EMBER_LIFE=0.42;
+const TRACE_EMBERS=[];
+(function(){
+  let i=0;
+  // stop spawning when the spark itself fades out (SPARK_FADE into the zoom-out).
+  // Must scale by DRAW_T2, the zoom's own length — not REVEAL_DUR-ZOOM_START,
+  // which now also covers the sprint and would outlive the spark by ~0.5s.
+  for(let t=0.15;t<ZOOM_START+SPARK_FADE*DRAW_T2;t+=TRACE_EMBER_INTERVAL,i++){
+    const el=document.createElementNS(SVGNS,'circle');
+    el.setAttribute('class','trace-ember');
+    traceEmbersG.appendChild(el);
+    TRACE_EMBERS.push({el, spawnT:DRAW_T0+t, ang:(i*137.5)*Math.PI/180, dist:12+(i%3)*6});
+  }
+})();
+
+const DRAW_TOTAL=DRAW_T0+REVEAL_DUR;                  // boundary complete + fully zoomed out
+// Label pop-in timing depends on DRAW_TOTAL — set it before the SCENES
+// engine below reads data-d off these nodes.
+const FILL_T0=DRAW_TOTAL+0.1, FILL_DUR=0.45;
+const didEl=document.querySelector('[data-scene="draw"] .did');
+const dstateEl=document.querySelector('[data-scene="draw"] .dstate');
+didEl.dataset.d=(FILL_T0+0.1).toFixed(2);
+dstateEl.dataset.d=(FILL_T0+0.25).toFixed(2);
+// After a brief hold (long enough to read the label), the fully-revealed
+// shape doesn't just disappear when this scene ends — it MORPHS (shrinks +
+// fades) into exactly what sits behind the wordmark for the rest of the CTA
+// scene, so the CTA scene starts precisely as the morph finishes.
+const MORPH_HOLD=1.1, MORPH_DUR=1.3, MORPH_SMALL_SCALE=0.6;
+const MORPH_T0=DRAW_TOTAL+MORPH_HOLD, MORPH_T1=MORPH_T0+MORPH_DUR;
+const DRAW_DUR=MORPH_T1;
+
+// Drives the persistent shape overlay every frame, regardless of which
+// .scene is currently on screen — this is what lets it stay mounted and
+// morph smoothly across the draw→cta boundary instead of two separate
+// elements handing off. A pure function of lt (scene-local to 'draw') so it
+// stays correct under render-mp4's frame-by-frame seek.
+function updateShape(lt){
+  updateComets(lt);
+  const traceLt=lt-DRAW_T0;
+  const cx=TRACE_VB_W/2, cy=TRACE_VB_H/2;
+  const rotateCss=TRACE_ROTATE?' rotate(90deg)':'';
+  // The fly-in: the whole svg (tip and spark included) is pushed back along the
+  // flight heading so the tip starts outside the frame, then slides to centre.
+  // A plain screen-space translate — CSS transforms compose left-to-right, so
+  // this shifts in stage coords and is unaffected by the rotate() that follows.
+  // The ink is already growing throughout, so what streams behind the tip is
+  // the real boundary: the line that flies in IS the line that keeps drawing.
+  if(traceLt<0){
+    // Pre-roll: parked in its fly-in pose, START_PT off-stage, nothing visible yet.
+    contentG.setAttribute('transform',`translate(${cx},${cy}) scale(${TRACE_SCALE.toFixed(3)}) rotate(${ROT_STATIC.toFixed(2)}) translate(${(-FLY_A.x).toFixed(2)},${(-FLY_A.y).toFixed(2)})`);
+    sparkEl.style.opacity='0';
+    boundaryPath.style.opacity='0';
+    fillPath.style.opacity='0';
+    drawSvg.style.transform=`translate(-50%,-50%)${rotateCss}`;
+    return;
+  }
+  // Linear while zoomed in, then accelerating in step with the pull-back so the
+  // pen's apparent speed holds steady — see drawProgress(). Never an ease-out:
+  // that eases at *both* ends and the line visibly crawled to a halt over the
+  // closing stretch. The camera eases; the hand doesn't.
+  const drawP=drawProgress(traceLt);
+  // Two distinct beats rather than one blended ramp: DRAW tight for the first
+  // ZOOM_START seconds (the camera holds its close crop and just follows the
+  // spark, so the comet fills the frame and the drawing reads as *happening*),
+  // and only then start the zoom-out. Ramping the zoom from t=0 meant the view
+  // was already wide while only a short comet tail was ever visible — a tiny
+  // squiggle adrift in a big empty frame, which is what read as "nothing is
+  // being built" and made the motion feel jerky.
+  const zoomRaw=clamp((traceLt-ZOOM_START)/DRAW_T2,0,1);
+  const zoomP=easeInOut(zoomRaw);   // must stay identical to P2_SCALE's easing —
+                                    // the pen's phase-2 rate is derived from it
+  const curLen=PATH_LEN*drawP;
+  const pt=refPath.getPointAtLength(curLen);
+  // The spark fades out over the first stretch of the zoom-out; recentering
+  // waits until it's gone, so it never visibly drifts off the boundary tip.
+  const sparkOp=clamp(1-zoomRaw/SPARK_FADE,0,1);
+  const posP=easeInOut(clamp((zoomRaw-0.25)/0.75,0,1));
+  let scale, rotDeg, px, py;
+  if(curLen<FLY_LEN){
+    // FLY-IN: district held still; only the ink grows, so the tip walks its own
+    // boundary in from off-stage and the trail lies exactly along its path.
+    scale=TRACE_SCALE; rotDeg=ROT_STATIC; px=FLY_A.x; py=FLY_A.y;
+  } else {
+    // TIP-LOCKED: tip pinned at centre, shape turns underneath it. ROT_K carries
+    // the fly-in's rotation across the join (so rotDeg doesn't jump) and unwinds
+    // over the zoom-out, leaving the base term's exact -360° per lap to land the
+    // shape upright.
+    scale=lerp(TRACE_SCALE,1,zoomP);
+    rotDeg=-turnSince(curLen)+ROT_K*(1-zoomP);
+    // Track the tip exactly while zoomed in; only blend toward the box's true
+    // centre once zooming out, so the settled shape lands properly centred.
+    px=lerp(pt.x,cx,posP); py=lerp(pt.y,cy,posP);
+  }
+  // Where the tip actually lands on screen under the transform above — the spark
+  // and its embers ride it, which during the fly-in means riding it in from
+  // off-stage rather than sitting at centre.
+  const rad=rotDeg*Math.PI/180, tdx=pt.x-px, tdy=pt.y-py;
+  const tipX=cx+scale*(tdx*Math.cos(rad)-tdy*Math.sin(rad));
+  const tipY=cy+scale*(tdx*Math.sin(rad)+tdy*Math.cos(rad));
+  sparkEl.setAttribute('cx',tipX.toFixed(1)); sparkEl.setAttribute('cy',tipY.toFixed(1));
+  // Everything drawn so far, always — start of the path through to the spark.
+  // Never a moving window (see the note on TRACE_SCALE above): the dash only
+  // ever grows forward from 0, so the ink can't appear to un-draw itself.
+  boundaryPath.style.strokeDasharray=`${curLen.toFixed(2)} ${(PATH_LEN-curLen).toFixed(2)}`;
+  boundaryPath.style.strokeDashoffset='0';
+  for(const e of TRACE_EMBERS){
+    const ep=clamp((lt-e.spawnT)/TRACE_EMBER_LIFE,0,1);
+    if(lt<e.spawnT||ep>=1){ e.el.style.opacity='0'; continue; }
+    const eo=easeOut(1-ep), dd=e.dist*easeOut(ep);
+    e.el.setAttribute('cx',(tipX+Math.cos(e.ang)*dd).toFixed(1));
+    e.el.setAttribute('cy',(tipY+Math.sin(e.ang)*dd).toFixed(1));
+    e.el.setAttribute('r',(2.6*(1-ep*0.6)).toFixed(1));
+    e.el.style.opacity=eo.toFixed(2);
+  }
+
+  const fillBase=easeOut(clamp((lt-FILL_T0)/FILL_DUR,0,1));
+  const morphP=easeInOut(clamp((lt-MORPH_T0)/MORPH_DUR,0,1));
+
+  contentG.setAttribute('transform',`translate(${cx},${cy}) scale(${scale.toFixed(3)}) rotate(${rotDeg.toFixed(2)}) translate(${(-px).toFixed(2)},${(-py).toFixed(2)})`);
+  sparkEl.style.opacity=(sparkOp*(1-morphP)).toFixed(2);
+  fillPath.style.opacity=(fillBase*(1-morphP)).toFixed(3);
+  boundaryPath.style.opacity=lerp(1,0.16,morphP).toFixed(3);
+
+  const outerScale=lerp(1,MORPH_SMALL_SCALE,morphP);
+  drawSvg.style.transform=`translate(-50%,-50%) scale(${outerScale.toFixed(3)})${rotateCss}`;
+}
+
+// ── End-card confetti: fires part-way into the (held) CTA scene and keeps
+//    falling through the hold, so the final frame is logo + confetti. ────────
+const CONF_FIRE=2.0;                                   // s into the CTA scene
+const CONF_COLORS=['#C41230','#2b6cb0','#2f9e44','#FDB515','#1a1a1a','#e64980','#ffffff'];
+const confettiLayer=document.getElementById('confetti');
+const CONFETTI=(function(){
+  const arr=[]; let seed=1337; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=0;i<72;i++){
+    const el=document.createElement('div'); el.className='cf';
+    const w=8+rnd()*12, h=8+rnd()*14;
+    el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+    el.style.width=w.toFixed(1)+'px'; el.style.height=h.toFixed(1)+'px';
+    el.style.borderRadius=(rnd()<0.3?'50%':'2px');
+    confettiLayer.appendChild(el);
+    arr.push({el, x0:-0.05*SW+rnd()*1.10*SW, y0:-0.12*SH-rnd()*0.10*SH,
+      dist:SH*1.20+rnd()*0.1*SH, delay:rnd()*1.4, fall:2.0+rnd()*1.3,
+      damp:12+rnd()*60, dfreq:1.4+rnd()*2.4, phase:rnd()*6.283,
+      rot0:rnd()*360, spin:(rnd()-0.5)*720});
+  }
+  return arr;
+})();
+// Run the end card until every piece has landed, then hold the logo +3s more.
+const CONF_END = CONF_FIRE + Math.max(...CONFETTI.map(c=>c.delay+c.fall));
+const CTA_DUR = CONF_END + 3;
+function renderConfetti(active, elapsed){
+  if(!active){ if(confettiLayer.style.opacity!=='0') confettiLayer.style.opacity='0'; return; }
+  confettiLayer.style.opacity='1';
+  for(const c of CONFETTI){
+    if(elapsed<c.delay){ c.el.style.opacity='0'; continue; }
+    const p=clamp((elapsed-c.delay)/c.fall,0,1);
+    const y=c.y0+c.dist*(0.35*p+0.65*p*p);
+    const x=c.x0+Math.sin(elapsed*c.dfreq+c.phase)*c.damp;
+    const rot=c.rot0+elapsed*c.spin;
+    const op = p<0.12 ? p/0.12 : p>0.9 ? (1-p)/0.1 : 1;
+    c.el.style.opacity=op.toFixed(2);
+    c.el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(1)}deg)`;
+  }
+}
+
+// scene name, duration, whip axis/direction, and optional behaviours.
+// No wordmark intro scene here, unlike the other teasers — this one opens cold
+// on the comets. `dynamicIntro` on draw suppresses the usual slide-in so the
+// first scene doesn't whip in from the side out of nowhere.
+const DEF=[
+  {name:'draw',  dur:DRAW_DUR, ax:'x', dir: 1, dynamicIntro:true},
+  {name:'cta',   dur:CTA_DUR, ax:'x', dir:-1, hold:true},
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
+const CTA=SCENES.find(s=>s.name==='cta');
+const DRAW_SCENE=SCENES.find(s=>s.name==='draw');
+
+SCENES.forEach(s=>{
+  s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
+});
+
+function revealKids(s,lt){
+  for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
+    let tf='', fl='';
+    if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`;
+    else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
+    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;
+    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;
+    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf;
+    if(k.type==='zoomIn') k.n.style.filter=fl; }
+}
+
+// scatterOut scenes fly each child off in its own direction (data-exit: L/R/U/D)
+// or zoom past the camera (Z) instead of the block sliding off as one piece.
+const SCATTER_DUR=0.7, SCATTER_TRAVEL=820, SCATTER_ZOOM=5.5, SCATTER_ZBLUR=22;
+function scatterKids(s,lt,dur){
+  if(lt<=dur-SCATTER_DUR) return;
+  const p=easeIn(clamp((lt-(dur-SCATTER_DUR))/SCATTER_DUR,0,1)), T=SCATTER_TRAVEL;
+  for(const k of s.kids){ let x=0,y=0; const e=k.exit;
+    if(e==='L')x=-T*p; else if(e==='R')x=T*p; else if(e==='U')y=-T*p; else if(e==='D')y=T*p;
+    if(e==='Z'){ k.n.style.transform=`scale(${(1+p*SCATTER_ZOOM).toFixed(2)})`; k.n.style.filter=`blur(${(p*SCATTER_ZBLUR).toFixed(1)}px)`; }
+    else k.n.style.transform=`translate3d(${x.toFixed(0)}px,${y.toFixed(0)}px,0)`;
+    k.n.style.opacity=clamp(1-p*1.5,0,1).toFixed(3); }
+}
+
+let startTs=null, paused=false, pauseAt=0;
+window.__teaser={seek:t=>{paused=true;pauseAt=((t%LOOP)+LOOP)%LOOP;},play:()=>{paused=false;startTs=null;},loop:()=>LOOP};
+
+function frame(ts){
+  if(startTs===null) startTs=ts;
+  const t = paused ? pauseAt : ((ts-startTs)/1000)%LOOP;
+  for(const s of SCENES){
+    const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
+    if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
+    let x=0,y=0,sc=1,bl=0,op=1,ry=0;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=s.dynamicIntro?0:(1-p)*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(s.hold){ /* settle and hold — static logo, never swipes out (confetti scene) */ }
+    else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
+    else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
+    el.style.opacity=op.toFixed(3);
+    el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
+    el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
+    revealKids(s,lt);
+    if(s.scatterOut) scatterKids(s,lt,dur);
+  }
+  // The persistent shape overlay runs every frame regardless of which .scene
+  // is visible, so it can stay mounted and morph smoothly across the
+  // draw→cta boundary instead of two separate elements handing off.
+  updateShape(t-DRAW_SCENE.t0);
+  // End-card confetti — driven purely by the CTA scene's local time (so it's
+  // deterministic under render-mp4's frame-by-frame seek).
+  const ctaLt=t-CTA.t0, ctaOn=(t>=CTA.t0-0.02 && t<CTA.t1+0.02);
+  renderConfetti(ctaOn && ctaLt>=CONF_FIRE, ctaLt-CONF_FIRE);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Controls + record ───────────────────────────────────────────────────────
+const statusEl=document.getElementById('status');
+document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
+document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); if(paused){paused=false;startTs=performance.now()-pauseAt*1000;} else {paused=true;pauseAt=((performance.now()-(startTs||performance.now()))/1000)%LOOP;}}
+  if(e.key==='r'||e.key==='R'){startTs=null;paused=false;}
+  if(e.key==='h'||e.key==='H'){document.body.classList.toggle('clean');fit();}
+});
+
+let rec, chunks=[];
+document.getElementById('btn-rec').onclick=async ()=>{
+  try{
+    statusEl.textContent='Choose “This Tab”…';
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:{{STAGE_W}},height:{{STAGE_H}}},audio:false,preferCurrentTab:true});
+    document.body.classList.add('clean'); fit(); startTs=null; paused=false; chunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12_000_000});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-8.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
+    rec.start();
+    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    statusEl.textContent='● Recording '+left+'s…';
+    const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
+    setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);
+    stream.getVideoTracks()[0].onended=()=>{if(rec&&rec.state!=='inactive')rec.stop();};
+  }catch(err){statusEl.textContent='Record cancelled';document.body.classList.remove('clean');fit();}
+};
+
+function fit(){
+  const pad=document.body.classList.contains('clean')?0:56;
+  const s=Math.min(1,(window.innerWidth-pad)/{{STAGE_W}},(window.innerHeight-pad)/{{STAGE_H}});
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+</script>
+</body>
+</html>

@@ -42,7 +42,24 @@ Functions read it with `service_role` and return only what the player has earned
   `neighbors`/`state_neighbors` drive hot/cold without shipping the adjacency graph.
 - `results(user_id, puzzle_date) PK, won, completed, guesses, seconds,
   guess_history, started_at, completed_at` — RLS: read own only; writes via the
-  Edge Function (service_role).
+  Edge Function (service_role). **Signed-in players only.**
+- `anon_results(id PK, puzzle_date, won, completed, guesses, seconds, session_id,
+  created_at)` — one row per **completed anonymous (not-signed-in) game**, so player
+  count + win/loss are measurable without a profile id. Written by the `guess` Edge
+  Function (service_role) when an anon game completes; a partial unique index on
+  `(session_id, puzzle_date)` makes it idempotent. **Deny-all RLS (no policies)** — no
+  client read/write. Throwaway: `truncate public.anon_results` anytime you only want
+  signed-in stats. DDL:
+  ```sql
+  create table public.anon_results (
+    id uuid primary key default gen_random_uuid(), puzzle_date date not null,
+    won boolean not null, completed boolean not null default true,
+    guesses integer not null default 0, seconds integer not null default 0,
+    session_id text, created_at timestamptz not null default now());
+  create unique index anon_results_session_date_uidx
+    on public.anon_results (session_id, puzzle_date) where session_id is not null;
+  alter table public.anon_results enable row level security;
+  ```
 - `profiles` also carries optional standard fields: `email, display_name, phone,
   city, region, country, marketing_opt_in, updated_at`. `email`/`display_name`
   are captured from auth on signup; the rest are user-entered via the profile
@@ -77,7 +94,7 @@ One-shot loaders that (re)populate `puzzles` / `district_geometries`. Guarded by
 2026-07-08 rotation (the old value was hardcoded in the function source and had to
 go before committing the source publicly), so both loaders currently return 403 —
 set `LOAD_SECRET` before the next seeding run, or load via SQL instead
-(`seed-puzzles.mjs` can emit upsert SQL).
+(`scripts/seed-puzzles.mjs` can emit upsert SQL).
 
 ### `POST /functions/v1/today`
 Returns the current puzzle for the signed-in user. Playtest accounts allowed to
@@ -142,7 +159,7 @@ Exercised with a real signed-in JWT against the live functions:
 
 - ✅ Schema + RLS + signup trigger (advisor-clean).
 - ✅ `today` + `guess` Edge Functions (verified above; 401 without auth).
-- ✅ Puzzle-seeding loader `seed-puzzles.mjs` — replicates the client schedule
+- ✅ Puzzle-seeding loader `scripts/seed-puzzles.mjs` — replicates the client schedule
   (`seededIndex/dateSeed`) + FACT_DEFS clue text exactly by extracting the real
   maps from `script.js`. **Launch reseed (v2.14.0):** DB wiped (puzzles/results/
   telemetry; accounts kept) and refilled with a full 436-day non-repeating cycle,
@@ -167,7 +184,7 @@ Exercised with a real signed-in JWT against the live functions:
    - Keep `districts.topojson` shapes/names client-side (not spoilers).
    - Drop the client `seededIndex/dateSeed` answer pick and the once-per-day
      `localStorage` gate (server is now authoritative).
-3. **Extend the puzzle runway** — re-run `node seed-puzzles.mjs <startDate> <days>`
+3. **Extend the puzzle runway** — re-run `node scripts/seed-puzzles.mjs <startDate> <days>`
    periodically (or as a scheduled job) so `puzzles` always has upcoming dates.
    Currently filled through **2027-09-21** (No. 436).
 4. **Move the Census API key** in `acs_by_state.R` / `acs_by_district.R` to the

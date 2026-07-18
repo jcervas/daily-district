@@ -1,0 +1,56 @@
+# Posts the daily "Yesterday's District" recap (two 1:1 cards, no link) to
+# https://x.com/daily_district_ via social/scripts/daily-recap.mjs.
+#
+# Requires the same repo secrets as daily-tweet.yml (X developer app, Read+Write
+# on @daily_district_): X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+#
+# Safe to enable before go-live: social/scripts/daily-recap.mjs has a LAUNCH_DATE guard and
+# will not post for recap dates before it (it simply no-ops).
+name: Daily recap post
+
+on:
+  schedule:
+    # 13:00 UTC = 8:00 AM ET in winter, 9:00 AM ET during daylight saving.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build the cards only — do not post'
+        type: boolean
+        default: false
+      date:
+        description: 'Recap this date (YYYY-MM-DD) instead of yesterday'
+        type: string
+        default: ''
+      force:
+        description: 'Bypass the launch-date guard'
+        type: boolean
+        default: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build and post recap
+        run: >-
+          node social/scripts/daily-recap.mjs
+          ${{ inputs.date != '' && format('--date={0}', inputs.date) || '' }}
+          ${{ inputs.force && '--force' || '' }}
+        env:
+          DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '' }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      - name: Upload preview (dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-recap-preview
+          path: social/card/*-card*.png

@@ -1,5 +1,5 @@
 # Posts the daily puzzle teaser (district image + random message) to
-# https://x.com/daily_district_ via post-daily-tweet.mjs.
+# https://x.com/daily_district_ via social/scripts/post-daily-tweet.mjs.
 #
 # Requires repo secrets from an X developer app (Read + Write) authorized
 # on the @daily_district_ account:
@@ -32,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Render and post
-        run: node post-daily-tweet.mjs ${{ inputs.delete_tweet_id != '' && format('--delete-tweet={0}', inputs.delete_tweet_id) || '' }}
+        run: node social/scripts/post-daily-tweet.mjs ${{ inputs.delete_tweet_id != '' && format('--delete-tweet={0}', inputs.delete_tweet_id) || '' }}
         env:
           DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '' }}
           X_API_KEY: ${{ secrets.X_API_KEY }}

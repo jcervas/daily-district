@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily District — Teaser #9 (Sudden Death)</title>
+<style>
+/*{{FONTS_CSS}}*/
+
+:root{
+  --red:#C41230; --ink:#1a1a1a; --muted:#6b6b74; --bg:#f4f3f1; --card:#ffffff;
+  --line:#e7e4e0; --gold:#F4B733; --chip:#f6eef0; --grass:#2f9e44;
+  --stageW:{{STAGE_W}}px; --stageH:{{STAGE_H}}px;
+  font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0e0e11;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+
+#stage{position:relative;width:var(--stageW);height:var(--stageH);background:var(--bg);
+  overflow:hidden;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,.5);
+  transform-origin:center center;perspective:1500px}
+body.clean{background:#f4f3f1}
+body.clean #stage{border-radius:0;box-shadow:none}
+
+/* end-card confetti (shared pattern — see social/README.md) */
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:12;opacity:0}
+.cf{position:absolute;left:0;top:0;will-change:transform,opacity}
+
+#bg{position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% -12%, #ffffff 0%, rgba(255,255,255,0) 52%),
+    radial-gradient(70% 70% at 8% 6%, rgba(196,18,48,.10) 0%, rgba(196,18,48,0) 46%),
+    radial-gradient(70% 70% at 94% 96%, rgba(196,18,48,.12) 0%, rgba(196,18,48,0) 50%),
+    linear-gradient(160deg,#f8f6f4 0%,#eeeae6 100%)}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  will-change:transform,filter,opacity;backface-visibility:hidden;opacity:0}
+.scene .wrap{position:relative;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+[data-anim]{opacity:0;will-change:transform,opacity}
+
+/* shared type (identical across teasers — see social/README.md §6) */
+.wordmark{color:var(--red);display:block}
+.wordmark svg{display:block;width:100%;height:auto}
+.eyebrow{font-weight:800;letter-spacing:2.8px;text-transform:uppercase;color:var(--red);font-size:22px}
+.sub{font-weight:700;color:var(--muted);font-size:30px;text-align:center;max-width:84%;line-height:1.25}
+.redword{color:var(--red)}
+.cta-url{font-weight:900;font-size:60px;color:var(--red);letter-spacing:-1px}
+.cap{position:absolute;left:0;right:0;bottom:64px;text-align:center;font-weight:800;font-size:30px;color:var(--ink);z-index:15}
+.cap .redword{color:var(--red)}
+
+/* ── the pitch: the district silhouette itself IS the goal net — the ball
+   curls directly into the shape from any angle, no separate frame graphic ── */
+.pitch{position:relative;width:420px;height:420px;perspective:900px}
+.pitch::before{content:'';position:absolute;inset:-26px;border-radius:50%;z-index:-1;
+  background:radial-gradient(closest-side, rgba(47,158,68,.12), rgba(47,158,68,0) 72%)}
+#sil-svg{position:absolute;inset:0;width:100%;height:100%;
+  filter:drop-shadow(0 20px 34px rgba(196,18,48,.15))}
+#sil-group{transform-origin:200px 200px;will-change:transform}
+#sil-path{fill:var(--red)}
+#sil-path-net{fill:url(#netmesh)}
+.entry-ring{position:absolute;left:50%;top:50%;width:64px;height:64px;border-radius:50%;
+  border:6px solid var(--gold);transform:translate(-50%,-50%) scale(0);opacity:0;
+  z-index:9;pointer-events:none;will-change:transform,opacity}
+.ball-shadow{position:absolute;width:96px;height:26px;left:50%;top:50%;z-index:7;
+  border-radius:50%;background:radial-gradient(closest-side,rgba(20,60,20,.34),rgba(20,60,20,0) 72%);
+  opacity:0;will-change:transform,opacity}
+.ball{position:absolute;width:84px;height:84px;left:50%;top:50%;z-index:8;
+  opacity:0;will-change:transform,opacity,filter}
+.ball-inner{width:100%;height:100%;display:block;will-change:transform}
+/* "GOAL" — a quick floating flash right where the ball hit the net: pops in,
+   holds briefly, then drifts up and fades (same beat as a broadcast graphic). */
+.scorepop{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10;
+  opacity:0;pointer-events:none;white-space:nowrap;will-change:transform,opacity}
+.scorepop .goaltext{font-weight:900;font-size:52px;color:var(--gold);letter-spacing:1px;
+  text-shadow:0 4px 0 rgba(0,0,0,.16)}
+
+/* shootout scoreboard — one dot per round, fills in as each kick scores;
+   ties the loop structurally to Daily District's own guess-limit mechanic. */
+.dots{display:flex;gap:14px;margin-top:26px}
+.dot{width:16px;height:16px;border-radius:50%;border:3px solid var(--muted);
+  background:transparent;will-change:transform,background,border-color}
+
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;z-index:1000;background:rgba(20,20,24,.86);backdrop-filter:blur(8px);
+  border-radius:14px;padding:10px 14px;font-family:'Barlow',sans-serif}
+body.clean #controls{display:none}
+#controls button{font-family:inherit;font-weight:800;font-size:14px;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;background:#2f2f36;color:#fff}
+#controls button.primary{background:var(--red)}
+#controls button:hover{filter:brightness(1.12)}
+#controls .status{color:#c9c7cf;font-size:13px;font-weight:600;min-width:120px}
+#hint-cue{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(20,20,24,.8);color:#eee;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:8px}
+body.clean #hint-cue{display:none}
+
+/* portrait tuning */
+body[data-aspect="9x16"] .wordmark[style]{width:840px!important}
+body[data-aspect="9x16"] .sub{font-size:34px}
+body[data-aspect="9x16"] .pitch{width:620px;height:620px}
+body[data-aspect="9x16"] .ball{width:116px;height:116px}
+body[data-aspect="9x16"] .ball-shadow{width:134px;height:36px}
+body[data-aspect="9x16"] .entry-ring{width:84px;height:84px}
+body[data-aspect="9x16"] .scorepop .goaltext{font-size:70px}
+body[data-aspect="9x16"] .dots{margin-top:38px;gap:18px}
+body[data-aspect="9x16"] .dot{width:22px;height:22px;border-width:4px}
+body[data-aspect="9x16"] .cap{bottom:180px;font-size:38px}
+body[data-aspect="9x16"] .cta-url{font-size:72px}
+
+/* landscape tuning (1280×720) */
+body[data-aspect="16x9"] .wordmark[style]{width:560px!important}
+body[data-aspect="16x9"] .eyebrow{font-size:17px}
+body[data-aspect="16x9"] .sub{font-size:24px}
+body[data-aspect="16x9"] .pitch{width:270px;height:270px}
+body[data-aspect="16x9"] .ball{width:56px;height:56px}
+body[data-aspect="16x9"] .ball-shadow{width:66px;height:18px}
+body[data-aspect="16x9"] .entry-ring{width:42px;height:42px;border-width:4px}
+body[data-aspect="16x9"] .scorepop .goaltext{font-size:32px}
+body[data-aspect="16x9"] .dots{margin-top:16px;gap:10px}
+body[data-aspect="16x9"] .dot{width:12px;height:12px;border-width:3px}
+body[data-aspect="16x9"] .cta-url{font-size:48px}
+body[data-aspect="16x9"] .cap{bottom:24px;font-size:22px}
+</style>
+</head>
+<body data-aspect="{{ASPECT}}">
+
+<div id="stage">
+  <div id="bg"></div>
+  <div id="confetti"></div>
+
+  <!-- 1 · INTRO (shared dynamic-intro pattern — see social/README.md §6) -->
+  <section class="scene" data-scene="intro">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="slideL" data-d="0.05" data-exit="L">Bend it in</span>
+      <div class="wordmark" data-anim="zoomIn" data-d="0.18" data-exit="Z" style="width:760px;margin:24px 0 14px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="slideR" data-d="0.42" data-exit="R">Curl the shot. <b class="redword">Name the district.</b></div>
+    </div>
+  </section>
+
+  <!-- 2 · GOAL — the district itself is the net; the ball curls in on a
+       bending free-kick path from a different angle each round. -->
+  <section class="scene" data-scene="goal">
+    <div class="wrap">
+      <span class="eyebrow" data-anim="rise" data-d="0.05" style="margin-bottom:10px">From the spot</span>
+      <div class="pitch" id="pitch">
+        <svg id="sil-svg" viewBox="0 0 {{SIL_BOX}} {{SIL_BOX}}" aria-hidden="true">
+          <defs>
+            <pattern id="netmesh" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="16" stroke="#ffffff" stroke-width="1.6" opacity=".55"/>
+              <line x1="0" y1="0" x2="16" y2="0" stroke="#ffffff" stroke-width="1.6" opacity=".55"/>
+            </pattern>
+          </defs>
+          <g id="sil-group">
+            <path id="sil-path" d="{{SIL_PATH0}}"/>
+            <path id="sil-path-net" d="{{SIL_PATH0}}"/>
+          </g>
+        </svg>
+        <div class="entry-ring" id="entry-ring"></div>
+        <div class="ball-shadow" id="ball-shadow"></div>
+        <div class="ball" id="ball">
+          <!-- Vector soccer ball — true pentagon/hexagon seam layout (adapted
+               from the standard flat "soccer ball" reference geometry), not a
+               photo, so it stays crisp at any render size. Seam paths are
+               drawn 4× with decreasing stroke width/darkness (sb-black reuse
+               via <use>) to feather the edges without a blur filter. -->
+          <svg class="ball-inner" id="ball-inner" viewBox="-105 -105 210 210" aria-hidden="true">
+            <defs>
+              <clipPath id="sb-clip"><circle r="100" stroke-width="0"/></clipPath>
+              <radialGradient id="sb-shade1" cx=".4" cy=".3" r=".8">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="1"/>
+                <stop offset=".4" stop-color="#ffffff" stop-opacity="1"/>
+                <stop offset=".8" stop-color="#eeeeee" stop-opacity="1"/>
+              </radialGradient>
+              <radialGradient id="sb-shade2" cx=".5" cy=".5" r=".5">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+                <stop offset=".8" stop-color="#ffffff" stop-opacity="0"/>
+                <stop offset=".99" stop-color="#000000" stop-opacity=".3"/>
+                <stop offset="1" stop-color="#000000" stop-opacity="1"/>
+              </radialGradient>
+              <g id="sb-black" stroke-linejoin="round" clip-path="url(#sb-clip)">
+                <g fill="#000000">
+                  <path d="M 6,-32 Q 26,-28 46,-19 Q 57,-35 64,-47 Q 50,-68 37,-76 Q 17,-75 1,-68 Q 4,-51 6,-32"/>
+                  <path d="M -26,-2 Q -45,-8 -62,-11 Q -74,5 -76,22 Q -69,40 -50,54 Q -32,47 -17,39 Q -23,15 -26,-2"/>
+                  <path d="M -95,22 Q -102,12 -102,-8 V 80 H -85 Q -95,45 -95,22"/>
+                  <path d="M 55,24 Q 41,41 24,52 Q 28,65 31,79 Q 55,78 68,67 Q 78,50 80,35 Q 65,28 55,24"/>
+                  <path d="M 0,120 L -3,95 Q -25,93 -42,82 Q -50,84 -60,81"/>
+                  <path d="M -90,-48 Q -80,-52 -68,-49 Q -52,-71 -35,-77 Q -35,-100 -40,-100 H -100"/>
+                  <path d="M 100,-55 L 87,-37 Q 98,-10 97,5 L 100,6"/>
+                </g>
+                <g fill="none">
+                  <path d="M 6,-32 Q -18,-12 -26,-2
+                           M 46,-19 Q 54,5 55,24
+                           M 64,-47 Q 77,-44 87,-37
+                           M 37,-76 Q 39,-90 36,-100
+                           M 1,-68 Q -13,-77 -35,-77
+                           M -62,-11 Q -67,-25 -68,-49
+                           M -76,22 Q -85,24 -95,22
+                           M -50,54 Q -49,70 -42,82
+                           M -17,39 Q 0,48 24,52
+                           M 31,79 Q 20,92 -3,95
+                           M 68,67 L 80,80
+                           M 80,35 Q 90,25 97,5
+                  "/>
+                </g>
+              </g>
+            </defs>
+            <circle r="100" fill="#ffffff" stroke="none"/>
+            <circle r="100" fill="url(#sb-shade1)" stroke="none"/>
+            <use href="#sb-black" stroke="#eeeeee" stroke-width="7"/>
+            <use href="#sb-black" stroke="#dddddd" stroke-width="4"/>
+            <use href="#sb-black" stroke="#999999" stroke-width="2"/>
+            <use href="#sb-black" stroke="#000000" stroke-width="1"/>
+            <circle r="100" fill="url(#sb-shade2)" stroke="none"/>
+          </svg>
+        </div>
+        <div class="scorepop" id="scorepop"><span class="goaltext">GOAL</span></div>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </section>
+
+  <!-- 3 · CTA (shared confetti/hold pattern — see social/README.md §6) -->
+  <section class="scene" data-scene="cta">
+    <div class="wrap">
+      <div class="wordmark" data-anim="pop" data-d="0.05" style="width:620px;margin-bottom:22px"><svg viewBox="0 0 260 56" role="img" aria-label="Daily District">{{WORDMARK}}</svg></div>
+      <div class="sub" data-anim="rise" data-d="0.22" style="color:var(--ink)">Sudden death. <b class="redword">Every day.</b></div>
+      <div class="cta-url" data-anim="pop" data-d="0.42" style="margin-top:16px">daily-district.com</div>
+    </div>
+  </section>
+</div>
+
+<div id="hint-cue">▶ Teaser #9 · loop · press <b>Record video</b> and share <b>This Tab</b> to export</div>
+<div id="controls">
+  <button class="primary" id="btn-rec">● Record video</button>
+  <button id="btn-restart">↻ Restart</button>
+  <button id="btn-clean">Hide UI</button>
+  <span class="status" id="status">{{STAGE_W}}×{{STAGE_H}} · teaser #9</span>
+</div>
+
+<script>/*{{FLUBBER_JS}}*/</script>
+<script>
+const easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+
+// ── District line-up: silhouettes to morph through + a flubber interpolator
+//    between each consecutive pair (same technique as teaser #4's learn beat). ──
+const SIL_PATHS={{SIL_PATHS_JSON}}, DISTRICTS_META={{DISTRICTS_META_JSON}};
+const N_SHOTS=SIL_PATHS.length;
+const SIL_MORPH=[];
+for(let i=0;i<SIL_PATHS.length-1;i++){ try{ SIL_MORPH[i]=flubber.interpolate(SIL_PATHS[i],SIL_PATHS[i+1]); }catch(e){ SIL_MORPH[i]=null; } }
+const silPath=document.getElementById('sil-path');
+const silPathNet=document.getElementById('sil-path-net');
+const silGroup=document.getElementById('sil-group');
+function setSilD(d){ silPath.setAttribute('d', d); silPathNet.setAttribute('d', d); }
+const ball=document.getElementById('ball'), ballInner=document.getElementById('ball-inner'), ballShadow=document.getElementById('ball-shadow');
+const entryRing=document.getElementById('entry-ring');
+const scorepop=document.getElementById('scorepop');
+
+// ── Shootout scoreboard — one dot per round, fills in once its kick scores ──
+const dotsEl=document.getElementById('dots');
+for(let i=0;i<N_SHOTS;i++){ const d=document.createElement('span'); d.className='dot'; dotsEl.appendChild(d); }
+const dotEls=[...dotsEl.children];
+
+// ── Per-round timeline (all pure functions of scene-local time → deterministic
+//    and fully seekable for render-mp4's frame-by-frame capture) ─────────────
+// Quick curl-in, quick "GOAL" pop, quick morph into the next district —
+// energetic pacing built to feel good with a bigger district lineup.
+const ARC_DUR=0.62;                    // ball flight time (free-kick curl)
+// "GOAL": pop in → hold → then a slow float all the way to the top of the
+// pitch, staying fully opaque for the first half of that rise and only
+// fading out over the second half (so it reads clearly before it fades).
+const POP_FADE=0.12, POP_HOLD=0.16, POP_RISE=0.55, POP_TOP_PCT=4;
+const NET_RIPPLE_DUR=0.32;             // net-bulge reaction right at impact
+const MORPH_START=ARC_DUR+POP_FADE+POP_HOLD+0.05;                      // morph starts right after the "GOAL" settles
+const MORPH_DUR=0.35;
+// Shot length must cover whichever finishes last — the shape morph, or the
+// "GOAL"'s full rise-to-the-top-and-fade — so neither gets cut off.
+const SHOT_DUR=Math.max(MORPH_START+MORPH_DUR, ARC_DUR+POP_FADE+POP_HOLD+POP_RISE)+0.05;
+// Deterministic pseudo-random angle per shot (0–360°) so the ball curls in
+// from a different direction each time — golden-angle spacing gives good
+// spread even for a handful of shots.
+function shotAngle(idx){ return (idx*222.49)%360; }
+function arcPoint(t,sx,sy,px,py,ex,ey){
+  const u=1-t;
+  return [u*u*sx+2*u*t*px+t*t*ex, u*u*sy+2*u*t*py+t*t*ey];
+}
+
+// ── End-card confetti: fires part-way into the (held) CTA scene and keeps
+//    falling through the hold, so the final frame is logo + confetti. ────────
+const SW={{STAGE_W}}, SH={{STAGE_H}};
+const CONF_FIRE=2.0;                                   // s into the CTA scene
+const CONF_COLORS=['#C41230','#2b6cb0','#2f9e44','#FDB515','#1a1a1a','#e64980','#ffffff'];
+const confettiLayer=document.getElementById('confetti');
+const CONFETTI=(function(){
+  const arr=[]; let seed=1337; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=0;i<72;i++){
+    const el=document.createElement('div'); el.className='cf';
+    const w=8+rnd()*12, h=8+rnd()*14;
+    el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+    el.style.width=w.toFixed(1)+'px'; el.style.height=h.toFixed(1)+'px';
+    el.style.borderRadius=(rnd()<0.3?'50%':'2px');
+    confettiLayer.appendChild(el);
+    arr.push({el, x0:-0.05*SW+rnd()*1.10*SW, y0:-0.12*SH-rnd()*0.10*SH,
+      dist:SH*1.20+rnd()*0.1*SH, delay:rnd()*1.4, fall:2.0+rnd()*1.3,
+      damp:12+rnd()*60, dfreq:1.4+rnd()*2.4, phase:rnd()*6.283,
+      rot0:rnd()*360, spin:(rnd()-0.5)*720});
+  }
+  return arr;
+})();
+// Run the end card until every piece has landed, then hold the logo +3s more.
+const CONF_END = CONF_FIRE + Math.max(...CONFETTI.map(c=>c.delay+c.fall));
+const CTA_DUR = CONF_END + 3;
+function renderConfetti(active, elapsed){
+  if(!active){ if(confettiLayer.style.opacity!=='0') confettiLayer.style.opacity='0'; return; }
+  confettiLayer.style.opacity='1';
+  for(const c of CONFETTI){
+    if(elapsed<c.delay){ c.el.style.opacity='0'; continue; }
+    const p=clamp((elapsed-c.delay)/c.fall,0,1);
+    const y=c.y0+c.dist*(0.35*p+0.65*p*p);
+    const x=c.x0+Math.sin(elapsed*c.dfreq+c.phase)*c.damp;
+    const rot=c.rot0+elapsed*c.spin;
+    const op = p<0.12 ? p/0.12 : p>0.9 ? (1-p)/0.1 : 1;
+    c.el.style.opacity=op.toFixed(2);
+    c.el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(1)}deg)`;
+  }
+}
+
+const DEF=[
+  {name:'intro', dur:2.7, ax:'y', dir: 1, scatterOut:true, dynamicIntro:true},
+  {name:'goal',  dur:SHOT_DUR*N_SHOTS, ax:'x', dir: 1, goal:true},
+  {name:'cta',   dur:CTA_DUR, ax:'x', dir:-1, hold:true},   // holds on the logo through the confetti, then +3s, no swipe-out
+];
+let acc=0; const SCENES=DEF.map(s=>{const o={...s,t0:acc,t1:acc+s.dur};acc+=s.dur;return o;});
+const LOOP=acc;
+const CTA=SCENES.find(s=>s.name==='cta');
+const ENTER=0.5, EXIT=0.46, TRAVEL=560, BLURMAX=20, CHILD=0.5;
+
+SCENES.forEach(s=>{
+  s.el=document.querySelector(`.scene[data-scene="${s.name}"]`);
+  s.kids=[...s.el.querySelectorAll('[data-anim]')].map(n=>({n,type:n.dataset.anim,d:parseFloat(n.dataset.d)||0,exit:n.dataset.exit}));
+});
+
+function revealKids(s,lt){
+  for(const k of s.kids){ const p=easeOut(clamp((lt-k.d)/CHILD,0,1));
+    let tf='', fl='';
+    if(k.type==='pop')tf=`scale(${lerp(.72,1,p)})`;
+    else if(k.type==='rise')tf=`translateY(${lerp(30,0,p)}px)`;
+    else if(k.type==='slideL')tf=`translateX(${lerp(-180,0,p)}px)`;   // fly in from the left
+    else if(k.type==='slideR')tf=`translateX(${lerp(180,0,p)}px)`;    // fly in from the right
+    else if(k.type==='zoomIn'){ tf=`scale(${lerp(.25,1,p)})`; fl=`blur(${lerp(16,0,p).toFixed(1)}px)`; }  // rushes at the viewer
+    k.n.style.opacity=p.toFixed(3); k.n.style.transform=tf;
+    if(k.type==='zoomIn') k.n.style.filter=fl; }
+}
+
+// scatterOut scenes fly each child off in its own direction (data-exit: L/R/U/D)
+// or zoom past the camera (Z) instead of the block sliding off as one piece.
+const SCATTER_DUR=0.7, SCATTER_TRAVEL=820, SCATTER_ZOOM=5.5, SCATTER_ZBLUR=22;
+function scatterKids(s,lt,dur){
+  if(lt<=dur-SCATTER_DUR) return;
+  const p=easeIn(clamp((lt-(dur-SCATTER_DUR))/SCATTER_DUR,0,1)), T=SCATTER_TRAVEL;
+  for(const k of s.kids){ let x=0,y=0; const e=k.exit;
+    if(e==='L')x=-T*p; else if(e==='R')x=T*p; else if(e==='U')y=-T*p; else if(e==='D')y=T*p;
+    if(e==='Z'){ k.n.style.transform=`scale(${(1+p*SCATTER_ZOOM).toFixed(2)})`; k.n.style.filter=`blur(${(p*SCATTER_ZBLUR).toFixed(1)}px)`; }
+    else k.n.style.transform=`translate3d(${x.toFixed(0)}px,${y.toFixed(0)}px,0)`;
+    k.n.style.opacity=clamp(1-p*1.5,0,1).toFixed(3); }
+}
+
+let startTs=null, paused=false, pauseAt=0;
+window.__teaser={seek:t=>{paused=true;pauseAt=((t%LOOP)+LOOP)%LOOP;},play:()=>{paused=false;startTs=null;},loop:()=>LOOP};
+
+function frame(ts){
+  if(startTs===null) startTs=ts;
+  const t = paused ? pauseAt : ((ts-startTs)/1000)%LOOP;
+  for(const s of SCENES){
+    const el=s.el, lt=t-s.t0, dur=s.t1-s.t0;
+    if(t<s.t0-0.02 || t>=s.t1+0.02){ el.style.opacity='0'; el.style.filter='none'; continue; }
+    let x=0,y=0,sc=1,bl=0,op=1,ry=0;
+    if(lt<ENTER){ const p=easeOut(clamp(lt/ENTER,0,1)); const off=s.dynamicIntro?0:(1-p)*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1.08-0.08*p; bl=BLURMAX*(1-p); op=clamp(p*1.6,0,1); ry=(s.ax==='x')?s.dir*8*(1-p):0; }
+    else if(s.hold){ /* settle and hold — static logo, never swipes out (confetti scene) */ }
+    else if(s.scatterOut){ /* block holds still & opaque; children fly off individually */ }
+    else if(lt>dur-EXIT){ const p=easeIn(clamp((lt-(dur-EXIT))/EXIT,0,1)); const off=-p*TRAVEL*s.dir;
+      if(s.ax==='x')x=off; else y=off*0.7; sc=1-0.05*p; bl=BLURMAX*p; op=clamp(1-p*1.35,0,1); ry=(s.ax==='x')?-s.dir*9*p:0; }
+    else { const hp=(lt-ENTER)/(dur-ENTER-EXIT); sc=1+0.026*hp; y=-6*hp; }
+    el.style.opacity=op.toFixed(3);
+    el.style.filter = bl>0.05?`blur(${bl.toFixed(1)}px)`:'none';
+    el.style.transform=`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) scale(${sc.toFixed(3)}) rotateY(${ry.toFixed(1)}deg)`;
+    revealKids(s,lt);
+    if(s.scatterOut) scatterKids(s,lt,dur);
+
+    if(s.goal){
+      // Clamp both bounds — lt can be a hair negative right at the scene's
+      // entry boundary (float rounding inside the -0.02 grace window), and an
+      // un-floored Math.floor() there yields -1, which would crash on
+      // DISTRICTS_META[-1] and silently kill the rAF loop for the rest of
+      // the video (only the intro would ever show).
+      const shotIdx=Math.max(0, Math.min(N_SHOTS-1, Math.floor(lt/SHOT_DUR)));
+      const shotLt=Math.max(0, lt-shotIdx*SHOT_DUR);
+      const isLast=shotIdx===N_SHOTS-1;
+
+      const meta=DISTRICTS_META[shotIdx];
+      const tcx=meta.cx, tcy=meta.cy;   // this district's actual visual centroid — the "net"
+
+      // Shape: static on its own silhouette, then flubber-morphs into the next
+      // district starting at MORPH_START (the last shot never morphs — nothing
+      // left to morph into, so it just holds).
+      if(!isLast && shotLt>=MORPH_START){
+        const p=easeOut(clamp((shotLt-MORPH_START)/MORPH_DUR,0,1));
+        const mrp=SIL_MORPH[shotIdx];
+        setSilD(mrp?mrp(p):SIL_PATHS[shotIdx+1]);
+      } else {
+        setSilD(SIL_PATHS[shotIdx]);
+      }
+
+      // Ball: curls in from a different angle each round (golden-angle
+      // spacing around the district), on a bending free-kick path converging
+      // on the shape's actual centroid — the district itself is the net, so
+      // there's no separate goal frame to aim at. Grows toward the viewer
+      // through the first half (3D "coming at you"), then shrinks to near-
+      // nothing and tips away in perspective as it rips into the shape.
+      if(shotLt<ARC_DUR){
+        const ta=shotLt/ARC_DUR;
+        const ang=shotAngle(shotIdx)*Math.PI/180, R=115;
+        const sx=tcx+Math.cos(ang)*R, sy=tcy+Math.sin(ang)*R;
+        const dx=tcx-sx, dy=tcy-sy, len=Math.hypot(dx,dy)||1;
+        const perpx=-dy/len, perpy=dx/len, bend=(shotIdx%2?1:-1)*32;
+        const cpx=(sx+tcx)/2+perpx*bend, cpy=(sy+tcy)/2+perpy*bend;
+        const [bx,by]=arcPoint(ta, sx,sy, cpx,cpy, tcx,tcy);
+        const scale = ta<0.55 ? lerp(0.16,1.38,easeOut(ta/0.55)) : lerp(1.38,0.05,easeIn((ta-0.55)/0.45));
+        const op2 = ta<0.06 ? ta/0.06 : (ta>0.97 ? (1-ta)/0.03 : 1);
+        const blur = (1-Math.sin(ta*Math.PI))*2.4;
+        const tiltX = ta>0.55 ? lerp(0,55,easeIn((ta-0.55)/0.45)) : 0;   // tips away as it rips in
+        ball.style.left=bx.toFixed(2)+'%'; ball.style.top=by.toFixed(2)+'%';
+        ball.style.transform=`translate(-50%,-50%) scale(${scale.toFixed(3)}) rotateX(${tiltX.toFixed(1)}deg)`;
+        ball.style.opacity=op2.toFixed(3);
+        // Blur lives on the flat inner image (pre-tilt), not the 3D-tilted
+        // wrapper — blurring a layer that itself carries a rotateX transform
+        // produces a GPU sampling streak across the ball during the dive-in
+        // tilt; applying it before that transform avoids it.
+        ballInner.style.transform=`rotate(${(shotLt*480).toFixed(0)}deg)`;
+        ballInner.style.filter=blur>0.05?`blur(${blur.toFixed(1)}px)`:'none';
+        // Contact shadow — trails just under/behind the ball, fading out as
+        // the ball vanishes into the net (a cheap but effective grounding cue
+        // for the 3D read).
+        ballShadow.style.left=bx.toFixed(2)+'%'; ballShadow.style.top=(by+2).toFixed(2)+'%';
+        ballShadow.style.transform=`translate(-50%,-50%) scale(${(scale*0.85).toFixed(3)})`;
+        ballShadow.style.opacity=(op2*lerp(0.15,0.55,ta)*(1-Math.max(0,ta-0.85)/0.15)).toFixed(3);
+      } else {
+        ball.style.opacity='0'; ballShadow.style.opacity='0';
+      }
+
+      // Entry ring — a quick pulse right where the ball ripped into the net.
+      if(shotLt>=ARC_DUR && shotLt<ARC_DUR+POP_FADE){
+        const p=clamp((shotLt-ARC_DUR)/POP_FADE,0,1);
+        entryRing.style.left=tcx+'%'; entryRing.style.top=tcy+'%';
+        entryRing.style.opacity=(1-p).toFixed(3);
+        entryRing.style.transform=`translate(-50%,-50%) scale(${lerp(0.3,2.4,p).toFixed(3)})`;
+      } else { entryRing.style.opacity='0'; }
+
+      // Net ripple — a damped bulge right at impact, as if the mesh actually
+      // caught the ball. Pure function of shot-local time, so it stays
+      // deterministic/seekable like everything else here.
+      if(shotLt>=ARC_DUR && shotLt<ARC_DUR+NET_RIPPLE_DUR){
+        const rp=(shotLt-ARC_DUR)/NET_RIPPLE_DUR;
+        const decay=Math.exp(-rp*6)*Math.cos(rp*18);
+        const bulge=decay*0.05;
+        silGroup.style.transform=`scale(${(1+bulge).toFixed(4)}, ${(1-bulge*0.4).toFixed(4)})`;
+      } else {
+        silGroup.style.transform='scale(1,1)';
+      }
+
+      // "GOAL" — a quick floating flash right at the impact point: pops in,
+      // holds briefly, then floats all the way up to the top of the pitch,
+      // staying fully readable through the first half of that climb and only
+      // fading out over the second half (same beat on every round, including
+      // the last — it always floats away on its own).
+      let popOp=0, popScale=0.6, popTop=tcy;
+      if(shotLt>=ARC_DUR){
+        const pl=shotLt-ARC_DUR;
+        if(pl<POP_FADE){ const p=easeOut(clamp(pl/POP_FADE,0,1)); popOp=p; popScale=lerp(0.5,1,p); }
+        else if(pl<POP_FADE+POP_HOLD){ popOp=1; popScale=1; }
+        else if(pl<POP_FADE+POP_HOLD+POP_RISE){
+          const p=easeOut(clamp((pl-POP_FADE-POP_HOLD)/POP_RISE,0,1));
+          popTop=lerp(tcy,POP_TOP_PCT,p); popScale=1;
+          popOp = p<0.5 ? 1 : 1-easeIn(clamp((p-0.5)/0.5,0,1));
+        } else { popOp=0; popScale=1; popTop=POP_TOP_PCT; }
+      }
+      scorepop.style.left=tcx+'%'; scorepop.style.top=popTop.toFixed(2)+'%';
+      scorepop.style.opacity=popOp.toFixed(3);
+      scorepop.style.transform=`translate(-50%, -50%) scale(${popScale.toFixed(3)})`;
+
+      // Shootout scoreboard — each dot fills in (and gives a quick pop) the
+      // instant its round's ball hits the net; earlier rounds stay filled.
+      for(let i=0;i<N_SHOTS;i++){
+        const el=dotEls[i];
+        const scored = i<shotIdx || (i===shotIdx && shotLt>=ARC_DUR);
+        let dotScale=1;
+        if(i===shotIdx && shotLt>=ARC_DUR && shotLt<ARC_DUR+POP_FADE+POP_HOLD){
+          const p=easeOut(clamp((shotLt-ARC_DUR)/POP_FADE,0,1));
+          dotScale=lerp(1,1.35,p<1?p:1)*(shotLt<ARC_DUR+POP_FADE?1:lerp(1.35,1,clamp((shotLt-ARC_DUR-POP_FADE)/POP_HOLD,0,1)));
+        }
+        el.style.background = scored ? 'var(--gold)' : 'transparent';
+        el.style.borderColor = scored ? 'var(--gold)' : 'var(--muted)';
+        el.style.transform = `scale(${dotScale.toFixed(3)})`;
+      }
+    }
+  }
+  // End-card confetti — driven purely by the CTA scene's local time (so it's
+  // deterministic under render-mp4's frame-by-frame seek).
+  const ctaLt=t-CTA.t0, ctaOn=(t>=CTA.t0-0.02 && t<CTA.t1+0.02);
+  renderConfetti(ctaOn && ctaLt>=CONF_FIRE, ctaLt-CONF_FIRE);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Controls + record ───────────────────────────────────────────────────────
+const statusEl=document.getElementById('status');
+document.getElementById('btn-restart').onclick=()=>{startTs=null;paused=false;};
+document.getElementById('btn-clean').onclick=()=>{document.body.classList.toggle('clean');fit();};
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); if(paused){paused=false;startTs=performance.now()-pauseAt*1000;} else {paused=true;pauseAt=((performance.now()-(startTs||performance.now()))/1000)%LOOP;}}
+  if(e.key==='r'||e.key==='R'){startTs=null;paused=false;}
+  if(e.key==='h'||e.key==='H'){document.body.classList.toggle('clean');fit();}
+});
+
+let rec, chunks=[];
+document.getElementById('btn-rec').onclick=async ()=>{
+  try{
+    statusEl.textContent='Choose “This Tab”…';
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:{{STAGE_W}},height:{{STAGE_H}}},audio:false,preferCurrentTab:true});
+    document.body.classList.add('clean'); fit(); startTs=null; paused=false; chunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12_000_000});
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mime});const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download='daily-district-teaser-9.'+(mime.includes('mp4')?'mp4':'webm');a.click();
+      document.body.classList.remove('clean');fit();statusEl.textContent='Saved '+a.download;};
+    rec.start();
+    const total=Math.round(LOOP*1000)+300; let left=Math.ceil(total/1000);
+    statusEl.textContent='● Recording '+left+'s…';
+    const iv=setInterval(()=>{left--;statusEl.textContent='● Recording '+left+'s…';},1000);
+    setTimeout(()=>{clearInterval(iv);if(rec&&rec.state!=='inactive')rec.stop();},total);
+    stream.getVideoTracks()[0].onended=()=>{if(rec&&rec.state!=='inactive')rec.stop();};
+  }catch(err){statusEl.textContent='Record cancelled';document.body.classList.remove('clean');fit();}
+};
+
+function fit(){
+  const pad=document.body.classList.contains('clean')?0:56;
+  const s=Math.min(1,(window.innerWidth-pad)/{{STAGE_W}},(window.innerHeight-pad)/{{STAGE_H}});
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
+</script>
+</body>
+</html>

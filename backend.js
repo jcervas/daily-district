@@ -81,11 +81,17 @@
   function signInWithEmail(email, password) {
     return client().auth.signInWithPassword({ email, password });
   }
-  function signUpWithEmail(email, password, username) {
+  function signUpWithEmail(email, password, username, marketingOptIn) {
+    const data = {};
+    if (username) data.username = username;
+    // Read by the handle_new_user trigger to seed profiles.marketing_opt_in at
+    // creation — captured here (opt-in checkbox on the sign-up form) so it's
+    // recorded even if the player never reaches/completes the later profile modal.
+    if (marketingOptIn != null) data.marketing_opt_in = !!marketingOptIn;
     return client().auth.signUp({
       email, password,
       options: {
-        data: username ? { username } : {},
+        data,
         // With "Confirm email" enabled in Supabase Auth, the confirmation link
         // sends the user back here; implicit flow + detectSessionInUrl then
         // establishes their session and onAuthChange fires SIGNED_IN.
@@ -135,7 +141,7 @@
     // opts.history (anonymous only): the player's prior guesses as [{ phase, value }].
     // The server (verify_jwt off) recomputes correctness from these values and persists
     // nothing — signed-in callers omit it and the server uses the stored result instead.
-    const body = { phase, value, seconds };
+    const body = { phase, value, seconds, session_id: sessionId() };
     if (Array.isArray(opts.history)) body.history = opts.history;
     const { data, error } = await client().functions.invoke('guess', { body });
     if (error) throw error;
