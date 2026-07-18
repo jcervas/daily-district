@@ -138,7 +138,7 @@ async function build16x9(district) {
   parts.push(badge.svg);
   parts.push(text('Can you identify', x, 470, { size: 78, weight: 900, fill: INK }));
   parts.push(text('this district?', x, 552, { size: 78, weight: 900, fill: INK }));
-  parts.push(text(`Play free at ${SITE}`, x, 632, { size: 34, weight: 700, fill: RED }));
+  parts.push(text(`Coming soon at ${SITE}`, x, 632, { size: 34, weight: 700, fill: RED }));
 
   parts.push('</svg>');
   return parts.join('');
@@ -171,8 +171,8 @@ async function build9x16(district) {
   // "Can you identify it?" + CTA pill (measured first so we can centre it).
   const cy = cardY + cardH + 80 + 62 * 0.7;
   parts.push(text('Can you identify it?', W / 2, cy, { size: 62, weight: 800, fill: RED, anchor: 'middle' }));
-  const ctaW = await measure(`Play free · ${SITE}`, 40, 800) + 54 * 2;
-  const cta = await pill(`Play free · ${SITE}`, (W - ctaW) / 2, cy + 44, { size: 40, weight: 800, padX: 54, height: 88 });
+  const ctaW = await measure(`Coming soon · ${SITE}`, 40, 800) + 54 * 2;
+  const cta = await pill(`Coming soon · ${SITE}`, (W - ctaW) / 2, cy + 44, { size: 40, weight: 800, padX: 54, height: 88 });
   parts.push(cta.svg);
 
   parts.push('</svg>');
