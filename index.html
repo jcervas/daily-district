@@ -611,6 +611,26 @@
       if (btn) btn.click();
     });
   })();
+
+  /* Deep-link to the sign-in / sign-up modal: the district pages' "Sign up"
+     button links here as /?signup=1. Wait for login.js to reveal the header
+     sign-in button (only shown once it's confirmed nobody's signed in), then
+     open the same login-modal. Give up quietly if already signed in. */
+  (function () {
+    var p = new URLSearchParams(location.search);
+    if (!p.has('signup') && !p.has('signin') && location.hash !== '#signup' && location.hash !== '#signin') return;
+    var tries = 0;
+    var iv = setInterval(function () {
+      var btn = document.getElementById('header-signin-btn');
+      if (btn && !btn.classList.contains('hidden')) {
+        clearInterval(iv);
+        btn.click();
+        try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      } else if (++tries > 50) {
+        clearInterval(iv);
+      }
+    }, 150);
+  })();
 </script>
 </body>
 </html>

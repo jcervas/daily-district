@@ -180,7 +180,7 @@ function shell({ title, description, canonical, body, scripts = '' }) {
     <div class="dd-header-inner">
       <img src="/logo.svg" alt="" aria-hidden="true" />
       <a class="dd-wordmark" href="/">Daily District</a>
-      <a class="dd-play" id="dd-auth" href="/">Sign in</a>
+      <a class="dd-play" id="dd-auth" href="/?signup=1">Sign up</a>
     </div>
   </header>
   <main class="dd-main">
@@ -199,11 +199,12 @@ ${scripts}${authAssets()}</body>
 </html>`;
 }
 
-// Header Sign in / Sign out control. Reuses the game's real auth stack
+// Header Sign up / Sign out control. Reuses the game's real auth stack
 // (supabase-js + backend.js → window.DistrictBackend). The Supabase session
 // lives in localStorage and is shared same-origin, so a visitor who created an
-// account on the homepage is recognised here. Signed out → "Sign in" links to
-// the homepage funnel (the game isn't live yet); signed in → "Sign out" in place.
+// account on the homepage is recognised here. Signed out → "Sign up" links to
+// /?signup=1, which opens the homepage's real sign-in/sign-up modal (the game
+// isn't live yet); signed in → "Sign out" in place.
 function authAssets() {
   const js = `(function(){
   function init(){
@@ -211,7 +212,7 @@ function authAssets() {
     if(!el||!B) return;
     function render(user){
       if(user){ el.textContent='Sign out'; el.dataset.auth='in'; el.setAttribute('href','#'); }
-      else { el.textContent='Sign in'; el.dataset.auth='out'; el.setAttribute('href','/'); }
+      else { el.textContent='Sign up'; el.dataset.auth='out'; el.setAttribute('href','/?signup=1'); }
     }
     el.addEventListener('click',function(e){
       if(el.dataset.auth==='in'){ e.preventDefault(); Promise.resolve(B.signOut()).then(function(){ render(null); }).catch(function(){}); }
