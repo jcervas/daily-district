@@ -180,7 +180,7 @@ function shell({ title, description, canonical, body, scripts = '' }) {
     <div class="dd-header-inner">
       <img src="/logo.svg" alt="" aria-hidden="true" />
       <a class="dd-wordmark" href="/">Daily District</a>
-      <a class="dd-play" href="/">Play today&rsquo;s puzzle</a>
+      <a class="dd-play" id="dd-auth" href="/">Sign in</a>
     </div>
   </header>
   <main class="dd-main">
@@ -195,8 +195,37 @@ ${body}
     <p>Daily District — a daily game about U.S. congressional districts.<br>
     Demographics from the U.S. Census Bureau (ACS 5-year); presidential results via The Downballot.</p>
   </footer>
-${scripts}</body>
+${scripts}${authAssets()}</body>
 </html>`;
+}
+
+// Header Sign in / Sign out control. Reuses the game's real auth stack
+// (supabase-js + backend.js → window.DistrictBackend). The Supabase session
+// lives in localStorage and is shared same-origin, so a visitor who created an
+// account on the homepage is recognised here. Signed out → "Sign in" links to
+// the homepage funnel (the game isn't live yet); signed in → "Sign out" in place.
+function authAssets() {
+  const js = `(function(){
+  function init(){
+    var el=document.getElementById('dd-auth'), B=window.DistrictBackend;
+    if(!el||!B) return;
+    function render(user){
+      if(user){ el.textContent='Sign out'; el.dataset.auth='in'; el.setAttribute('href','#'); }
+      else { el.textContent='Sign in'; el.dataset.auth='out'; el.setAttribute('href','/'); }
+    }
+    el.addEventListener('click',function(e){
+      if(el.dataset.auth==='in'){ e.preventDefault(); Promise.resolve(B.signOut()).then(function(){ render(null); }).catch(function(){}); }
+    });
+    Promise.resolve(B.getUser()).then(render).catch(function(){ render(null); });
+    if(B.onAuthChange){ try{ B.onAuthChange(function(user){ render(user); }); }catch(_){ } }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();`;
+  return `
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/backend.js?v=24" defer></script>
+  <script>${js}</script>
+`;
 }
 
 // Responsive Display ad (one reused unit, slot 3771556759). A labeled placeholder box
