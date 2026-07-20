@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SITE = 'https://daily-district.com';
-const CSS_V = 7; // bump when district-pages.css changes
+const CSS_V = 8; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
 const MAP_JS_V = 5; // bump when the emitted district-map.js changes
@@ -179,7 +179,7 @@ function shell({ title, description, canonical, body, scripts = '' }) {
   <header class="dd-header">
     <div class="dd-header-inner">
       <img src="/logo.svg" alt="" aria-hidden="true" />
-      <a class="dd-wordmark" href="/">Daily District</a>
+      <a class="dd-wordmark" href="/" aria-label="Daily District — home"></a>
       <a class="dd-play" id="dd-auth" href="/?signup=1">Sign up</a>
     </div>
   </header>

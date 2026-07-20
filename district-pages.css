@@ -44,14 +44,18 @@ a:hover { color: var(--dd-red); }
   gap: 12px;
 }
 .dd-header-inner img { width: 34px; height: 34px; }
+/* "Daily District" wordmark, rendered from wordmark.svg via a CSS mask so its
+   colour is controlled by the page (currentColor in the SVG can't be reached
+   through an <img>). */
 .dd-wordmark {
-  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: .3px;
-  color: var(--dd-red);
-  text-decoration: none;
-  text-transform: uppercase;
+  display: block;
+  height: 22px;
+  aspect-ratio: 260 / 56;
+  background-color: var(--dd-red);
+  -webkit-mask: url(/wordmark.svg) no-repeat left center;
+  mask: url(/wordmark.svg) no-repeat left center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 .dd-header-inner .dd-play {
   margin-left: auto;
@@ -68,7 +72,7 @@ a:hover { color: var(--dd-red); }
 @media (max-width: 560px) {
   .dd-header-inner { padding: 10px 14px; gap: 8px; }
   .dd-header-inner img { width: 26px; height: 26px; }
-  .dd-wordmark { font-size: 19px; white-space: nowrap; }
+  .dd-wordmark { height: 18px; }
   .dd-header-inner .dd-play { padding: 7px 12px; font-size: 13px; }
 }
 
