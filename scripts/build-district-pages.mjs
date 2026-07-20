@@ -518,7 +518,7 @@ function browsePage() {
 
   const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>Districts</nav>
     <h1 class="dd-title">All U.S. House Districts</h1>
-    <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
+    <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat.</p>
 ${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its profile.' })}
     ${adUnit()}
     <details class="dd-browse-all">
