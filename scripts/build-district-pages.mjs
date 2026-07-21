@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SITE = 'https://daily-district.com';
-const CSS_V = 8; // bump when district-pages.css changes
+const CSS_V = 9; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
 const MAP_JS_V = 5; // bump when the emitted district-map.js changes
@@ -190,6 +190,9 @@ ${body}
     <div>
       <a href="/">Play</a> ·
       <a href="/districts/">All districts</a> ·
+      <a href="/about/">About</a> ·
+      <a href="/how-to-play/">How to play</a> ·
+      <a href="/methodology/">Data &amp; methodology</a> ·
       <a href="/privacy.html">Privacy</a>
     </div>
     <p>Daily District — a daily game about U.S. congressional districts.<br>
@@ -487,7 +490,7 @@ ${mapFigure({
     ${S.join('\n    ')}
     <div class="dd-cta"><a href="/">Can you guess this district? Play Daily District →</a></div>`;
 
-  return shell({ title: `${fullName} — Representative, Demographics &amp; Map | Daily District`,
+  return shell({ title: `${fullName} — Representative, Demographics & Map | Daily District`,
     description: metaDesc, canonical, body, scripts: mapAssets() });
 }
 
@@ -530,6 +533,159 @@ ${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its
     title: 'All U.S. Congressional Districts — Representatives & Demographics | Daily District',
     description: `Directory of all ${records.length} U.S. House districts with representatives, Census demographics, and election results. Explore any district, then play the daily game.`,
     canonical, body, scripts: mapAssets(),
+  });
+}
+
+// ---- static editorial pages (about / how-to-play / methodology) ------------
+// Real crawlable pages for content that previously lived only in homepage
+// modals. Same shell as the district profiles, one ad unit each.
+function contentPage({ path, crumb, title, metaTitle, description, lede, cards, cta }) {
+  // One in-content ad after the second card, matching the district profiles.
+  const S = cards.slice();
+  S.splice(Math.min(2, S.length), 0, adUnit());
+  const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>${esc(crumb)}</nav>
+    <h1 class="dd-title">${esc(title)}</h1>
+    <p class="dd-lede">${lede}</p>
+    ${S.join('\n    ')}
+    <div class="dd-cta"><a href="/">${cta || 'Play Daily District →'}</a></div>`;
+  return shell({ title: metaTitle, description, canonical: `${SITE}${path}`, body });
+}
+
+function aboutPage() {
+  return contentPage({
+    path: '/about/', crumb: 'About',
+    title: 'About Daily District',
+    metaTitle: 'About Daily District — The Daily Congressional District Game',
+    description: 'Daily District is a free daily geography game about the 435 U.S. House districts, created by Dr. Jonathan Cervas of Carnegie Mellon University and Jason Fierman of the Redistrict Network.',
+    lede: 'Daily District is a free daily puzzle about American democracy: every day, one of the 435 U.S. House districts appears on the map, and your job is to figure out which one it is from its shape, its geography, and contextual clues.',
+    cards: [
+`<section class="dd-card">
+      <h2>What is Daily District?</h2>
+      <p>Each day, every player around the world gets the same mystery congressional district. You study its outline and location clues, then narrow it down — first to a state, then to the exact district — in six guesses or fewer. Wrong guesses aren't wasted: each one tells you whether you're getting warmer or colder geographically, eliminating whole regions of the country as you go. (See <a href="/how-to-play/">How to play</a> for the full rules.)</p>
+      <p>Behind the game sits a reference library: a <a href="/districts/">profile page for every one of the 435 districts</a>, with its current representative, Census demographics, recent presidential results, an interactive map, and shape statistics. Miss a puzzle and you can read exactly what makes that district distinctive — which is the point. Daily District is designed so that playing it, even badly, teaches you something about how the country is divided up.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Why congressional districts matter</h2>
+      <p>The U.S. House of Representatives has 435 voting members, each elected from a single district. After every decennial census, those districts are redrawn — a process called redistricting — to reflect where people live. How the lines are drawn shapes who runs, who wins, and ultimately which party controls the House, which is why redistricting (and its abuse, gerrymandering) is one of the most consequential and contested processes in American politics.</p>
+      <p>Yet most Americans would struggle to draw their own district from memory, let alone recognize any of the other 434. Districts range from dense urban seats a few dozen square miles in area to rural districts larger than entire states; some are compact and intuitive, others snake across a map in ways only a line-drawer could love. Learning to recognize them — their shapes, their communities, their politics — is a surprisingly effective way to build real civic knowledge. That's the gap Daily District tries to fill, one district a day.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Who's behind it</h2>
+      <p>Daily District was created through a partnership between <a href="https://jonathancervas.com" target="_blank" rel="noopener">Dr. Jonathan Cervas of Carnegie Mellon University</a> and <a href="https://x.com/RedistrictNet" target="_blank" rel="noopener">Jason Fierman of the Redistrict Network</a>. It grew out of their shared work on redistricting: an interactive way to learn how congressional districts shape American democracy, built for curious people of all backgrounds — students, teachers, political junkies, and anyone who likes a good map puzzle.</p>
+      <p>The data behind the game — Census demographics, election results, district geometry — is documented in detail on the <a href="/methodology/">Data &amp; methodology</a> page.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Support Daily District</h2>
+      <p>Daily District is committed to making civic education interactive, approachable, and fun. Donations to the <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&amp;a=10546035" target="_blank" rel="noopener">Carnegie Mellon Institute for Strategy &amp; Technology</a> support research and help make educational projects like Daily District possible.</p>
+      <p>Daily District is also seeking sponsors and organizational partners to support ongoing updates and maintenance of the game. If your organization is interested in sponsoring or partnering with Daily District, please contact <a href="mailto:RedistrictNetwork@gmail.com">RedistrictNetwork@gmail.com</a>.</p>
+      <p>Follow <a href="https://x.com/daily_district_" target="_blank" rel="noopener">@daily_district_ on X (Twitter)</a> for each day's puzzle and the latest updates.</p>
+    </section>`,
+    ],
+    cta: 'Ready to test yourself? Play Daily District →',
+  });
+}
+
+function howToPlayPage() {
+  return contentPage({
+    path: '/how-to-play/', crumb: 'How to play',
+    title: 'How to Play',
+    metaTitle: 'How to Play Daily District — Rules, Hot/Cold Clues & Tips',
+    description: 'The complete rules of Daily District: six guesses to identify the day\'s U.S. House district, hot/cold geographic elimination, a worked example, and tips for getting better.',
+    lede: 'Every day, one congressional district. You get six guesses to name it — and every wrong guess teaches you geography. Here are the full rules, a worked example, and some tips.',
+    cards: [
+`<section class="dd-card">
+      <h2>The basics</h2>
+      <ul>
+        <li>A new mystery district appears <strong>every day</strong> — the same one for all players, using the current district boundaries.</li>
+        <li>You have <strong>6 guesses</strong> to identify it.</li>
+        <li>Guess in two steps: first click a <strong>state</strong> on the reference map; once you nail the state, pick the <strong>district number</strong> within it.</li>
+        <li>Your timer starts when you submit your first guess.</li>
+        <li><strong>Sign in</strong> (free) to track your statistics, keep your streak, and compare with other players on the leaderboard.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Hot / cold elimination</h2>
+      <p>Wrong state guesses aren't wasted — each one comes back with a geographic clue:</p>
+      <ul>
+        <li><strong>Hot / Adjacent</strong> — the correct state <em>borders</em> the state you guessed. Only that state's neighbors stay in play; everything else is eliminated.</li>
+        <li><strong>Cold / Not adjacent</strong> — the correct state is farther away. The guessed state <em>and all of its neighbors</em> are eliminated.</li>
+      </ul>
+      <p>Eliminated states grey out on the map and in the state list automatically, so you can always see exactly which states are still possible. Playing the clues well usually matters more than your first guess being close.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>A worked example</h2>
+      <p>Say the day's outline is a huge, blocky, sparsely populated district.</p>
+      <ul>
+        <li><strong>Guess 1 — Missouri.</strong> The game answers <em>Hot</em>: the mystery district's state borders Missouri. Everything except Missouri's eight neighbors is eliminated — you're down to Iowa, Illinois, Kentucky, Tennessee, Arkansas, Oklahoma, Kansas, and Nebraska.</li>
+        <li><strong>Guess 2 — Kansas.</strong> Correct state! The enormous outline fits a plains state with a handful of districts.</li>
+        <li><strong>Guess 3 — Kansas's 1st.</strong> Kansas has four districts, and the vast shape covering most of the state can only be the "Big First," which spans western and central Kansas. Solved in three.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Tips for getting better</h2>
+      <ul>
+        <li><strong>Size is a population clue.</strong> Every district holds roughly 760,000 people, so a physically huge district means rural (think Montana or western Kansas) and a tiny one means a dense city.</li>
+        <li><strong>Look for borders you know.</strong> Coastlines, the Great Lakes, and big rivers like the Mississippi and Rio Grande often form one edge of a district and give the state away.</li>
+        <li><strong>Weird shapes are information.</strong> A long, contorted district often connects separated communities — common in and around large metro areas.</li>
+        <li><strong>Study between puzzles.</strong> Every answer links to its <a href="/districts/">district profile</a>; browsing neighboring districts after each game builds the mental map fast.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Frequently asked questions</h2>
+      <h3>When does a new puzzle come out?</h3>
+      <p>Once a day, every day. Everyone in the world gets the same district on the same day.</p>
+      <h3>Is it free?</h3>
+      <p>Yes. Daily District is free to play, supported by ads and by <a href="/about/">donations and sponsorships</a>.</p>
+      <h3>Do I need an account?</h3>
+      <p>No — anyone can play. A free account adds saved statistics, streaks, and the leaderboard.</p>
+      <h3>Which district boundaries does the game use?</h3>
+      <p>The congressional districts currently in effect, as described on the <a href="/methodology/">Data &amp; methodology</a> page.</p>
+    </section>`,
+    ],
+    cta: 'Got it? Play today\'s district →',
+  });
+}
+
+function methodologyPage() {
+  return contentPage({
+    path: '/methodology/', crumb: 'Data & methodology',
+    title: 'Data & Methodology',
+    metaTitle: 'Data & Methodology — The Sources Behind Daily District',
+    description: 'Where Daily District\'s numbers come from: Census Bureau ACS demographics, precinct-based presidential results, house.gov representative data, and how compactness scores are computed.',
+    lede: 'Every number on Daily District — the demographics, election results, and shape statistics on all 435 district profiles — comes from a public source and a documented pipeline. This page explains where the data comes from and how it\'s processed.',
+    cards: [
+`<section class="dd-card">
+      <h2>District boundaries &amp; maps</h2>
+      <p>The game and the district profiles use the congressional district boundaries currently in effect — the plans used to elect the current U.S. House. District geometry is built from official block-assignment files, which specify exactly which Census blocks belong to each district, paired with U.S. Census Bureau TIGER/Line and cartographic boundary geography. When a state adopts a new map (through litigation or mid-decade redistricting), the affected districts are rebuilt from the new plan.</p>
+      <p>The interactive maps are rendered from simplified versions of this geometry so pages load quickly; zooming into a state swaps in higher-detail boundaries. Land area figures come from the same geometry, so the acreage, density, and compactness figures on a profile all describe the same shape.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Demographics</h2>
+      <p>Population and demographic figures come from the U.S. Census Bureau's <strong>American Community Survey (ACS) 5-year estimates</strong>, retrieved directly from the Census Bureau API and aggregated from census tracts to districts using the block-assignment files above. That tract-level aggregation is what lets the profiles report demographics for current district lines even where they differ from the boundaries the Census Bureau publishes district tables for.</p>
+      <p>A note on categories: "White" refers to non-Hispanic White alone; "Hispanic" includes people of any race; "Black" and "Asian" refer to people identifying with those races alone. Percentages may not sum to 100 because of rounding and smaller groups collected under "Other." As with all ACS estimates, figures are survey-based and carry margins of error — treat small differences between districts as approximate.</p>
+      <p class="dd-source">Source: U.S. Census Bureau, American Community Survey 5-year estimates; 2020 Decennial Census (P.L. 94-171) for total population baselines.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Election results</h2>
+      <p><strong>2024 presidential results</strong> by congressional district (Harris vs. Trump) come from <a href="https://www.the-downballot.com/" target="_blank" rel="noopener">The Downballot</a>'s district-level calculations. <strong>2020 presidential results</strong> are computed from precinct-level election returns reallocated to the current district boundaries, so both elections describe the same lines even where districts have since been redrawn. Margins are reported as two-party leans — for example, D+3 means the Democratic candidate ran three points ahead of the Republican in that district.</p>
+      <p class="dd-source">Sources: The Downballot (2024); precinct-level returns aggregated to current districts (2020).</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Representatives</h2>
+      <p>The current U.S. House member for each district comes from official House sources (house.gov) and is updated periodically. When a seat is vacant — after a resignation or death, before a special election — the profile says so rather than listing a former member. Party labels are those the member serves under in the House.</p>
+      <p class="dd-source">Source: Official listings at house.gov.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Compactness &amp; shape statistics</h2>
+      <p>Each profile reports a <strong>Polsby-Popper</strong> compactness score: 4πA / P², where A is the district's area and P its perimeter. The score runs from 0 to 1 — a perfect circle scores 1.0, and the more contorted a district's boundary, the closer it falls to 0. It's one of the standard measures courts and scholars use when evaluating whether a district's shape is "regular," though no single number can prove or disprove a gerrymander on its own.</p>
+      <p>All geometric calculations — area, perimeter, compactness, and which districts border which — are done in an equal-area map projection (the US National Atlas projection) so that scores are comparable across every state, including Alaska and Hawaii. One caveat inherent to the measure: districts whose edges follow naturally jagged features like coastlines score lower than their appearance on a map might suggest.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Accuracy &amp; corrections</h2>
+      <p>All of this data is assembled for education, not as an official record — for authoritative figures, consult the underlying sources directly. If you spot something that looks wrong on a district profile, please email <a href="mailto:jcervas@andrew.cmu.edu">jcervas@andrew.cmu.edu</a> and we'll investigate and correct it.</p>
+    </section>`,
+    ],
+    cta: 'See the data in action — play Daily District →',
   });
 }
 
@@ -736,6 +892,17 @@ for (const r of records) {
 mkdirSync(join(ROOT, 'districts'), { recursive: true });
 writeFileSync(join(ROOT, 'districts', 'index.html'), browsePage());
 
+// Static editorial pages.
+const staticPages = [
+  ['about', aboutPage()],
+  ['how-to-play', howToPlayPage()],
+  ['methodology', methodologyPage()],
+];
+for (const [dir, html] of staticPages) {
+  mkdirSync(join(ROOT, dir), { recursive: true });
+  writeFileSync(join(ROOT, dir, 'index.html'), html);
+}
+
 // Shared interactive-map client, loaded by the browse hub and every profile.
 writeFileSync(join(ROOT, 'district-map.js'), mapClientJs());
 
@@ -744,6 +911,9 @@ const today = new Date().toISOString().slice(0, 10);
 const urls = [
   { loc: `${SITE}/`, pri: '1.0' },
   { loc: `${SITE}/districts/`, pri: '0.9' },
+  { loc: `${SITE}/about/`, pri: '0.5' },
+  { loc: `${SITE}/how-to-play/`, pri: '0.5' },
+  { loc: `${SITE}/methodology/`, pri: '0.5' },
   { loc: `${SITE}/privacy.html`, pri: '0.2' },
   ...records.map((r) => ({ loc: `${SITE}${districtUrl(r.id)}`, pri: '0.7' })),
 ];

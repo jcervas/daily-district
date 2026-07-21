@@ -589,3 +589,10 @@ path.dd-statehit { fill: transparent; stroke: none; cursor: pointer; }
 .dd-ad-box:has(ins.adsbygoogle[data-ad-status="filled"]) {
   border: 0; background: transparent; min-height: 0;
 }
+
+/* ── Editorial pages (about / how-to-play / methodology) ────────────────── */
+.dd-card ul, .dd-card ol { margin: 10px 0 0; padding-left: 1.3em; }
+.dd-card li { margin: 6px 0; }
+.dd-card li::marker { color: var(--dd-red); }
+.dd-card h3 { font-size: 16px; margin: 18px 0 4px; }
+.dd-card h3:first-of-type { margin-top: 12px; }
