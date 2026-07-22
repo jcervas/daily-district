@@ -16,7 +16,7 @@ const PUSH_DECISION_KEY = STORAGE_PREFIX + 'pushDecision';  // 'granted' | 'defe
 const REF_VB_W = 960;
 const REF_VB_H = 400;
 // Bump on every push. Keep in sync with the ?v= cache-bust params in index.html.
-const VERSION_NUMBER = '1.0';
+const VERSION_NUMBER = '1.1';
 const GAME_VERSION = (() => {
   const d = new Date();
   const y = d.getFullYear();
@@ -475,6 +475,18 @@ let isDemoGame          = false;  // true while playing a /demo.html random prac
 // the `demo` endpoint and telemetry fully disabled (see backend.js DEMO guard).
 const DEMO_MODE = (typeof window !== 'undefined')
   && (window.DD_DEMO === true || new URLSearchParams(location.search).get('demo') === '1');
+let isOneoffGame        = false;  // true while playing a /oneoff.html fixed "special edition" district
+let oneoffSlug          = null;   // the current one-off event's slug, needed to record its result
+let oneoffTitle         = null;   // the current one-off event's display title
+let oneoffStats         = null;   // last stats snapshot from the oneoff endpoint: { played, wonPct, avgGuesses }
+let oneoffAlready       = null;   // this identity's prior result for the current event, if any
+let _oneoffRecorded     = false;  // guards against double-recording if endGame() runs more than once
+// One-off "special edition" mode: /oneoff.html sets window.DD_ONEOFF (or ?oneoff=1).
+// Reuses the same archive-replay path as demo (fixed district, local validation, no
+// /guess) but — unlike demo — the outcome IS recorded via DistrictBackend.oneoffResult()
+// so simple aggregate stats can be shown. Real telemetry stays on (not a throwaway round).
+const ONEOFF_MODE = (typeof window !== 'undefined')
+  && (window.DD_ONEOFF === true || new URLSearchParams(location.search).get('oneoff') === '1');
 let _dailySnapshot      = null;   // daily game state captured when an archive launches, for no-reload return
 // The archive only holds puzzles dated strictly before today. On day one (puzzle No. 1)
 // there is nothing to replay yet, so the archive stays disabled until puzzle No. 2 —
@@ -647,6 +659,13 @@ async function initServer() {
   if (DEMO_MODE) {
     loadDecorativeOverlays();
     return startDemoGame();
+  }
+
+  // One-off mode: skip the daily entirely (no /today, no result restore) and launch
+  // the event's fixed district instead. Telemetry stays on (real traffic).
+  if (ONEOFF_MODE) {
+    loadDecorativeOverlays();
+    return startOneoffGame();
   }
 
   // 2. Today's puzzle from the server (answer withheld).
@@ -1054,7 +1073,8 @@ function showLaunchScreen() {
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
 async function startServerArchive(date, num, label, opts = {}) {
-  const demo = !!opts.demo;   // demo mode: random practice district, nothing recorded
+  const demo = !!opts.demo;     // demo mode: random practice district, nothing recorded
+  const oneoff = !!opts.oneoff; // one-off mode: fixed "special edition" district, outcome recorded
   showBuildLoader();   // CSS loader animates through the whole fetch + build (no freeze)
   let data = opts.data;
   if (!data) {
@@ -1066,8 +1086,8 @@ async function startServerArchive(date, num, label, opts = {}) {
   // these globals with fresh objects (new arrays/Sets), so the snapshot keeps the daily's
   // references intact and untouched by archive play. Capture once: an archive→archive jump
   // must preserve the ORIGINAL daily, so only snapshot when leaving a non-archive game.
-  // Demo has no daily behind it to return to, so never snapshot in demo mode.
-  if (!isArchiveGame && !demo) {
+  // Demo/one-off have no daily behind them to return to, so never snapshot there.
+  if (!isArchiveGame && !demo && !oneoff) {
     _dailySnapshot = {
       serverPuzzle, serverAnswer, serverState,
       guessHistory, guessCount, elapsedSeconds,
@@ -1077,8 +1097,17 @@ async function startServerArchive(date, num, label, opts = {}) {
     };
   }
 
-  // Reset to a fresh, unofficial archive/demo session.
+  // Reset to a fresh, unofficial archive/demo session (one-off is "unofficial" only in
+  // that guesses validate locally — its outcome IS recorded, see endGame()).
   isDemoGame         = demo;
+  isOneoffGame       = oneoff;
+  if (oneoff) {
+    oneoffSlug      = data.slug;
+    oneoffTitle     = data.title || 'Special Edition';
+    oneoffStats     = data.stats || null;
+    oneoffAlready   = data.already || null;
+    _oneoffRecorded = !!data.already;   // already played this event — don't record again
+  }
   isArchiveGame      = true;
   serverArchive      = { date, puzzleNumber: data.puzzleNumber, answer: { districtId: data.districtId, state: data.state, census: data.census }, clues: data.clues || {} };
   {
@@ -1118,7 +1147,10 @@ async function startServerArchive(date, num, label, opts = {}) {
   ['archive-modal', 'result-modal', 'welcome-modal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
   destroyGameoverDiv();
   const _badge = document.getElementById('archive-badge');
-  if (_badge) { _badge.textContent = demo ? 'Demo' : 'Archive'; _badge.classList.remove('hidden'); }
+  if (_badge) {
+    _badge.textContent = oneoff ? (data.title || 'Special Edition') : demo ? 'Demo' : 'Archive';
+    _badge.classList.remove('hidden');
+  }
   document.getElementById('game-section')?.remove();
   buildGameSection();
 
@@ -1157,6 +1189,23 @@ async function startDemoGame() {
   return startServerArchive(data.date || 'demo', data.puzzleNumber, 'Demo', { data, demo: true });
 }
 if (typeof window !== 'undefined') window.startDemoGame = startDemoGame;
+
+// One-off "special edition" mode: fetch the FIXED event district from the `oneoff`
+// endpoint and launch it through the same unofficial-replay path as demo/archive
+// (local guess validation, no /guess) — but unlike demo, the outcome IS recorded
+// (see the isOneoffGame branch in endGame()).
+async function startOneoffGame() {
+  let data;
+  showBuildLoader();
+  try { data = await window.DistrictBackend.oneoffPuzzle(new URLSearchParams(location.search).get('event') || undefined); }
+  catch (err) {
+    hideBuildLoader();
+    console.error('oneoff load failed:', err);
+    alert('Could not load the special edition district.');
+    return;
+  }
+  return startServerArchive(data.slug || 'oneoff', null, data.title || 'Special Edition', { data, oneoff: true });
+}
 
 // Return from an archive to today's daily WITHOUT a reload, by restoring the snapshot
 // taken when the archive launched and rebuilding the daily game-over screen. If the
@@ -1713,6 +1762,19 @@ function formatNumber(n) {
 
 function formatCurrency(n) {
   return '$' + parseInt(n, 10).toLocaleString();
+}
+
+// "N played · X% solved it · avg Y guesses" for the one-off game-over screen, plus a
+// note if this identity already had a recorded result before this playthrough.
+function oneoffStatsLine() {
+  const s = oneoffStats;
+  if (!s || !s.played) return 'Special edition — a fixed district everyone plays.';
+  const parts = [`${formatNumber(s.played)} played`, `${s.wonPct}% solved it`, `avg ${s.avgGuesses} guesses`];
+  let line = parts.join(' &middot; ');
+  if (oneoffAlready) {
+    line += ` &middot; You already played this one (${oneoffAlready.won ? 'won' : 'lost'} in ${oneoffAlready.guesses})`;
+  }
+  return line;
 }
 
 // Observable zoom-to-bounding-box pattern (observablehq.com/@d3/zoom-to-bounding-box).
@@ -4908,6 +4970,19 @@ function endGame(won, { skipAnims = false } = {}) {
   // Archive games are unofficial — never counted. Anonymous players record nothing
   // (their outcomes are not saved anywhere) — the results screen invites them to sign in.
   if (!isArchiveGame && !isAnonymousPlayer) savePersonalStats(won, guessCount, elapsedSeconds);
+  // One-off "special edition" games ARE recorded (client-scored, trusted) — once per
+  // identity. _oneoffRecorded is already true on load if this identity has a prior
+  // result for this event, so a replay updates the screen without re-recording.
+  if (isOneoffGame && !_oneoffRecorded) {
+    _oneoffRecorded = true;
+    window.DistrictBackend.oneoffResult(oneoffSlug, { won, guesses: guessCount, seconds: elapsedSeconds })
+      .then((resp) => {
+        if (resp && resp.stats) oneoffStats = resp.stats;
+        const line = document.getElementById('oneoff-stats-line');
+        if (line) line.innerHTML = oneoffStatsLine();
+      })
+      .catch((err) => reportClientError('oneoff_record', err));
+  }
   lastGameWon = won;
   // Render result content now, but don't auto-open the modal — let the user watch the
   // map-ref reveal animation (boundary draw-in + shake/pulse) on the game-over screen,
@@ -5283,7 +5358,25 @@ async function showGameoverModal() {
     reportClientError('gameover_modal_content', e);
   }
 
-  if (isDemoGame) {
+  if (isOneoffGame) {
+    // One-off game-over: a fixed "special edition" district shared by everyone. Unlike
+    // demo/archive this IS a real, recorded result — keep share/post visible (it's worth
+    // sharing) and show the event title + aggregate "you vs everyone" stats instead of
+    // the daily's midnight countdown. The result modal's tabs (Everyone/Guesses/All-Time)
+    // are all daily-scoped (get_leaderboard()), so — like archive/demo — never open it;
+    // the game-over screen itself is the one-off's result. Hide the "View Result" button
+    // (no daily to return to, no relevant modal to open) alongside "Play Archive".
+    const main = document.querySelector('#gameover-next .gameover-next-main');
+    if (main) {
+      main.innerHTML = `<span class="gameover-next-title">${oneoffTitle || 'Special Edition'}</span>` +
+        `<span class="gameover-next-sub" id="oneoff-stats-line">${oneoffStatsLine()}</span>`;
+    }
+    document.getElementById('gameover-next-cta')?.classList.add('hidden');
+    document.getElementById('gameover-result-btn')?.classList.add('hidden');
+    document.getElementById('gameover-share-btn')?.classList.remove('hidden');
+    document.getElementById('gameover-post-btn')?.classList.remove('hidden');
+    document.getElementById('gameover-new-map-btn')?.classList.add('hidden');
+  } else if (isDemoGame) {
     // Demo game-over: a random practice district, nothing recorded. Show a demo label,
     // hide the sign-in CTA, relabel the ribbon button to "New District" (wired to
     // startDemoGame), and hide share/post so practice rounds aren't shared as real results.
@@ -6292,7 +6385,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // which — "View Results" vs "District Profile" — via openResultModal/
       // revealGameoverFromResult).
       if (isDemoGame) { startDemoGame(); return; }   // "New District" — fresh practice round
-      if (isArchiveGame) { returnToTodayDaily(true); return; }
+      // One-off has no daily behind it to return to (ONEOFF_MODE skips /today entirely) —
+      // fall through to the plain open/close toggle instead of isArchiveGame's
+      // returnToTodayDaily(). Must be checked before isArchiveGame since startServerArchive
+      // sets isArchiveGame=true for one-off games too.
+      if (isArchiveGame && !isOneoffGame) { returnToTodayDaily(true); return; }
       const resultModal = document.getElementById('result-modal');
       if (resultModal.classList.contains('hidden')) openResultModal();
       else { resultModal.classList.add('hidden'); revealGameoverFromResult(); }

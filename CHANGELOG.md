@@ -1,5 +1,26 @@
 # District Guess — Changelog
 
+## v2.16.0 — One-off "Special Edition" mode at /oneoff.html
+
+- **New `/oneoff.html`** — a one-off game mode where every player, signed in or
+  anonymous, plays the SAME fixed district (a hand-seeded `oneoff_events` row, not the
+  daily's date-driven pick). First event: **VA-02**, one of the closest districts in the
+  country (R+0.3%, 2024 presidential vote). Plays through the same full-data replay path
+  as `/demo.html` (guesses validate client-side), but — unlike demo — a completed game's
+  outcome IS recorded, once per identity, into the new `oneoff_results` table, and the
+  game-over screen shows simple aggregate stats ("N played · X% solved it · avg Y
+  guesses") instead of a leaderboard. Doesn't touch the daily's `puzzles`/`results`/
+  `anon_results` tables or Edge Functions in any way.
+- New `oneoff` Edge Function (`get`/`record` actions) and two new tables
+  (`oneoff_events`, `oneoff_results`) — see BACKEND.md. Seeded via the new
+  `scripts/seed-oneoff.mjs <district_id> <slug> [title]`, reusing the exact clue/census
+  builders from `seed-puzzles.mjs` so a one-off district's clues read identically to a
+  daily's.
+- `oneoff.html` is **generated** from `index.html` by `build-oneoff.mjs` (re-run after
+  editing `index.html`), the same way `/demo.html` is generated — but unlike demo's
+  chrome, it keeps the real sign-in UI visible, since playing signed in or anonymous is
+  the whole point.
+
 ## v2.15.0 — Demo mode at /demo.html
 
 - **New `/demo.html`** — a standalone practice version of the game for testing. It loads a **random district** (via a new `demo` Edge Function, mirroring the archive's full-data path) and plays it through the unofficial archive-replay flow: local guess validation, no `/guess`, no saved result. A "New district" control (in the fixed demo bar and on the game-over ribbon) fetches another random district. It demonstrates the full gameplay loop, the district profile, and the game-over screen.

@@ -178,6 +178,28 @@
     return data; // { date, puzzleNumber, districtId, state, geometry, clues, census, districts:[…] }
   }
 
+  // One-off "special edition" mode (/oneoff.html): a FIXED district shared by every
+  // player (an `oneoff_events` row), same full-data shape as demoPuzzle/archivePuzzle.
+  // Unlike demo, a completed game's outcome IS recorded — see oneoffResult(). `event`
+  // is optional; the server falls back to whichever event is currently active.
+  async function oneoffPuzzle(event) {
+    const { data, error } = await client().functions.invoke('oneoff', {
+      body: { action: 'get', event, session_id: sessionId() },
+    });
+    if (error) throw error;
+    return data; // { slug, title, districtId, state, geometry, clues, census, districts, stats, already }
+  }
+  // Records a completed one-off game (client-scored, trusted — same tradeoff as demo's
+  // client-side validation, just persisted). Idempotent per identity (signed-in user id,
+  // else anonymous session id): a replay never overwrites the first recorded result.
+  async function oneoffResult(event, { won, guesses, seconds }) {
+    const { data, error } = await client().functions.invoke('oneoff', {
+      body: { action: 'record', event, won, guesses, seconds, session_id: sessionId() },
+    });
+    if (error) throw error;
+    return data; // { recorded: true, stats: { played, wonPct, avgGuesses } }
+  }
+
   // Leaderboard: { user, today, allTime }. `user` is the signed-in player's own
   // stats (null if signed out); today/allTime are aggregates across all players.
   // Callable by anon, so aggregates show even when signed out.
@@ -406,7 +428,7 @@
     client,
     getUser, onAuthChange,
     signInWithOAuth, signInWithEmail, signUpWithEmail, signOut, resetPassword, updatePassword, resendConfirmation,
-    today, guess, stateShapes, archiveList, archivePuzzle, demoPuzzle, leaderboard,
+    today, guess, stateShapes, archiveList, archivePuzzle, demoPuzzle, oneoffPuzzle, oneoffResult, leaderboard,
     logTelemetry, reportControl, getProfile, updateProfile, deleteAccount,
     pushSupported, isIOS, isStandalone, browserName, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush,
   };
