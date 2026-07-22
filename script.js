@@ -475,13 +475,13 @@ let isDemoGame          = false;  // true while playing a /demo.html random prac
 // the `demo` endpoint and telemetry fully disabled (see backend.js DEMO guard).
 const DEMO_MODE = (typeof window !== 'undefined')
   && (window.DD_DEMO === true || new URLSearchParams(location.search).get('demo') === '1');
-let isOneoffGame        = false;  // true while playing a /oneoff.html fixed "special edition" district
+let isOneoffGame        = false;  // true while playing a /mica.html fixed "special edition" district
 let oneoffSlug          = null;   // the current one-off event's slug, needed to record its result
 let oneoffTitle         = null;   // the current one-off event's display title
 let oneoffStats         = null;   // last stats snapshot from the oneoff endpoint: { played, wonPct, avgGuesses }
 let oneoffAlready       = null;   // this identity's prior result for the current event, if any
 let _oneoffRecorded     = false;  // guards against double-recording if endGame() runs more than once
-// One-off "special edition" mode: /oneoff.html sets window.DD_ONEOFF (or ?oneoff=1).
+// One-off "special edition" mode: /mica.html sets window.DD_ONEOFF (or ?oneoff=1).
 // Reuses the same archive-replay path as demo (fixed district, local validation, no
 // /guess) but — unlike demo — the outcome IS recorded via DistrictBackend.oneoffResult()
 // so simple aggregate stats can be shown. Real telemetry stays on (not a throwaway round).

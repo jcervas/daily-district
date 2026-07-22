@@ -1,8 +1,8 @@
 # District Guess — Changelog
 
-## v2.16.0 — One-off "Special Edition" mode at /oneoff.html
+## v2.16.0 — One-off "Special Edition" mode at /mica.html
 
-- **New `/oneoff.html`** — a one-off game mode where every player, signed in or
+- **New `/mica.html`** — a one-off game mode where every player, signed in or
   anonymous, plays the SAME fixed district (a hand-seeded `oneoff_events` row, not the
   daily's date-driven pick). First event: **VA-02**, one of the closest districts in the
   country (R+0.3%, 2024 presidential vote). Plays through the same full-data replay path
@@ -16,7 +16,7 @@
   `scripts/seed-oneoff.mjs <district_id> <slug> [title]`, reusing the exact clue/census
   builders from `seed-puzzles.mjs` so a one-off district's clues read identically to a
   daily's.
-- `oneoff.html` is **generated** from `index.html` by `build-oneoff.mjs` (re-run after
+- `mica.html` is **generated** from `index.html` by `build-mica.mjs` (re-run after
   editing `index.html`), the same way `/demo.html` is generated — but unlike demo's
   chrome, it keeps the real sign-in UI visible, since playing signed in or anonymous is
   the whole point.

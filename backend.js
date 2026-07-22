@@ -178,7 +178,7 @@
     return data; // { date, puzzleNumber, districtId, state, geometry, clues, census, districts:[…] }
   }
 
-  // One-off "special edition" mode (/oneoff.html): a FIXED district shared by every
+  // One-off "special edition" mode (/mica.html): a FIXED district shared by every
   // player (an `oneoff_events` row), same full-data shape as demoPuzzle/archivePuzzle.
   // Unlike demo, a completed game's outcome IS recorded — see oneoffResult(). `event`
   // is optional; the server falls back to whichever event is currently active.
