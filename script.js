@@ -1103,7 +1103,10 @@ async function startServerArchive(date, num, label, opts = {}) {
   isOneoffGame       = oneoff;
   if (oneoff) {
     oneoffSlug      = data.slug;
-    oneoffTitle     = data.title || 'Special Edition';
+    // Deliberately NOT data.title: the seeded title (e.g. "Special Edition: Virginia's
+    // Coast") names the state/district and would spoil the answer before the first
+    // guess — the badge and game-over screen only ever show the generic label.
+    oneoffTitle     = 'Special Edition';
     oneoffStats     = data.stats || null;
     oneoffAlready   = data.already || null;
     _oneoffRecorded = !!data.already;   // already played this event — don't record again
@@ -1148,7 +1151,7 @@ async function startServerArchive(date, num, label, opts = {}) {
   destroyGameoverDiv();
   const _badge = document.getElementById('archive-badge');
   if (_badge) {
-    _badge.textContent = oneoff ? (data.title || 'Special Edition') : demo ? 'Demo' : 'Archive';
+    _badge.textContent = oneoff ? 'Special Edition' : demo ? 'Demo' : 'Archive';
     _badge.classList.remove('hidden');
   }
   document.getElementById('game-section')?.remove();
@@ -6578,8 +6581,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   }); // end _initPromise.then
 
-  // Title click → show welcome splash
+  // Title click → show welcome splash. One-off mode has no "today's puzzle" welcome
+  // screen to return to (it's a single fixed event) — send the logo click to the real
+  // site instead.
   document.getElementById('title-home-btn')?.addEventListener('click', () => {
+    if (ONEOFF_MODE) { window.location.href = 'https://daily-district.com/index.html'; return; }
     document.getElementById('welcome-modal').classList.remove('hidden');
   });
 
