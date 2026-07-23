@@ -2,9 +2,18 @@
 // seed-oneoff.mjs
 // Generates a Supabase `oneoff_events` upsert for ONE fixed district — the
 // "special edition" one-off game where every player (signed in or anonymous)
-// plays the same district. Clue text / census mirror seed-puzzles.mjs EXACTLY
-// (same extraction from script.js + the state ACS csv), just for an arbitrary
+// plays the same district. Clue text mirrors seed-puzzles.mjs EXACTLY (same
+// extraction from script.js + the state ACS csv), just for an arbitrary
 // district instead of the daily's date-driven schedule.
+//
+// `census` is NOT rebuilt here — it's pulled via a subquery from the district's
+// own row in `puzzles`, which already carries the FULL enriched profile (current
+// rep, redistricting year, perimeter/compactness/reock, percentile ranks, etc.)
+// that the game-over "District Profile" card needs. That full shape comes from a
+// separate data pipeline (data/), not from the clue-only fields this script
+// computes — building a partial census object here left "Current Representative"
+// / "Compactness" / "District Perimeter" etc. showing "—" the first time (every
+// district appears once per 436-day cycle, so the subquery always finds a row).
 //
 //   node scripts/seed-oneoff.mjs <district_id> <slug> [title...]  > oneoff.sql
 //   e.g. node scripts/seed-oneoff.mjs VA-02 special-1 Special Edition: VA-02
@@ -138,18 +147,6 @@ function buildDistrictClues(p) {
   return out.slice(0, 6);
 }
 
-function buildCensus(p) {
-  const num = v => (v != null ? Number(v) : null);
-  return {
-    pop: num(p.pop), income: num(p.income), whiteNH: num(p.whiteNH),
-    black: num(p.black), asian: num(p.asian), hispanic: num(p.hispanic),
-    medianHome: num(p.medianHome), bach: num(p.bach), master: num(p.master),
-    Margin2024Pres: num(p.Margin2024Pres),
-    DemPct2024Pres: num(p.DemPct2024Pres),
-    RepPct2024Pres: num(p.RepPct2024Pres),
-  };
-}
-
 // ── CLI ─────────────────────────────────────────────────────────────────────────
 const [, , districtIdArg, slugArg, ...titleParts] = process.argv;
 if (!districtIdArg || !slugArg) {
@@ -167,14 +164,15 @@ const record = {
   state: p.state,
   title,
   clues: { state: buildStateClues(p), district: buildDistrictClues(p) },
-  census: buildCensus(p),
 };
 
 const sqlEsc = s => s.replace(/'/g, "''");
 process.stdout.write(
   `insert into public.oneoff_events (slug, district_id, state, title, clues, census, active) values\n` +
   `('${sqlEsc(record.slug)}', '${sqlEsc(record.district_id)}', '${sqlEsc(record.state)}', '${sqlEsc(record.title)}', ` +
-  `'${sqlEsc(JSON.stringify(record.clues))}'::jsonb, '${sqlEsc(JSON.stringify(record.census))}'::jsonb, true)\n` +
+  `'${sqlEsc(JSON.stringify(record.clues))}'::jsonb,\n` +
+  `  (select census from public.puzzles where district_id = '${sqlEsc(record.district_id)}' order by date desc limit 1),\n` +
+  `  true)\n` +
   `on conflict (slug) do update set\n` +
   `  district_id = excluded.district_id, state = excluded.state, title = excluded.title,\n` +
   `  clues = excluded.clues, census = excluded.census, active = excluded.active;\n`
