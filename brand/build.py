@@ -52,8 +52,20 @@ INK = "#1A1A1A"        # --text
 G = 12.0               # the mark is G x G cells
 
 # Seams run top edge to bottom edge. Vertices alternate: down, across, down...
-SEAM_DISPLAY = [(6, 0), (6, 3), (4, 3), (4, 6), (8, 6), (8, 9), (5, 9), (5, 12)]
-SEAM_SMALL = [(6, 0), (6, 4), (4, 4), (4, 8), (8, 8), (8, 12)]
+#
+# The outer square stays axis-aligned — only the seam trends diagonally. Rotating the
+# WHOLE mark 45 degrees (tried and reverted) turned the square into a diamond with
+# bent segments radiating from its centre, which read as far too close to a hate
+# symbol. A single diagonal cut across an upright square carries none of that
+# 4-fold-radial structure — it's an ordinary two-tone split, just tilted.
+#
+# Each horizontal jog moves the SAME direction as the others: a zigzag (left, then
+# right, then left again) has no net drift, so a vertical seam with a jog at
+# mid-height reads as a dollar sign; a one-way staircase reads as a diagonal border.
+# Both cuts share the same two endpoints, (9,0) and (3,12), so the mark doesn't
+# visually jump when it switches cuts at 32px.
+SEAM_DISPLAY = [(9, 0), (9, 3), (7, 3), (7, 6), (5, 6), (5, 9), (3, 9), (3, 12)]
+SEAM_SMALL = [(9, 0), (9, 4), (6, 4), (6, 8), (3, 8), (3, 12)]
 
 CH_DISPLAY = 1.6
 CH_SMALL = 2.6
