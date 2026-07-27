@@ -1,3 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="512" height="512" role="img" aria-label="Daily District">
-  <path fill="currentColor" fill-rule="evenodd" d="M1.200 0.000H10.800A1.200 1.200 0 0 1 12.000 1.200V10.800A1.200 1.200 0 0 1 10.800 12.000H1.200A1.200 1.200 0 0 1 0.000 10.800V1.200A1.200 1.200 0 0 1 1.200 0.000ZM7.700 0.000L7.700 2.700L4.700 2.700L4.700 6.700L1.700 6.700L1.700 12.000L4.300 12.000L4.300 9.300L7.300 9.300L7.300 5.300L10.300 5.300L10.300 0.000Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Daily District">
+  <path fill="none" stroke="currentColor" stroke-width="73.79" stroke-linejoin="round" d="M182.25 76.90 L392.96 119.04 L435.10 287.61 L308.68 435.10 L140.11 392.96 L76.90 224.39Z"/>
 </svg>
