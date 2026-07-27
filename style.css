@@ -268,9 +268,11 @@ header .header-inner a.title-home-btn {
   background: none;
   padding-bottom: 0;
 }
+/* The mark is square (it was a 1.58:1 US map before), so width alone would make it
+   44px tall and crowd the 52px header. Sized to the wordmark's cap height instead. */
 .game-logo {
-  width: 44px;
-  height: auto;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: block;
 }
@@ -2656,7 +2658,9 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 }
 .welcome-top-spacer { flex: 1.2; }
 .welcome-logo-wrap { margin-bottom: clamp(8px, 1.5vh, 16px); }
-.welcome-logo-svg { width: clamp(80px, 14vh, 140px); height: auto; }
+/* Square mark: the old US map was 1.58:1, so the same width now reads much taller.
+   Pulled in a little so it doesn't dominate the welcome modal. */
+.welcome-logo-svg { width: clamp(64px, 11vh, 104px); aspect-ratio: 1; height: auto; }
 .welcome-wordmark {
   margin-bottom: clamp(14px, 2.5vh, 24px);
   line-height: 1;

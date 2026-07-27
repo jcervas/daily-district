@@ -17,10 +17,11 @@
   <title>Daily District — Coming soon</title>
   <meta name="description" content="Daily District is a free daily game to identify all 435 U.S. House districts. Coming soon. Meanwhile, explore profiles of every congressional district." />
   <link rel="canonical" href="https://daily-district.com/" />
-  <link rel="icon" href="favicon.ico?v=2" sizes="any" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.svg?v=3" type="image/svg+xml" />
+  <link rel="icon" href="favicon.ico?v=3" sizes="any" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3" />
+  <link rel="manifest" href="manifest.json?v=3" />
   <meta name="theme-color" content="#C41230" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Daily District" />
@@ -30,14 +31,19 @@
   <meta property="og:title" content="Daily District — Coming soon" />
   <meta property="og:description" content="A free daily game to identify all 435 U.S. House districts. Coming soon." />
   <meta property="og:url" content="https://daily-district.com/" />
-  <meta property="og:image" content="https://daily-district.com/icon-512.png" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://daily-district.com/og-image.png?v=3" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- summary_large_image, not summary: og-image.png is a 1200x630 card, and the
+       small-summary card would centre-crop it to a square and cut the wordmark off. -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://daily-district.com/og-image.png?v=3" />
   <meta name="twitter:site" content="@daily_district_" />
   <!-- Barlow: closest freely available match to CMU's Gibson typeface -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=219" />
+  <link rel="stylesheet" href="style.css?v=220" />
   <!-- Google AdSense — verification meta + loader. No visible ad units on the teaser;
        this is only so the AdSense reviewer finds the code on the homepage during site
        review (the district pages and the game carry the same snippet). -->
@@ -46,16 +52,39 @@
           crossorigin="anonymous"></script>
   <style>
     /* Teaser hero — theme-aware, layered on top of style.css (header + modals reuse it). */
+    /* style.css locks the page into a fixed app shell — body{height:100dvh;
+       overflow:hidden} with main{flex:1;min-height:0} — which is right for the game
+       (header + board, never scrolls) but wrong for this marketing teaser. It meant
+       the hero could not grow past the viewport, so on a short screen the top of the
+       card was clipped with no way to scroll to it. Restore normal document flow for
+       the teaser page only. */
+    body.teaser { height: auto; min-height: 100dvh; overflow: visible; }
+
     .teaser-hero {
-      min-height: calc(100vh - 64px);
-      display: flex; align-items: center; justify-content: center;
-      padding: 28px 16px 96px;
+      /* flex:1 0 auto fills the viewport when there's room and grows past it when
+         there isn't. Deliberately not min-height:calc(100dvh - header): that needs the
+         header's exact rendered height (52px + its 1px border), and being off by a
+         single pixel leaves a permanent scrollbar on tall screens. */
+      flex: 1 0 auto;
+      min-height: 0;
+      overflow: visible;
+      /* flex-start + auto margins on the card, NOT align-items:center. Centring
+         overflows equally in both directions, so on a short viewport the top of the
+         card lands above the scroll origin and is unreachable behind the sticky
+         header. Auto margins only distribute free space that actually exists, so a
+         too-tall card starts at the top and the page simply scrolls. */
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 28px 16px 64px;
     }
     .teaser-card {
       width: 100%; max-width: 640px; text-align: center;
+      margin: auto;
       display: flex; flex-direction: column; align-items: center; gap: 6px;
     }
-    .teaser-logo { width: 84px; height: auto; margin-bottom: 4px; }
+    /* 56px, not the old 84px: the mark is square where the US map was 1.58:1, and the
+       teaser card already overflows its viewport upward. Matching the old rendered
+       height (53px) keeps the card from growing. */
+    .teaser-logo { width: 56px; aspect-ratio: 1; height: auto; margin-bottom: 4px; }
     .teaser-eyebrow {
       font-family: "Barlow", system-ui, sans-serif; text-transform: uppercase;
       letter-spacing: .18em; font-weight: 700; font-size: 12px; color: #c41230; margin: 2px 0 0;
@@ -177,7 +206,7 @@
     </div>
     <h1>
       <a href="/" class="title-home-btn" title="Daily District">
-        <img src="logo.svg" class="game-logo" alt="" aria-hidden="true" />
+        <img src="logo.svg?v=3" class="game-logo" alt="" aria-hidden="true" />
         <span class="header-wordmark">Daily District</span>
       </a>
     </h1>
@@ -216,7 +245,7 @@
 <!-- ===== TEASER HERO ===== -->
 <main class="teaser-hero">
   <div class="teaser-card">
-    <img src="logo.svg" class="teaser-logo" alt="" aria-hidden="true" />
+    <img src="logo.svg?v=3" class="teaser-logo" alt="" aria-hidden="true" />
     <p class="teaser-eyebrow" id="t-eyebrow">Coming soon</p>
     <h1 class="teaser-headline" id="t-headline">Launching soon</h1>
     <p class="teaser-sub" id="t-sub">A free daily game to identify all 435 U.S. House districts from their shape — geographic, map-based, and contextual clues, one puzzle a day. Check back soon.</p>

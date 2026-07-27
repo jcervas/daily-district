@@ -1,0 +1,8 @@
+# Regenerated on every run of the exploration scripts — only the numbered contact
+# sheets in explorations/ are worth keeping.
+explorations/explore*/
+explorations/compare/
+# Scratch previews written while checking renders.
+dist/px/
+__pycache__/
+.ico/
