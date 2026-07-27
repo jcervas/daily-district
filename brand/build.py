@@ -31,7 +31,6 @@ site; adopting the system is a deliberate copy out of dist/.
 
 Requires: inkscape (SVG -> PNG).
 """
-import math
 import os
 import re
 import struct
@@ -60,12 +59,6 @@ CH_DISPLAY = 1.6
 CH_SMALL = 2.6
 
 RADIUS = 1.2           # default corner radius, in cells
-
-# The mark rotates 45°, bottom-left to top-right — an unrotated vertical seam with a
-# mid-height jog read as a dollar sign. +45 is clockwise in SVG's y-down coordinate
-# space, which sends the seam's top end (originally straight up from centre) to the
-# top-right and its bottom end to the bottom-left.
-ROTATE_DEG = 45
 
 
 def _offset(seam, h, side):
@@ -110,70 +103,13 @@ def _rounded_rect(x, y, w, h, r):
             f"{x + r:.3f} {y:.3f}Z")
 
 
-def _rotate_vec(dx, dy, deg):
-    """Rotate an offset vector by `deg`. Positive is clockwise in SVG's y-down space."""
-    if not deg:
-        return dx, dy
-    th = math.radians(deg)
-    c, s = math.cos(th), math.sin(th)
-    return dx * c - dy * s, dx * s + dy * c
-
-
-def _rounded_polygon(corners, r):
-    """A rounded polygon through `corners` (clockwise), circular radius r at each
-    vertex. Works at any rotation: a circular arc's shape doesn't depend on the frame
-    it's drawn in, only the straight edges' direction does, and that's recomputed here
-    from the (already-rotated) corner points rather than assumed axis-aligned."""
-    if r <= 0:
-        return "M" + " L".join(f"{x:.3f} {y:.3f}" for x, y in corners) + "Z"
-    n = len(corners)
-    edges = []
-    for i in range(n):
-        (x0, y0), (x1, y1) = corners[i], corners[(i + 1) % n]
-        ex, ey = x1 - x0, y1 - y0
-        length = math.hypot(ex, ey)
-        edges.append((ex / length, ey / length))
-    pts = []
-    for i in range(n):
-        cx, cy = corners[i]
-        uix, uiy = edges[i - 1]
-        oux, ouy = edges[i]
-        pts.append(((cx - uix * r, cy - uiy * r), (cx + oux * r, cy + ouy * r)))
-    d = [f"M{pts[0][1][0]:.3f} {pts[0][1][1]:.3f}"]
-    for i in list(range(1, n)) + [0]:
-        a, b = pts[i]
-        d.append(f"L{a[0]:.3f} {a[1]:.3f}")
-        d.append(f"A{r:.3f} {r:.3f} 0 0 1 {b[0]:.3f} {b[1]:.3f}")
-    d.append("Z")
-    return "".join(d)
-
-
-def mark_path(size, x=0.0, y=0.0, cut="display", radius=RADIUS, rotate_deg=ROTATE_DEG):
-    """The whole mark as one evenodd path: square outline, channel as a hole.
-
-    Rotating a square by 45° grows its bounding diagonal by sqrt(2); the geometry is
-    drawn at 1/sqrt(2) scale so the rotated diamond's four corners land exactly on the
-    target size x size box's edge midpoints instead of overflowing it — so every
-    caller built around an axis-aligned square keeps working unmodified.
-    """
+def mark_path(size, x=0.0, y=0.0, cut="display", radius=RADIUS):
+    """The whole mark as one evenodd path: square outline, channel as a hole."""
     seam, ch = ((SEAM_DISPLAY, CH_DISPLAY) if cut == "display"
                 else (SEAM_SMALL, CH_SMALL))
-    shrink = (1.0 / math.sqrt(2)) if rotate_deg else 1.0
-    s = size / G * shrink
-    cx, cy = x + size / 2.0, y + size / 2.0
-    half = G * s / 2.0
-
-    base = [(-half, -half), (half, -half), (half, half), (-half, half)]
-    corners = [(cx + rx, cy + ry) for rx, ry in
-               (_rotate_vec(dx, dy, rotate_deg) for dx, dy in base)]
-    outer = _rounded_polygon(corners, radius * s)
-
-    chan_pts = []
-    for px, py in channel(seam, ch):
-        rx, ry = _rotate_vec(px * s - half, py * s - half, rotate_deg)
-        chan_pts.append((cx + rx, cy + ry))
-    inner = "M" + " L".join(f"{px:.3f} {py:.3f}" for px, py in chan_pts) + "Z"
-    return outer + inner
+    s = size / G
+    return (_rounded_rect(x, y, size, size, radius * s)
+            + _poly(channel(seam, ch), s, x, y))
 
 
 def svg(body, w, h, vb=None, extra=""):
