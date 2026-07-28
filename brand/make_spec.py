@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Assemble brand/spec.html — the presentation sheet for the outline mark.
+"""Assemble brand/spec.html — the presentation sheet for the logo system.
 
-Small-size renders are embedded as base64 of the ACTUAL rasters build.py produces,
-not scaled-down vectors — a scaled vector always flatters a mark, only a real raster
-tells you whether it survives.
+Small-size renders are embedded as base64 of the ACTUAL rasters build.py produces, not
+as scaled-down vectors. A scaled vector always looks fine; only a real 16px raster
+tells you whether the mark survives.
 """
 import base64
 import os
@@ -13,9 +13,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PX = os.path.join(HERE, "dist", "px")
 os.makedirs(PX, exist_ok=True)
 
-import build as B  # noqa: E402
+import build as B  # noqa: E402  — one source of geometry
 
 RED, INK, NAVY, CREAM = B.RED, B.INK, B.NAVY, B.CREAM
+G = B.G
 
 
 def render(src, name, size, height=None):
@@ -29,40 +30,48 @@ def b64(path):
     return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
 
 
-SMALL = {s: b64(render("favicon-small-flat.svg", f"s{s}.png", s))
-         for s in (16, 20, 24, 32)}
+SMALL = {s: b64(render("favicon.svg", f"s{s}.png", s)) for s in (16, 20, 24, 32)}
 DISPLAY = {s: b64(render("favicon-display-flat.svg", f"d{s}.png", s))
-           for s in (32, 40, 48, 64)}
-TILE = b64(render("icon-tile.svg", "tile.png", 192))
-IOS = b64(render("icon-ios.svg", "ios.png", 180))
+           for s in (16, 20, 24, 32, 48, 64)}
+TILE192 = b64(render("icon-tile.svg", "t192.png", 192))
+IOS180 = b64(render("icon-ios.svg", "i180.png", 180))
 MASK = b64(render("icon-maskable.svg", "mask.png", 192))
 
 
-def mark_svg(color, cut="display", box=200):
-    return (f'<svg viewBox="0 0 {box} {box}" aria-hidden="true">'
-            f'{B.mark_element(color, box, box, inset=box * 0.08, cut=cut)}</svg>')
+def mark(fill, cut="display", radius=B.RADIUS):
+    return (f'<svg viewBox="0 0 {G:g} {G:g}" fill="{fill}" aria-hidden="true">'
+            f'<path fill-rule="evenodd" d="{B.mark_path(G, cut=cut, radius=radius)}"/>'
+            f'</svg>')
 
 
-def construction_svg():
-    """Display and small cuts side by side, on their own grid, with the stroke
-    fraction called out on each."""
-    c, gap = 220, 60
-    w = c * 2 + gap
-    h = c + 46
+def construction_svg(seam, ch, label):
+    """The mark as a technical drawing: grid visible through a washed fill, with the
+    channel dimensioned across a vertical run near the top."""
+    c = 24.0
+    ox, oy = 34.0, 30.0
+    w, h = ox * 2 + G * c, oy * 2 + G * c
+    lines = []
+    for i in range(int(G) + 1):
+        x = ox + i * c
+        y = oy + i * c
+        lines.append(f'<line x1="{x:.0f}" y1="{oy:.0f}" x2="{x:.0f}" '
+                     f'y2="{oy + G * c:.0f}"/>')
+        lines.append(f'<line x1="{ox:.0f}" y1="{y:.0f}" x2="{ox + G * c:.0f}" '
+                     f'y2="{y:.0f}"/>')
 
-    def one(cut, label):
-        s, ox, oy, stroke = B.fit(c, c, inset=c * 0.1, cut=cut)
-        pts = B.POLY_DISPLAY if cut == "display" else B.POLY_SMALL
-        d = B._poly_d(pts, s, ox, oy)
-        return (f'<g>'
-                f'<rect width="{c}" height="{c}" fill="none" class="frame"/>'
-                f'<path class="fill" stroke-width="{stroke:.2f}" d="{d}"/>'
-                f'<text x="{c/2:.0f}" y="{c + 30}" text-anchor="middle" '
-                f'class="lbl">{label}</text></g>')
+    dy = oy + 1.4 * c
+    x1, x2 = ox + (seam[0][0] - ch / 2) * c, ox + (seam[0][0] + ch / 2) * c
+    dim = (f'<line x1="{x1:.0f}" y1="{dy:.0f}" x2="{x2:.0f}" y2="{dy:.0f}"/>'
+           f'<line x1="{x1:.0f}" y1="{dy - 6:.0f}" x2="{x1:.0f}" y2="{dy + 6:.0f}"/>'
+           f'<line x1="{x2:.0f}" y1="{dy - 6:.0f}" x2="{x2:.0f}" y2="{dy + 6:.0f}"/>'
+           f'<text x="{(x1 + x2) / 2:.0f}" y="{dy - 14:.0f}" text-anchor="middle">'
+           f'{ch}</text>')
 
-    return f'''<svg viewBox="0 0 {w} {h}" class="cons" aria-hidden="true">
-  {one("display", "display · 11 points · stroke 11.6% of size")}
-  <g transform="translate({c + gap} 0)">{one("small", "small · 6 points · stroke 20.6% of size")}</g>
+    return f'''<svg viewBox="0 0 {w:.0f} {h:.0f}" class="cons" aria-hidden="true">
+  <g class="grid">{''.join(lines)}</g>
+  <path class="fill" fill-rule="evenodd" vector-effect="non-scaling-stroke"
+        d="{B.mark_path(G * c, ox, oy, cut=label, radius=0)}"/>
+  <g class="dim">{dim}</g>
 </svg>'''
 
 
@@ -73,26 +82,26 @@ HTML = f'''<title>Daily District — Logo System</title>
 <style>
   :root {{
     --ground:#F4F3F1; --panel:#FFFFFF; --ink:#15171B; --muted:#7B7378;
-    --rule:#E3DFDA; --red:{RED}; --navy:{NAVY};
+    --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; --grid:#D8D3CC;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   }}
   @media (prefers-color-scheme:dark) {{
     :root {{ --ground:#131417; --panel:#1B1D22; --ink:#ECEAE7; --muted:#8E868C;
-             --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; }}
+             --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; --grid:#33373F; }}
   }}
   :root[data-theme="dark"] {{ --ground:#131417; --panel:#1B1D22; --ink:#ECEAE7;
-    --muted:#8E868C; --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; }}
+    --muted:#8E868C; --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; --grid:#33373F; }}
   :root[data-theme="light"] {{ --ground:#F4F3F1; --panel:#FFFFFF; --ink:#15171B;
-    --muted:#7B7378; --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; }}
+    --muted:#7B7378; --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; --grid:#D8D3CC; }}
 
   body {{ background:var(--ground); color:var(--ink); font-family:var(--sans);
          line-height:1.55; -webkit-font-smoothing:antialiased; }}
   .wrap {{ max-width:1000px; margin:0 auto; padding:64px 28px 120px;
            display:flex; flex-direction:column; gap:76px; }}
   h1,h2 {{ text-wrap:balance; margin:0; }}
-  h1 {{ font-size:clamp(2.1rem,5vw,3.2rem); font-weight:800; letter-spacing:-.028em;
-        line-height:1.06; }}
+  h1 {{ font-size:clamp(2.3rem,5.2vw,3.5rem); font-weight:800; letter-spacing:-.028em;
+        line-height:1.04; }}
   h2 {{ font-size:1.32rem; font-weight:700; letter-spacing:-.012em; }}
   p {{ margin:0; max-width:64ch; }}
   .lede {{ font-size:1.12rem; color:var(--muted); }}
@@ -106,22 +115,22 @@ HTML = f'''<title>Daily District — Logo System</title>
 
   .hero {{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:52px;
            align-items:center; }}
-  .hero .mk {{ width:170px; }}
+  .hero .mk {{ width:190px; }}
   .hero .mk svg {{ display:block; width:100%; height:auto; }}
   @media (max-width:720px) {{ .hero {{ grid-template-columns:1fr; gap:34px; }}
-                              .hero .mk {{ width:120px; }} }}
+                              .hero .mk {{ width:138px; }} }}
 
-  .cons {{ width:100%; max-width:520px; height:auto; display:block; }}
-  .cons .frame {{ stroke:var(--rule); stroke-width:1; }}
-  .cons .fill {{ fill:none; stroke:var(--red); }}
-  .cons .lbl {{ font-family:var(--mono); font-size:12px; fill:var(--muted); }}
-
-  .history {{ display:flex; flex-direction:column; gap:10px; }}
-  .hrow {{ display:flex; gap:12px; align-items:baseline; padding:8px 0;
-           border-bottom:1px solid var(--rule); }}
-  .hrow .n {{ font-family:var(--mono); font-size:.68rem; color:var(--muted); width:90px;
-              flex:none; }}
-  .hrow .r {{ font-size:.9rem; }}
+  .cons {{ width:100%; height:auto; display:block; }}
+  .cons .grid line {{ stroke:var(--grid); stroke-width:1; }}
+  .cons .fill {{ fill:var(--red); fill-opacity:.15; stroke:var(--red);
+                 stroke-width:2; }}
+  .cons .dim line {{ stroke:var(--ink); stroke-width:1.4; }}
+  .cons .dim text {{ font-family:var(--mono); font-size:12px; fill:var(--ink); }}
+  .cuts {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+           gap:22px; }}
+  .cut {{ padding:18px; display:flex; flex-direction:column; gap:10px; }}
+  .cut .cap {{ font-family:var(--mono); font-size:.68rem; color:var(--muted);
+               letter-spacing:.08em; text-transform:uppercase; }}
 
   .ladder {{ display:flex; gap:26px; flex-wrap:wrap; align-items:flex-end; }}
   .rung {{ display:flex; flex-direction:column; align-items:center; gap:11px; }}
@@ -166,9 +175,9 @@ HTML = f'''<title>Daily District — Logo System</title>
   .swatches {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
                gap:14px; }}
   .sw {{ border-radius:6px; overflow:hidden; border:1px solid var(--rule); }}
-  .sw .chip {{ aspect-ratio:1.1; display:grid; place-items:center; }}
+  .sw .chip {{ aspect-ratio:1; display:grid; place-items:center; }}
   .sw .chip svg {{ width:56%; height:auto; }}
-  .sw .lbl2 {{ padding:9px 11px; font-family:var(--mono); font-size:.67rem;
+  .sw .lbl {{ padding:9px 11px; font-family:var(--mono); font-size:.67rem;
               color:var(--muted); background:var(--panel); }}
 
   table {{ border-collapse:collapse; width:100%; font-size:.86rem; }}
@@ -184,80 +193,90 @@ HTML = f'''<title>Daily District — Logo System</title>
 
   <header class="hero">
     <div>
-      <div class="eyebrow">Logo system &middot; fourth attempt</div>
-      <h1>Just the outline.</h1>
-      <p class="lede" style="margin-top:14px">The whole game is naming a district
-      from its shape. This mark is that shape, drawn as an outline &mdash; the most
-      literal option tried yet. Nothing filled, no letterform, no interior seam.</p>
+      <div class="eyebrow">Logo system</div>
+      <h1>One square, two districts.</h1>
+      <p class="lede" style="margin-top:14px">The mark depicts <em>districting</em> —
+      the act of drawing the line — rather than depicting a district. Every jog is a
+      right angle on a 12&times;12 cell grid, because congressional districts are
+      assembled from census blocks and real boundaries are all right angles and jogs.
+      Because every edge lands on a whole cell, it rasterises cleanly instead of
+      mushing.</p>
     </div>
-    <div class="mk">{mark_svg("var(--red)")}</div>
+    <div class="mk">{mark("var(--red)")}</div>
   </header>
 
   <section>
     <div class="head">
-      <div class="eyebrow">Why this, fourth try</div>
-      <h2>What the first three got wrong</h2>
+      <div class="eyebrow">Construction</div>
+      <h2>One path, and the seam is a hole</h2>
     </div>
-    <div class="history">
-      <div class="hrow"><span class="n">Attempt 1</span><span class="r">A stepped
-        letter D. Read as a damaged letter at a glance, not a map.</span></div>
-      <div class="hrow"><span class="n">Attempt 2</span><span class="r">A square
-        split by a jogged seam. Rotating it for a diagonal look turned the square
-        into a diamond with bent segments radiating from its centre &mdash; flagged
-        as reading too close to a hate symbol. Reverted immediately.</span></div>
-      <div class="hrow"><span class="n">Attempt 3</span><span class="r">A puzzle
-        piece &mdash; tab and notch. Worked at every size; a different direction was
-        asked for before it shipped.</span></div>
-      <div class="hrow"><span class="n">Attempt 4</span><span class="r">This outline.
-        A single asymmetric stroked loop &mdash; no radiating arms, no rotational
-        symmetry, and the most literal tie to the game of anything tried.</span></div>
+    <div class="cuts">
+      <div class="panel cut">
+        <div class="cap">Display cut &middot; 3 jogs &middot; 1.6 channel</div>
+        {construction_svg(B.SEAM_DISPLAY, B.CH_DISPLAY, "display")}
+      </div>
+      <div class="panel cut">
+        <div class="cap">Small cut &middot; 2 jogs &middot; 2.6 channel</div>
+        {construction_svg(B.SEAM_SMALL, B.CH_SMALL, "small")}
+      </div>
     </div>
+    <p>The mark is built as a single path: the square, plus the channel as an
+    even&#8209;odd hole. That means the seam is always <em>transparent</em>, so one
+    file is correct on a light page, a dark page, or a photo — the channel simply
+    picks up whatever sits behind it. Only the outer corner radius changes between the
+    bare logo, the app tile and the maskable icon.</p>
+    <p class="note">Kept strictly upright. A prior diagonal variant turned the square
+    into a diamond with bent segments radiating from its centre and was pulled
+    immediately after it was flagged as reading too close to a hate symbol — never
+    rotate this mark or angle the outer square, regardless of how the seam itself is
+    drawn.</p>
   </section>
 
   <section>
     <div class="head">
       <div class="eyebrow">Optical sizes</div>
-      <h2>The small cut is a different shape, not a thicker line</h2>
+      <h2>The small cut is redrawn, not shrunk</h2>
     </div>
-    {construction_svg()}
-    <p>A first pass at the small cut just reused the display polygon at a heavier
-    stroke. Rendered at true 16px, it read as a stray letter &mdash; a "P" &mdash;
-    because one vertex stuck out as a leg. The small cut here is a genuinely
-    different, rounder-cornered six-point loop, tuned against real rasters until it
-    read as an irregular boundary and nothing more specific.</p>
-    <p class="note">Stroke width is defined as a fraction of the shape's own
-    rendered size, not of the canvas, so it scales correctly at any box a consumer
-    asks for &mdash; a lockup icon at 50px and a favicon at 512px use the same
-    formula, not a fixed pixel value.</p>
+    <p>The mark carries its meaning in an interior seam, and interior detail is the
+    first thing lost when a mark is rasterised small. So there are two cuts, the way a
+    type family has optical sizes. Below 32px the display cut's three jogs collapse
+    into mush; the small cut drops to two jogs and widens the channel to compensate.
+    A one&#8209;jog cut was tried and rejected — it loses the interlock and reads as
+    two bars.</p>
+    <div class="vs">
+      <div class="panel mock">
+        <div class="cap">Display cut below 32px &mdash; muddy</div>
+        <div class="ladder">
+          {''.join(f"""<div class="rung">
+            <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
+            <div class="cap">{s}px</div></div>""" for s in (16, 20, 24))}
+        </div>
+      </div>
+      <div class="panel mock">
+        <div class="cap">Small cut &mdash; holds</div>
+        <div class="ladder">
+          {''.join(f"""<div class="rung">
+            <img class="mag" src="{SMALL[s]}" width="72" height="72" alt="">
+            <div class="cap">{s}px</div></div>""" for s in (16, 20, 24))}
+        </div>
+      </div>
+    </div>
+    <p class="note">Real PNGs at those pixel sizes, magnified — not scaled vectors.
+    The <code>.ico</code> uses the small cut for its 16/24/32 frames and the display
+    cut from 48px up.</p>
   </section>
 
   <section>
     <div class="head">
-      <div class="eyebrow">Scale &middot; rendered, not simulated</div>
-      <h2>What it actually looks like small</h2>
+      <div class="eyebrow">Scale</div>
+      <h2>Display cut, true size</h2>
     </div>
-    <p class="note">Each image is the real PNG the build produces at that pixel
-    size. A scaled-down vector always flatters a mark; only a real raster tells the
-    truth.</p>
-    <div class="vs">
-      <div class="panel mock">
-        <div class="cap">Small cut &middot; 16&ndash;32px</div>
-        <div class="ladder">
-          {''.join(f"""<div class="rung">
-            <div class="true"><img src="{SMALL[s]}" width="{s}" height="{s}" alt=""></div>
-            <img class="mag" src="{SMALL[s]}" width="72" height="72" alt="">
-            <div class="cap">{s}px</div></div>""" for s in (16, 20, 24, 32))}
-        </div>
-      </div>
-      <div class="panel mock">
-        <div class="cap">Display cut &middot; 32&ndash;64px</div>
-        <div class="ladder">
-          {''.join(f"""<div class="rung">
-            <div class="true"><img src="{DISPLAY[s]}" width="{s}" height="{s}" alt=""></div>
-            <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
-            <div class="cap">{s}px</div></div>""" for s in (32, 40, 48, 64))}
-        </div>
-      </div>
+    <div class="ladder">
+      {''.join(f"""<div class="rung">
+        <div class="true"><img src="{DISPLAY[s]}" width="{s}" height="{s}" alt=""></div>
+        <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
+        <div class="cap">{s}px</div>
+      </div>""" for s in (24, 32, 48, 64))}
     </div>
   </section>
 
@@ -274,9 +293,9 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div></div>
       </div>
       <div class="panel mock">
-        <div class="cap">iOS home screen</div>
+        <div class="cap">iOS home screen &middot; 180px</div>
         <div class="springboard">
-          <div class="app"><img src="{IOS}" alt=""><div class="nm">Daily District</div></div>
+          <div class="app"><img src="{IOS180}" alt=""><div class="nm">Daily District</div></div>
           <div class="app ghost"><div class="sq"></div></div>
         </div>
       </div>
@@ -295,6 +314,9 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div>
       </div>
     </div>
+    <p class="note">The maskable icon is sized to sit entirely inside Android's 80%
+    safe circle. A full-bleed version would have its seam clipped top and bottom,
+    visually rejoining the two districts and destroying the whole idea.</p>
   </section>
 
   <section>
@@ -313,19 +335,40 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="eyebrow">Colour &middot; existing tokens only</div>
       <h2>No new brand colours</h2>
     </div>
-    <p>Every value is already in <code>style.css</code>. On dark grounds the red
-    lifts to <code>#FF3B57</code>, since <code>#C41230</code> goes muddy below about
-    20% ground luminance &mdash; a rendering correction, not a new brand colour.</p>
+    <p>Every value is already in <code>style.css</code>. On dark grounds the red lifts
+    to <code>#FF3B57</code>, because <code>#C41230</code> goes muddy below about 20%
+    ground luminance — a rendering correction rather than a new brand colour.</p>
     <div class="swatches">
-      <div class="sw"><div class="chip" style="background:{CREAM}">{mark_svg(RED)}</div>
-        <div class="lbl2">--bg &middot; {CREAM}</div></div>
-      <div class="sw"><div class="chip" style="background:{RED}">{mark_svg(CREAM)}</div>
-        <div class="lbl2">--cmu-red &middot; {RED}</div></div>
-      <div class="sw"><div class="chip" style="background:{NAVY}">{mark_svg(CREAM)}</div>
-        <div class="lbl2">--cmu-navy &middot; {NAVY}</div></div>
-      <div class="sw"><div class="chip" style="background:{INK}">{mark_svg("#FF3B57")}</div>
-        <div class="lbl2">dark ground &middot; #FF3B57</div></div>
+      <div class="sw"><div class="chip" style="background:{CREAM}">{mark(RED)}</div>
+        <div class="lbl">--bg &middot; {CREAM}</div></div>
+      <div class="sw"><div class="chip" style="background:{RED}">{mark(CREAM)}</div>
+        <div class="lbl">--cmu-red &middot; {RED}</div></div>
+      <div class="sw"><div class="chip" style="background:{NAVY}">{mark(CREAM)}</div>
+        <div class="lbl">--cmu-navy &middot; {NAVY}</div></div>
+      <div class="sw"><div class="chip" style="background:{INK}">{mark("#FF3B57")}</div>
+        <div class="lbl">dark ground &middot; #FF3B57</div></div>
     </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <div class="eyebrow">Rules</div>
+      <h2>Clear space and minimum sizes</h2>
+    </div>
+    <div class="scroll"><table>
+      <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
+      <tr><td>Clear space</td><td class="f">1 cell = mark size / 12</td>
+          <td>The seam needs breathing room or it reads as part of the neighbour.</td></tr>
+      <tr><td>Minimum, small cut</td><td class="f">16px</td>
+          <td>Below this the 2.6-cell channel drops under 2px and the halves fuse.</td></tr>
+      <tr><td>Switch cuts at</td><td class="f">32px</td>
+          <td>Display cut above, small cut at and below.</td></tr>
+      <tr><td>Minimum, full lockup</td><td class="f">120px wide</td>
+          <td>Set by the wordmark's counters, not the mark.</td></tr>
+      <tr><td>Never</td><td class="f">&mdash;</td>
+          <td>Rotate it, fill the channel with a solid colour instead of leaving it
+              open, or re-space the jogs. The seam is the mark.</td></tr>
+    </table></div>
   </section>
 
   <section>
@@ -335,20 +378,18 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>File</th><th>Use</th></tr>
-      <tr><td class="f">mark.svg</td><td><code>currentColor</code>, display cut &mdash; inline in HTML.</td></tr>
-      <tr><td class="f">mark-red.svg</td><td>Baked red, for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> would become.</td></tr>
+      <tr><td class="f">mark.svg</td><td><code>currentColor</code>, display cut — inline in HTML.</td></tr>
+      <tr><td class="f">mark-red.svg</td><td>Baked red, for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> now is.</td></tr>
       <tr><td class="f">mark-small.svg</td><td>Small cut, for use at or below 32px.</td></tr>
       <tr><td class="f">favicon.svg</td><td>Small cut; answers the browser's dark mode.</td></tr>
-      <tr><td class="f">icon-tile.svg</td><td>PWA icons &mdash; solid tile, glyph centred with padding.</td></tr>
-      <tr><td class="f">icon-ios.svg</td><td>Full-bleed tile; iOS applies its own squircle.</td></tr>
+      <tr><td class="f">icon-tile.svg</td><td>PWA icons, rounded tile.</td></tr>
+      <tr><td class="f">icon-ios.svg</td><td>Full-bleed; iOS applies its own squircle.</td></tr>
       <tr><td class="f">icon-maskable.svg</td><td>Android maskable, inside the 80% safe circle.</td></tr>
       <tr><td class="f">lockup-*.svg</td><td>Horizontal and stacked; red, reversed, currentColor.</td></tr>
       <tr><td class="f">og-image.svg</td><td>1200&times;630 social card.</td></tr>
       <tr><td class="f">dist/</td><td>Rendered PNGs plus a 6-frame favicon.ico (16&ndash;128).</td></tr>
-      <tr><td class="f">build.py</td><td>Regenerates everything above from the two polygons.</td></tr>
+      <tr><td class="f">build.py</td><td>Regenerates everything above from one seam definition.</td></tr>
     </table></div>
-    <p class="note">Nothing here is wired into the site. Nothing has been pushed.
-    This is the review before that decision gets made.</p>
   </section>
 
 </div>
