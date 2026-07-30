@@ -14,8 +14,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daily District — Coming soon</title>
-  <meta name="description" content="Daily District is a free daily game to identify all 435 U.S. House districts. Coming soon. Meanwhile, explore profiles of every congressional district." />
+  <title>Daily District — The Daily Congressional District Puzzle</title>
+  <meta name="description" content="A free daily puzzle about the 435 U.S. House districts — plus in-depth profiles of every district: representatives, demographics, election results and maps." />
   <link rel="canonical" href="https://daily-district.com/" />
   <link rel="icon" href="favicon.svg?v=8" type="image/svg+xml" />
   <link rel="icon" href="favicon.ico?v=8" sizes="any" />
@@ -28,8 +28,8 @@
   <!-- Open Graph / social -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Daily District" />
-  <meta property="og:title" content="Daily District — Coming soon" />
-  <meta property="og:description" content="A free daily game to identify all 435 U.S. House districts. Coming soon." />
+  <meta property="og:title" content="Daily District — The Daily Congressional District Puzzle" />
+  <meta property="og:description" content="A free daily game about the 435 U.S. House districts, with profiles of every seat." />
   <meta property="og:url" content="https://daily-district.com/" />
   <meta property="og:image" content="https://daily-district.com/og-image.png?v=8" />
   <meta property="og:image:width" content="1200" />
@@ -171,6 +171,31 @@
     .teaser-links { margin: 10px 0 0; font-size: 13px; color: var(--muted, #565a63); }
     .teaser-links a { color: inherit; text-decoration: none; }
     .teaser-links a:hover { color: #c41230; text-decoration: underline; }
+    /* Interim homepage content sections (pre-launch): real, crawlable content
+       below the hero. Selectors carry two classes so they beat style.css's global
+       `a:not(.got-it-btn):not(.donate-modal-cta)` rule (same specificity, later
+       in the cascade). Removed with the teaser when the game index is restored. */
+    .home-sections { padding: 0 16px 64px; font-family: "Barlow", system-ui, sans-serif; }
+    .home-inner { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .home-card { background: #fff; border: 1px solid #e3e5ea; border-radius: 16px; padding: 22px 24px; text-align: left; }
+    .home-card h2 { margin: 0 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: #1a1a1a; }
+    .home-card p { margin: 8px 0 0; color: #3d4048; line-height: 1.55; font-size: 15px; }
+    .home-sections .home-card a { color: #c41230; text-decoration: none; font-weight: 600; background: none; padding-bottom: 0; }
+    .home-sections .home-card a:hover { text-decoration: underline; }
+    .home-sections .home-card h2 a { color: #1a1a1a; }
+    .home-sections .home-card h2 a:hover { color: #c41230; text-decoration: none; }
+    .home-card p.home-kicker { text-transform: uppercase; letter-spacing: .14em; font-weight: 800; font-size: 11px; color: #c41230; margin: 0 0 2px; }
+    .hl-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+    .hl-chip { border: 1px solid #e3e5ea; border-radius: 999px; padding: 6px 12px; font-size: 13px; color: #565a63; background: #faf9f8; }
+    .hl-chip b { color: #1a1a1a; }
+    .hl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+    .home-sections a.hl-item { border: 1px solid #e3e5ea; border-radius: 12px; padding: 12px 14px 12px; text-decoration: none; display: flex; flex-direction: column; gap: 2px; background: #fff; color: inherit; transition: border-color .15s; }
+    .home-sections a.hl-item:hover { border-color: #c41230; text-decoration: none; }
+    .hl-item b { color: #c41230; font-size: 15px; font-weight: 800; }
+    .hl-item span { color: #565a63; font-size: 12.5px; font-weight: 600; }
+    .hl-item em { font-style: normal; color: #1a1a1a; font-weight: 700; font-size: 13.5px; }
+    .home-steps { margin: 10px 0 0; padding-left: 1.25em; }
+    .home-steps li { margin: 8px 0; color: #3d4048; font-size: 15px; line-height: 1.5; }
     /* A plain districts link in the header for balance + crawlability. */
     .header-districts-link {
       font-family: "Barlow", system-ui, sans-serif; font-weight: 600; font-size: 14px;
@@ -246,9 +271,9 @@
 <main class="teaser-hero">
   <div class="teaser-card">
     <img src="logo.svg?v=8" class="teaser-logo" alt="" aria-hidden="true" />
-    <p class="teaser-eyebrow" id="t-eyebrow">Coming soon</p>
-    <h1 class="teaser-headline" id="t-headline">Launching soon</h1>
-    <p class="teaser-sub" id="t-sub">A free daily game to identify all 435 U.S. House districts from their shape — geographic, map-based, and contextual clues, one puzzle a day. Check back soon.</p>
+    <p class="teaser-eyebrow" id="t-eyebrow">The daily district game</p>
+    <h1 class="teaser-headline" id="t-headline">Know every district</h1>
+    <p class="teaser-sub" id="t-sub">Daily District is a free daily puzzle — and a crash course in the U.S. House. Learn all 435 congressional districts by shape, by place and by the facts behind them, then explore the full profile of every seat.</p>
     <div class="teaser-art">
       <div class="mp" id="mp" role="img" aria-label="Daily District — identify a U.S. House district from its shape, a new puzzle every day">
         <div class="mp-floaters" id="mp-floaters"></div>
@@ -305,6 +330,53 @@
   </div>
 </main>
 
+<!-- ===== HOMEPAGE CONTENT (interim, pre-launch) =====
+     Real crawlable sections below the hero. The block between the
+     HOME-HIGHLIGHTS markers is regenerated by scripts/build-district-pages.mjs
+     (featured district + superlatives); the rest is hand-written. All of it is
+     replaced by the game when the real index.html is restored at launch. -->
+<section class="home-sections">
+  <div class="home-inner">
+    <!-- HOME-HIGHLIGHTS:START -->
+    <div class="home-card">
+      <p class="home-kicker">Featured district</p>
+      <h2><a href="/district/mo-01/">Missouri&#39;s 1st Congressional District</a></h2>
+      <p>Missouri's 1st Congressional District is one of 8 U.S. House districts in Missouri, represented in Congress by Wesley Bell (Democrat). It is home to roughly 759,185 people, with a median age of 37. The population is about 45% Black. The median household income is $59,930, and 37% of adults 25 and older hold a bachelor’s degree or higher. In the 2024 presidential election it voted safely Democratic (D+57).</p>
+      <div class="hl-chips"><span class="hl-chip"><b>759,185</b> people</span><span class="hl-chip"><b>250</b> mi²</span><span class="hl-chip"><b>$59,930</b> median income</span><span class="hl-chip"><b>D+57</b> in 2024</span></div>
+      <p><a href="/district/mo-01/">Read the full MO-01 profile →</a></p>
+    </div>
+    <div class="home-card">
+      <h2>Districts of extremes</h2>
+      <p>Every district holds roughly the same number of people — almost everything else varies wildly. A few records from the <a href="/districts/">435 district profiles</a>:</p>
+      <div class="hl-grid">
+        <a class="hl-item" href="/district/ak-01/"><b>AK-01</b><span>Largest district</span><em>583,360 mi²</em></a>
+        <a class="hl-item" href="/district/ny-12/"><b>NY-12</b><span>Smallest district</span><em>13 mi²</em></a>
+        <a class="hl-item" href="/district/ny-12/"><b>NY-12</b><span>Densest district</span><em>56,285/mi²</em></a>
+        <a class="hl-item" href="/district/wy-01/"><b>WY-01</b><span>Most compact shape</span><em>0.77 Polsby-Popper</em></a>
+        <a class="hl-item" href="/district/ak-01/"><b>AK-01</b><span>Least compact shape</span><em>0.01 Polsby-Popper</em></a>
+        <a class="hl-item" href="/district/ca-17/"><b>CA-17</b><span>Highest median income</span><em>$177,521</em></a>
+        <a class="hl-item" href="/district/ms-02/"><b>MS-02</b><span>Lowest median income</span><em>$43,969</em></a>
+        <a class="hl-item" href="/district/oh-13/"><b>OH-13</b><span>Closest 2024 margin</span><em>D+0.05</em></a>
+      </div>
+    </div>
+    <!-- HOME-HIGHLIGHTS:END -->
+    <div class="home-card">
+      <h2>How the game works</h2>
+      <ol class="home-steps">
+        <li><strong>One district a day.</strong> Every player in the world gets the same mystery U.S. House district — you see its shape and work from geographic and contextual clues.</li>
+        <li><strong>Six guesses.</strong> Pick a state first. Every miss tells you whether the answer borders your guess (hot) or lies farther away (cold), eliminating whole regions at a time.</li>
+        <li><strong>Nail the district.</strong> Once you have the state, choose the district number — then read the answer's full profile and come back tomorrow.</li>
+      </ol>
+      <p><a href="/how-to-play/">Read the full rules and strategy tips →</a></p>
+    </div>
+    <div class="home-card">
+      <h2>Why districts matter</h2>
+      <p>All 435 seats in the U.S. House are decided district by district, and the lines are redrawn every ten years. How they're drawn shapes who runs, who wins, and which party controls the House — yet most Americans can't picture a single district's shape. Daily District, created by redistricting scholar <a href="https://jonathancervas.com" target="_blank" rel="noopener">Dr. Jonathan Cervas</a> of Carnegie Mellon University and Jason Fierman of the Redistrict Network, makes learning them a daily habit.</p>
+      <p><a href="/about/">More about the project →</a> · <a href="/methodology/">Where the data comes from →</a></p>
+    </div>
+  </div>
+</section>
+
 <!-- ===== HOW TO PLAY MODAL ===== -->
 <div id="how-to-modal" class="modal hidden">
   <div class="modal-content">
@@ -330,7 +402,7 @@
     <p style="margin-top:12px;font-size:0.8rem;color:var(--muted)">&copy; 2026 Jonathan Cervas &amp; Jason Fierman. All rights reserved.</p>
     <div class="how-to-footer">
       <button id="how-to-got-it" class="got-it-btn">Got it!</button>
-      <span class="how-to-note">The game launches soon.</span>
+      <span class="how-to-note">The daily game is in final playtesting — sign up to be first to play.</span>
     </div>
   </div>
 </div>
@@ -501,8 +573,8 @@
     var VARIANTS = {
       play: {   // gameplay — guess the district
         facts: false,
-        eyebrow: 'Coming soon', headline: 'Launching soon',
-        sub: 'A free daily game to identify all 435 U.S. House districts from their shape — geographic, map-based, and contextual clues, one puzzle a day. Check back soon.',
+        eyebrow: 'The daily district game', headline: 'Guess the district',
+        sub: 'One mystery U.S. House district a day. Six guesses, hot-and-cold geographic clues, and a new shape to learn every day.',
         introSub: '435 congressional districts. <b>One a day.</b>',
         silTag: 'Name it from its shape',
         ctaKicker: 'Play it daily', ctaSub: 'Free to play. <b>A new district every day.</b>'

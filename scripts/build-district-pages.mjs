@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SITE = 'https://daily-district.com';
-const CSS_V = 9; // bump when district-pages.css changes
+const CSS_V = 10; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
 const MAP_JS_V = 5; // bump when the emitted district-map.js changes
@@ -150,6 +150,40 @@ for (const [state, dists] of Object.entries(districtNames)) {
   }
 }
 records.sort((a, b) => a.id.localeCompare(b.id));
+
+// ---- national ranks & aggregates -------------------------------------------
+// Precomputed across all 435 districts; used to give every page unique,
+// data-driven prose ("ranks 37th of 435 by median household income") and to
+// build the homepage highlights.
+for (const r of records) {
+  r.density = r.geo.area > 0 && r.c.pop ? Math.round(r.c.pop / r.geo.area) : null;
+}
+function ranker(get, dir = -1) {
+  // dir -1: rank 1 = largest value; dir 1: rank 1 = smallest value.
+  const ranked = records.filter((r) => get(r) != null)
+    .sort((a, b) => dir * (get(a) - get(b)));
+  const m = new Map();
+  ranked.forEach((r, i) => m.set(r.id, i + 1));
+  return { of: (id) => m.get(id), n: ranked.length, first: ranked[0], last: ranked[ranked.length - 1] };
+}
+const rankArea    = ranker((r) => r.geo.area);
+const rankDensity = ranker((r) => r.density);
+const rankIncome  = ranker((r) => r.c.income);
+const rankPP      = ranker((r) => r.geo.pp);
+const rankAge     = ranker((r) => r.c.medianAge);
+const rankClose24 = ranker((r) => r.pres.mar24 != null ? Math.abs(r.pres.mar24) : null, 1);
+// Crossover seats: a representative of one party in a district the other
+// party's presidential candidate carried in 2024.
+const crossoverR = records.filter((r) => (r.rep?.partyCode || '') === 'R' && r.pres.mar24 > 0).length;
+const crossoverD = records.filter((r) => (r.rep?.partyCode || '') === 'D' && r.pres.mar24 < 0).length;
+
+function densityCharacter(d) {
+  if (d == null) return null;
+  if (d >= 3000) return 'a heavily urban district';
+  if (d >= 800) return 'a largely suburban district';
+  if (d >= 150) return 'a mix of small cities, suburbs and countryside';
+  return 'a predominantly rural district';
+}
 
 // ---- page renderers --------------------------------------------------------
 function shell({ title, description, canonical, body, scripts = '' }) {
@@ -310,6 +344,52 @@ function adUnit() {
     </div>`;
 }
 
+// The opening prose paragraph for a district — used as the profile lede and on
+// the homepage featured-district card.
+function ledeFor(r) {
+  const { c } = r;
+  const fullName = `${possessive(r.stateName)} ${districtLabel(r.state, r.dnum, r.atLarge)}`;
+  const total = c.pop || 0;
+  const pctOf = (x) => total > 0 && x != null ? Math.round((x / total) * 100) : null;
+  const whPct = pctOf(c.whiteNH), blPct = pctOf(c.black), hiPct = pctOf(c.hispanic), asPct = pctOf(c.asian);
+  const otherPct = [whPct, blPct, hiPct, asPct].every((v) => v != null)
+    ? Math.max(0, 100 - (whPct + blPct + hiPct + asPct)) : null;
+  const groups = [
+    { name: 'White', pct: whPct }, { name: 'Black', pct: blPct },
+    { name: 'Hispanic', pct: hiPct }, { name: 'Asian', pct: asPct },
+    { name: 'Other', pct: otherPct },
+  ].filter((g) => g.pct != null);
+  const raceTop = groups.length ? groups.reduce((a, b) => b.pct > a.pct ? b : a) : null;
+  const bachPlus = (c.bach || 0) + (c.master || 0);
+  const eduPct = c.edu_total > 0 ? Math.round((bachPlus / c.edu_total) * 100) : null;
+  const lean24 = presLean(r.pres.mar24);
+  const repName = r.rep?.name || null;
+  const repParty = r.rep?.party || null;
+
+  const sentences = [];
+  sentences.push(
+    `${fullName} is ${r.atLarge ? 'the statewide seat covering all of ' + r.stateName
+      : 'one of ' + districtNames[r.state].length + ' U.S. House districts in ' + r.stateName}` +
+    (repName ? `, represented in Congress by ${repName}${repParty ? ` (${repParty})` : ''}.` : '.'));
+  if (total) {
+    let s = `It is home to roughly ${fmt(total)} people`;
+    if (c.medianAge != null) s += `, with a median age of ${c.medianAge}`;
+    if (raceTop) s += `. The population is about ${raceTop.pct}% ${raceTop.name}`;
+    sentences.push(s + '.');
+  }
+  if (c.income != null) {
+    let s = `The median household income is ${money(c.income)}`;
+    if (eduPct != null) s += `, and ${eduPct}% of adults 25 and older hold a bachelor’s degree or higher`;
+    sentences.push(s + '.');
+  }
+  if (lean24) {
+    sentences.push(lean24.competitive
+      ? `In the 2024 presidential election the district was highly competitive (${lean24.tag}).`
+      : `In the 2024 presidential election it voted ${lean24.strength} ${lean24.party} (${lean24.tag}).`);
+  }
+  return sentences.join(' ');
+}
+
 function districtPage(r) {
   const { c, geo, rep, pres: p } = r;
   const label = districtLabel(r.state, r.dnum, r.atLarge);
@@ -349,33 +429,79 @@ function districtPage(r) {
   const raceTop = raceGroups.length ? raceGroups.reduce((a, b) => b.pct > a.pct ? b : a) : null;
 
   // ---- prose lede (unique, data-driven) ----
-  const sentences = [];
-  sentences.push(
-    `${fullName} is ${r.atLarge ? 'the statewide seat covering all of ' + r.stateName
-      : 'one of ' + districtNames[r.state].length + ' U.S. House districts in ' + r.stateName}` +
-    (repName ? `, represented in Congress by ${repName}${repParty ? ` (${repParty})` : ''}.` : '.'));
-  if (total) {
-    let s = `It is home to roughly ${fmt(total)} people`;
-    if (c.medianAge != null) s += `, with a median age of ${c.medianAge}`;
-    if (raceTop) s += `. The population is about ${raceTop.pct}% ${raceTop.name}`;
-    sentences.push(s + '.');
-  }
-  if (c.income != null) {
-    let s = `The median household income is ${money(c.income)}`;
-    if (eduPct != null) s += `, and ${eduPct}% of adults 25 and older hold a bachelor’s degree or higher`;
-    sentences.push(s + '.');
-  }
-  if (lean24) {
-    sentences.push(lean24.competitive
-      ? `In the 2024 presidential election the district was highly competitive (${lean24.tag}).`
-      : `In the 2024 presidential election it voted ${lean24.strength} ${lean24.party} (${lean24.tag}).`);
-  }
-  const lede = sentences.join(' ');
+  const lede = ledeFor(r);
 
   const metaDesc =
     `${fullName}: ${repName ? repName + ' represents this seat. ' : ''}` +
     `Population ${fmt(total)}${c.income != null ? `, median household income ${money(c.income)}` : ''}` +
     `${lean24 ? `, 2024 presidential lean ${lean24.tag}` : ''}. Census demographics, election results and maps.`;
+
+  // ---- unique per-card prose (national context via precomputed ranks) ----
+  const geoProse = [];
+  if (geo.area) {
+    const ar = rankArea.of(r.id);
+    const sizePhrase = ar === 1 ? 'the largest' : ar === rankArea.n ? 'the smallest'
+      : `the ${ordinal(ar)}-largest`;
+    geoProse.push(`Covering ${fmt(geo.area)} square miles, ${r.id} is ${sizePhrase} of the ${rankArea.n} congressional districts by land area.`);
+    if (density != null) geoProse.push(density < 2
+      ? `With about one resident per square mile, it is ${densityCharacter(density)}.`
+      : `With about ${fmt(density)} residents per square mile, it is ${densityCharacter(density)}.`);
+    if (geo.pp != null && ppLabel) geoProse.push(`Its shape is ${ppLabel.replace(' in shape', '')}: the district's Polsby-Popper score of ${geo.pp.toFixed(2)} ranks ${ordinal(rankPP.of(r.id))} of ${rankPP.n} nationally, where 1st is the most compact.`);
+  }
+
+  const presProse = [];
+  if (p.dem24 != null && p.rep24 != null && lean24) {
+    const closeRank = rankClose24.of(r.id);
+    presProse.push(`In the 2024 presidential election, ${p.dem24}% of ${r.id} voters backed Kamala Harris and ${p.rep24}% Donald Trump — a ${lean24.tag} margin${closeRank != null && closeRank <= 40 ? `, the ${ordinal(closeRank)}-closest result of any district in the country` : ''}.`);
+  }
+  if (p.mar24 != null && p.mar20 != null && lean20) {
+    const shift = p.mar24 - p.mar20;
+    presProse.push(Math.abs(shift) >= 0.5
+      ? `That is a ${Math.abs(shift).toFixed(1)}-point shift toward the ${shift < 0 ? 'Republicans' : 'Democrats'} from 2020, when the district voted ${lean20.tag}.`
+      : `The district's presidential lean was essentially unchanged from 2020 (${lean20.tag}).`);
+  }
+  if (repName && p.mar24 != null) {
+    if (repCode === 'R' && p.mar24 > 0) presProse.push(crossoverR > 1
+      ? `${repName} is one of only ${crossoverR} House Republicans representing a district Kamala Harris carried.`
+      : `${repName} is the only House Republican representing a district Kamala Harris carried.`);
+    else if (repCode === 'D' && p.mar24 < 0) presProse.push(crossoverD > 1
+      ? `${repName} is one of only ${crossoverD} House Democrats representing a district Donald Trump carried.`
+      : `${repName} is the only House Democrat representing a district Donald Trump carried.`);
+  }
+
+  const demoProse = [];
+  if (c.medianAge != null) {
+    const ar = rankAge.of(r.id);
+    let note = '';
+    if (ar != null && ar <= 30) note = ', making this one of the oldest districts in the nation by median age';
+    else if (ar != null && ar > rankAge.n - 30) note = ', making this one of the youngest districts in the nation by median age';
+    let s = `The median resident of the district is ${c.medianAge} years old${note}`;
+    if (c.under18Pct != null && c.age65Pct != null) s += `; ${c.under18Pct}% of residents are under 18 and ${c.age65Pct}% are 65 or older`;
+    demoProse.push(s + '.');
+  }
+  if (c.foreignBornPct != null) {
+    let s = `About ${c.foreignBornPct}% of residents were born outside the United States`;
+    if (c.nonEnglishPct != null) s += `, and ${c.nonEnglishPct}% speak a language other than English at home`;
+    demoProse.push(s + '.');
+  }
+
+  const econProse = [];
+  if (c.income != null) {
+    econProse.push(`At ${money(c.income)}, the district's median household income ranks ${ordinal(rankIncome.of(r.id))} of ${rankIncome.n} districts nationwide.`);
+  }
+  if (c.medianHome != null) {
+    let s = `The typical owner-occupied home is worth ${money(c.medianHome)}`;
+    if (c.medianRent != null) s += `, and the median rent is ${money(c.medianRent)} a month`;
+    econProse.push(s + '.');
+  }
+  if (c.povertyPct != null) {
+    let s = `${c.povertyPct}% of residents live below the poverty line`;
+    if (c.meanCommuteMin != null) s += `, and workers average a ${c.meanCommuteMin}-minute commute`;
+    if (c.wfhPct != null) s += ` (${c.wfhPct}% work from home)`;
+    econProse.push(s + '.');
+  }
+
+  const prose = (arr) => arr.length ? `<p class="dd-prose">${arr.join(' ')}</p>` : '';
 
   // ---- sections ----
   const S = [];
@@ -409,7 +535,7 @@ ${mapFigure({
         ${density != null ? statBox(fmt(density) + '/mi²', 'Pop. density') : ''}
         ${geo.pp != null ? statBox(geo.pp.toFixed(2), 'Compactness (Polsby-Popper)') : ''}
       </div>
-      ${ppLabel ? `<p style="margin:10px 0 0">By the Polsby-Popper measure, ${r.id} is ${ppLabel} compared with other districts.</p>` : ''}
+      ${prose(geoProse)}
     </section>`);
   }
 
@@ -427,6 +553,7 @@ ${mapFigure({
         ${p.dem24 != null ? statBox(p.dem24 + '% / ' + p.rep24 + '%', '2024 Dem / Rep') : ''}
         ${lean20 ? statBox(lean20.tag, '2020 margin') : ''}
       </div>
+      ${prose(presProse)}
       <p class="dd-source">Two-party presidential vote by district (source: The Downballot).</p>
     </section>`);
   }
@@ -447,6 +574,7 @@ ${mapFigure({
         ${statBox(pctS(c.foreignBornPct), 'Foreign-born')}
         ${statBox(pctS(c.veteranPct), 'Veterans')}
       </div>
+      ${prose(demoProse)}
       <p class="dd-source">U.S. Census Bureau, American Community Survey (5-year estimates).</p>
     </section>`);
 
@@ -462,6 +590,7 @@ ${mapFigure({
         ${statBox(c.meanCommuteMin != null ? c.meanCommuteMin + ' min' : '—', 'Mean commute')}
         ${statBox(pctS(c.uninsuredPct), 'Uninsured')}
       </div>
+      ${prose(econProse)}
       <p class="dd-source">U.S. Census Bureau, American Community Survey (5-year estimates).</p>
     </section>`);
   }
@@ -690,6 +819,56 @@ function methodologyPage() {
   });
 }
 
+// ---- homepage highlights (injected into index.html between markers) --------
+// A featured district (rotates with the build date) plus a grid of national
+// superlatives — real crawlable content for the interim pre-launch homepage.
+// Margin tag with sensible precision for near-zero margins ("D+0.05").
+function closeTag(m) {
+  if (m == null) return null;
+  return (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(Math.abs(m) < 1 ? 2 : 1);
+}
+
+function homeHighlights() {
+  const f = records[Math.floor(Date.now() / 86400000) % records.length];
+  const fName = `${possessive(f.stateName)} ${districtLabel(f.state, f.dnum, f.atLarge)}`;
+  const fLean = presLean(f.pres.mar24);
+  const chips = [
+    f.c.pop != null ? `<span class="hl-chip"><b>${fmt(f.c.pop)}</b> people</span>` : '',
+    f.geo.area != null ? `<span class="hl-chip"><b>${fmt(f.geo.area)}</b> mi²</span>` : '',
+    f.c.income != null ? `<span class="hl-chip"><b>${money(f.c.income)}</b> median income</span>` : '',
+    fLean ? `<span class="hl-chip"><b>${fLean.tag}</b> in 2024</span>` : '',
+  ].filter(Boolean).join('');
+
+  const sup = [
+    [rankArea.first, 'Largest district', `${fmt(rankArea.first?.geo.area)} mi²`],
+    [rankArea.last, 'Smallest district', `${fmt(rankArea.last?.geo.area)} mi²`],
+    [rankDensity.first, 'Densest district', `${fmt(rankDensity.first?.density)}/mi²`],
+    [rankPP.first, 'Most compact shape', `${rankPP.first?.geo.pp.toFixed(2)} Polsby-Popper`],
+    [rankPP.last, 'Least compact shape', `${rankPP.last?.geo.pp.toFixed(2)} Polsby-Popper`],
+    [rankIncome.first, 'Highest median income', money(rankIncome.first?.c.income)],
+    [rankIncome.last, 'Lowest median income', money(rankIncome.last?.c.income)],
+    [rankClose24.first, 'Closest 2024 margin', closeTag(rankClose24.first?.pres.mar24)],
+  ].filter(([r2, , val]) => r2 && val != null)
+    .map(([r2, label, val]) =>
+      `<a class="hl-item" href="${districtUrl(r2.id)}"><b>${esc(r2.id)}</b><span>${esc(label)}</span><em>${val}</em></a>`)
+    .join('\n        ');
+
+  return `    <div class="home-card">
+      <p class="home-kicker">Featured district</p>
+      <h2><a href="${districtUrl(f.id)}">${esc(fName)}</a></h2>
+      <p>${ledeFor(f)}</p>
+      <div class="hl-chips">${chips}</div>
+      <p><a href="${districtUrl(f.id)}">Read the full ${esc(f.id)} profile →</a></p>
+    </div>
+    <div class="home-card">
+      <h2>Districts of extremes</h2>
+      <p>Every district holds roughly the same number of people — almost everything else varies wildly. A few records from the <a href="/districts/">435 district profiles</a>:</p>
+      <div class="hl-grid">
+        ${sup}
+      </div>
+    </div>`;
+}
+
 // Map figure markup, shared by the browse hub (no focus) and each district
 // profile (focusState/focusDistrict start it zoomed on that district). Zoom
 // cluster reuses the game's markup/classes (.map-zoom-btns / .mzb).
@@ -906,6 +1085,23 @@ for (const [dir, html] of staticPages) {
 
 // Shared interactive-map client, loaded by the browse hub and every profile.
 writeFileSync(join(ROOT, 'district-map.js'), mapClientJs());
+
+// Homepage highlights: refresh the marker block in index.html when present
+// (the interim pre-launch homepage has it; the real game index does not).
+{
+  const homeFile = join(ROOT, 'index.html');
+  const markerRe = /(<!-- HOME-HIGHLIGHTS:START -->)[\s\S]*?(<!-- HOME-HIGHLIGHTS:END -->)/;
+  if (existsSync(homeFile)) {
+    const home = readFileSync(homeFile, 'utf8');
+    if (markerRe.test(home)) {
+      // Replacer function, NOT a replacement string: generated content contains
+      // dollar amounts ("$177,521") whose "$1" a replacement string would
+      // interpret as a capture-group reference.
+      writeFileSync(homeFile, home.replace(markerRe, (_, start, end) => `${start}\n${homeHighlights()}\n    ${end}`));
+      console.log('Homepage highlights refreshed.');
+    }
+  }
+}
 
 // sitemap.xml
 const today = new Date().toISOString().slice(0, 10);

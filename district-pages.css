@@ -590,6 +590,9 @@ path.dd-statehit { fill: transparent; stroke: none; cursor: pointer; }
   border: 0; background: transparent; min-height: 0;
 }
 
+/* Generated per-district narrative paragraphs inside profile cards. */
+.dd-card .dd-prose { margin: 14px 0 0; }
+
 /* ── Editorial pages (about / how-to-play / methodology) ────────────────── */
 .dd-card ul, .dd-card ol { margin: 10px 0 0; padding-left: 1.3em; }
 .dd-card li { margin: 6px 0; }

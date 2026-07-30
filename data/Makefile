@@ -12,6 +12,10 @@
 #   make pop2020          2020 Census population per district -> pop2020_update.sql
 #   make lang             person-level non-English (C16001) -> lang_update.sql
 #   make plan-year        latest congressional plan year per state -> plan_year_update.sql
+#   make drivetime        max drive time WITHOUT LEAVING the district, via per-district-clipped
+#                          local OSRM graphs (needs osmium + Docker, see README; hours, resumable)
+#                          -> drivetime_out.csv + drivetime_update.sql
+#   make drivetime-clean  discard cached per-district results (forces a full recompute)
 #   make build            everything above except lang (map + all District Profile data)
 #   make push             push ALL generated SQL files to the database (in dependency order)
 #   make push-census / push-reps / push-clues / push-pop2020 / push-lang / push-plan-year / push-compactness
@@ -29,6 +33,11 @@
 #   DATABASE_URL     Postgres connection string for the push targets. Get it from
 #                    Supabase -> Project Settings -> Database -> Connection string
 #                    (Session pooler). Keep it private; it contains the password.
+#   DD_DRIVETIME_STATE  Limit `make drivetime` to one or more states (default: all 50).
+#   DD_DRIVETIME_N      Boundary sample points per district (default 24).
+#   DD_DRIVETIME_WORK   Scratch dir for OSM extracts + per-district graphs and results
+#                       (default data/osrm_work). Peak usage is ~one state's extract.
+#   DD_DRIVETIME_PORT   Host port for the throwaway osrm-routed container (default 5002).
 # ------------------------------------------------------------------
 
 RSCRIPT ?= Rscript
@@ -37,9 +46,16 @@ RSCRIPT ?= Rscript
 DD_DISTRICTS ?= ../districts-core.topojson
 export DD_DISTRICTS
 
+# Empty = all 50 states; set to e.g. "VA" or "VA MD" to limit the run.
+DD_DRIVETIME_STATE  ?=
+DD_DRIVETIME_N      ?= 24
+DD_DRIVETIME_WORK   ?= osrm_work
+DD_DRIVETIME_PORT   ?= 5002
+export DD_DRIVETIME_N DD_DRIVETIME_WORK DD_DRIVETIME_PORT
+
 .PHONY: all build normalize national acs-district acs-state map compactness \
-        census reps clues pop2020 lang plan-year \
-        push push-census push-reps push-clues push-derived push-pop2020 push-lang push-plan-year push-compactness push-margins \
+        census reps clues pop2020 lang plan-year drivetime drivetime-clean \
+        push push-census push-reps push-clues push-derived push-pop2020 push-lang push-plan-year push-compactness push-margins push-drivetime \
         clean help guard-db
 
 help:
@@ -87,6 +103,14 @@ lang:                 ## person-level non-English (C16001) -> lang_update.sql
 plan-year:            ## latest congressional plan year per state -> plan_year_update.sql
 	$(RSCRIPT) plan_year.R
 
+drivetime:            ## max drive time without leaving the district (needs osmium + Docker) -> drivetime_out.csv + drivetime_update.sql
+	bash drivetime.sh $(DD_DRIVETIME_STATE)
+	$(RSCRIPT) apply_drivetime.R
+
+drivetime-clean:      ## discard cached per-district drive-time results (forces a full recompute)
+	rm -rf "$(DD_DRIVETIME_WORK)/per_district" "$(DD_DRIVETIME_WORK)/polys"
+	@echo "per-district drive-time cache cleared."
+
 # ---- push to the database (needs DATABASE_URL + psql) ---------------
 # Order matters: census rebuilds the census object (resetting the preserved geo/vote/rep
 # fields to null), so the additive steps must follow it, and clues/derived read those
@@ -126,6 +150,10 @@ push-compactness: compactness_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f compactness_update.sql
 	@echo "compactness (area + perimeter + reock) pushed."
 
+push-drivetime: drivetime_update.sql guard-db   ## PROTOTYPE, VA only — not part of `make push`
+	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f drivetime_update.sql
+	@echo "drivetime (max drive time, VA-only prototype) pushed."
+
 push-derived: derived_update.sql guard-db
 	psql "$$DATABASE_URL" -1 -v ON_ERROR_STOP=1 -f derived_update.sql
 	@echo "derived (percentile ranks) pushed."
@@ -142,7 +170,7 @@ guard-db:
 clean:
 	rm -f census_out.json census_update.sql reps_out.json reps_update.sql clues_update.sql \
 	      pop2020_update.sql lang_update.sql plan_year_update.sql compactness_out.csv compactness_update.sql \
-	      acs_by_district.csv acs_by_state.csv
+	      acs_by_district.csv acs_by_state.csv drivetime_out.csv drivetime_update.sql
 	rm -rf output
 	@echo "Note: does not remove ../districts.topojson, ../districts-core.topojson, ../districts-overlay.topojson," \
 	      "../state-svgs/, or ../state-acs.json — those are served files at the repo root, not build scratch."
