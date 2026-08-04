@@ -200,9 +200,9 @@ function shell({ title, description, canonical, body, scripts = '' }) {
   <meta property="og:type" content="article" />
   <meta property="og:url" content="${canonical}" />
   <meta name="google-adsense-account" content="ca-pub-2164002681613672" />
-  <link rel="icon" href="/favicon.svg?v=8" type="image/svg+xml" />
-  <link rel="icon" href="/favicon.ico?v=8" sizes="any" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
+  <link rel="icon" href="/favicon.svg?v=9" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico?v=9" sizes="any" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=9" />
   <meta name="theme-color" content="#C41230" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -213,7 +213,7 @@ function shell({ title, description, canonical, body, scripts = '' }) {
 <body>
   <header class="dd-header">
     <div class="dd-header-inner">
-      <img src="/logo.svg?v=8" alt="" aria-hidden="true" />
+      <img src="/logo.svg?v=9" alt="" aria-hidden="true" />
       <a class="dd-wordmark" href="/" aria-label="Daily District — home"></a>
       <a class="dd-play" id="dd-auth" href="/?signup=1">Sign up</a>
     </div>

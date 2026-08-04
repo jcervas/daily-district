@@ -2,43 +2,45 @@
 """Generate the Daily District logo system from one parametric source.
 
 THE MARK
-    One square, two districts, divided by a jogged seam. It depicts *districting* —
-    the act of drawing the line — rather than depicting a district. Every jog is a
-    right angle on a 12x12 cell grid, because congressional districts are assembled
-    from census blocks and real boundaries are all right angles and jogs. The grid
-    also means every edge lands on a whole cell, so the mark rasterises cleanly.
+    Five unequal districts on a 3x3 lattice, one of them filled: the district you are
+    looking for today. It depicts a *districted map* with an answer sitting in it,
+    which is the game, rather than depicting a single district.
 
-    The mark is built as ONE path: the square, plus the seam channel as an evenodd
-    hole. So the channel is always transparent, and the same path serves the bare
-    logo, the app tile and the maskable icon — only the outer radius changes.
+    The lattice is deliberately UNEVEN — columns 21/14/14, rows 14/21/14 — because an
+    even 3x3 grid reads as a word puzzle, not a map. Districts span it 1x2, 2x1, 1x1,
+    1x2, 2x1, so they interlock instead of tiling. Every edge lands on a whole unit,
+    so the mark rasterises cleanly instead of mushing.
 
-    Kept strictly UPRIGHT. Do not rotate this mark or angle its outer square: a prior
-    diagonal variant turned the square into a diamond with bent segments radiating
-    from its centre and was flagged as reading too close to a hate symbol, then
-    reverted immediately. The seam's own jogs are angular by design; the square's
-    sides and the canvas orientation are not to be touched.
+    Four boundary districts are drawn as outlines; the answer cell is solid. Never
+    fill the boundaries in the display cut, never outline the answer cell, and never
+    colour the districts individually.
+
+    Kept strictly UPRIGHT. Do not rotate the lattice: a prior mark's diagonal variant
+    was flagged as reading too close to a hate symbol and reverted immediately, and
+    the standing rule since is that anything with a rotational or radiating structure
+    is off the table.
 
 OPTICAL SIZES
-    The mark carries its meaning in an interior seam, and interior detail is the first
-    thing lost when a mark is rasterised small. So there are two cuts, the way a type
-    family has optical sizes:
+    The display cut carries the mark in hairlines, and hairlines are the first thing
+    lost to a raster. So there are two cuts, the way a type family has optical sizes:
 
-      DISPLAY  3 jogs, 1.6-cell channel   >= 48px
-      SMALL    2 jogs, 2.6-cell channel   <= 32px
+      DISPLAY  4 outlined + 1 filled            above 24px
+      SMALL    all 5 filled, boundaries tinted  24px and below
 
-    The small cut is not a scaled display cut — it is redrawn with fewer jogs and a
-    wider channel. Verified against true 16px rasters; a 1-jog cut was tried and
-    rejected because it loses the interlock and reads as two bars.
+    The small cut is not a scaled display cut — it replaces stroke with tint, so the
+    five districts stay separable once the outlines would have filled in. Verified
+    against true 16px rasters, not scaled-down vectors.
 
     python3 brand/build.py
 
 Output goes to brand/ (vector) and brand/dist/ (raster). Nothing here writes into the
 site; adopting the system is a deliberate copy out of dist/.
 
-Requires: inkscape (SVG -> PNG).
+Requires an SVG rasteriser: inkscape, rsvg-convert or the cairosvg module.
 """
 import os
 import re
+import shutil
 import struct
 import subprocess
 
@@ -48,55 +50,50 @@ DIST = os.path.join(HERE, "dist")
 os.makedirs(DIST, exist_ok=True)
 
 # ---------------------------------------------------------------- brand tokens
-RED = "#C41230"        # --cmu-red
+RED = "#C41230"        # --cmu-red    the answer cell
 RED_LIFT = "#FF3B57"   # red lifted for dark grounds, where #C41230 goes muddy
-NAVY = "#182C4B"       # --cmu-navy
+NAVY = "#182C4B"       # --cmu-navy   boundaries, wordmark
 CREAM = "#F5F5F3"      # --bg
 INK = "#1A1A1A"        # --text
 
+# Small-cut district tints. Mark-local, not brand colours: at 24px and below the
+# boundaries stop being outlines and become flat fills, and these are the two values
+# that keep adjacent districts apart without competing with the answer cell.
+TINT_LIGHT = ("#B9C1CD", "#D5DAE1")
+TINT_DARK = ("#3A4C6B", "#56688A")
+
 # ------------------------------------------------------------------- geometry
-G = 12.0               # the mark is G x G cells
+G = 53.0               # the mark is G x G units
+STROKE = 1.6           # 0.03 x G, centred on the district edge
+# Lattice: columns 21/14/14 and rows 14/21/14, separated by 2-unit gutters
+# (0.04 x G). 21 + 2 + 14 + 2 + 14 = 53, so every edge is a whole unit.
 
-# Seams run top edge to bottom edge. Vertices alternate: down, across, down...
-SEAM_DISPLAY = [(6, 0), (6, 3), (4, 3), (4, 6), (8, 6), (8, 9), (5, 9), (5, 12)]
-SEAM_SMALL = [(6, 0), (6, 4), (4, 4), (4, 8), (8, 8), (8, 12)]
+# Five districts, each a plain axis-aligned rect (x, y, w, h). Index 2 is the answer.
+DISTRICTS = [
+    (0.0, 0.0, 21.0, 37.0),    # 1  col 1, rows 1-2
+    (23.0, 0.0, 30.0, 14.0),   # 2  cols 2-3, row 1
+    (23.0, 16.0, 14.0, 21.0),  # 3  col 2, row 2 -- the answer cell
+    (39.0, 16.0, 14.0, 37.0),  # 4  col 3, rows 2-3
+    (0.0, 39.0, 37.0, 14.0),   # 5  cols 1-2, row 3
+]
+ANSWER = 2
 
-CH_DISPLAY = 1.6
-CH_SMALL = 2.6
-
-RADIUS = 1.2           # default corner radius, in cells
-
-
-def _offset(seam, h, side):
-    """One side of the channel: the seam pushed h cells perpendicular to itself.
-
-    side=-1 is the left district's edge, +1 the right's. Offsetting x alone (the
-    obvious shortcut) leaves horizontal runs welded shut, so verticals move in x and
-    horizontals move in y — and a horizontal jog's y offset flips with its direction,
-    because which district sits above the jog depends on which way it turns.
-    """
-    pts = []
-    for i, (x, y) in enumerate(seam):
-        nx, ny = x + side * h, y
-        prev_x = seam[i - 1][0] if i > 0 else None
-        next_x = seam[i + 1][0] if i + 1 < len(seam) else None
-        if next_x is not None and next_x != x:            # starts a horizontal run
-            ny = y + (h if (next_x > x) == (side < 0) else -h)
-        elif prev_x is not None and prev_x != x:          # ends a horizontal run
-            ny = y + (h if (x > prev_x) == (side < 0) else -h)
-        pts.append((nx, ny))
-    return pts
+# Padding inside the app-icon plates. The mark's own bounding box is a full square, so
+# unlike the rounded-square mark this replaces it cannot run to a rounded tile's edge —
+# its corner districts would overhang the corner arc.
+TILE_PAD = 0.10        # fraction of the tile, PWA "any" icon
+IOS_PAD = 0.13         # iOS crops to a squircle, which bites deeper than our own radius
 
 
-def channel(seam, ch):
-    """The gap between the two districts, as one closed polygon."""
-    h = ch / 2.0
-    return _offset(seam, h, -1) + list(reversed(_offset(seam, h, +1)))
+def n(v, places=3):
+    """Trim a coordinate: whole numbers stay whole, the rest keep `places` decimals."""
+    s = f"{v:.{places}f}".rstrip("0").rstrip(".")
+    return "0" if s in ("", "-", "-0") else s
 
 
-def _poly(pts, s, ox, oy):
-    return "".join(f"{'M' if i == 0 else 'L'}{ox + x * s:.3f} {oy + y * s:.3f}"
-                   for i, (x, y) in enumerate(pts)) + "Z"
+def t(v):
+    """Transform component, to the 2 decimals the lockup ratios are specified at."""
+    return str(round(v, 2))
 
 
 def _rounded_rect(x, y, w, h, r):
@@ -109,15 +106,6 @@ def _rounded_rect(x, y, w, h, r):
             f"{x + r:.3f} {y:.3f}Z")
 
 
-def mark_path(size, x=0.0, y=0.0, cut="display", radius=RADIUS):
-    """The whole mark as one evenodd path: square outline, channel as a hole."""
-    seam, ch = ((SEAM_DISPLAY, CH_DISPLAY) if cut == "display"
-                else (SEAM_SMALL, CH_SMALL))
-    s = size / G
-    return (_rounded_rect(x, y, size, size, radius * s)
-            + _poly(channel(seam, ch), s, x, y))
-
-
 def svg(body, w, h, vb=None, extra=""):
     vb = vb or f"0 0 {w} {h}"
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" '
@@ -128,152 +116,192 @@ def write(name, text):
     open(os.path.join(HERE, name), "w").write(text)
 
 
-def glyph(fill, size, x=0.0, y=0.0, cut="display", radius=RADIUS, extra=""):
-    return (f'  <path fill="{fill}" fill-rule="evenodd"{extra} '
-            f'd="{mark_path(size, x, y, cut, radius)}"/>')
+def glyph(size, x=0.0, y=0.0, cut="display", stroke=NAVY, answer=RED,
+          tints=TINT_LIGHT, indent="  ", classed=False):
+    """The mark: four boundary districts and the answer cell, as five rects.
+
+    Display cut: boundaries outlined in `stroke`, answer filled in `answer`.
+    Small cut:   boundaries FILLED, alternating `tints`, answer filled in `answer`.
+
+    `classed` adds a d1..d5 class to each rect. Fill and stroke stay on the element as
+    presentation attributes, which lose to any stylesheet rule — so a class is all a
+    file needs to restate its colours under `prefers-color-scheme: dark`.
+    """
+    s = size / G
+    sw = STROKE * s
+    out = []
+    for i, (dx, dy, dw, dh) in enumerate(DISTRICTS):
+        rx, ry, rw, rh = x + dx * s, y + dy * s, dw * s, dh * s
+        cls = f' class="d{i + 1}"' if classed else ""
+        if i == ANSWER:
+            paint = f'fill="{answer}"'
+        elif cut == "display":
+            # The stroke is centred, so the rect is drawn inset half a stroke on every
+            # side; drawn on the nominal edge, the outer districts would spill half a
+            # stroke past the mark's own bounding box.
+            rx, ry, rw, rh = rx + sw / 2, ry + sw / 2, rw - sw, rh - sw
+            paint = f'fill="none" stroke="{stroke}" stroke-width="{n(sw)}"'
+        else:
+            paint = f'fill="{tints[i % 2]}"'
+        out.append(f'{indent}<rect{cls} x="{n(rx)}" y="{n(ry)}" width="{n(rw)}" '
+                   f'height="{n(rh)}" {paint}></rect>')
+    return "\n".join(out)
 
 
 LABEL = ' role="img" aria-label="Daily District"'
+VB = f"0 0 {n(G)} {n(G)}"
+
+
+def mark_svg(**kw):
+    return svg(glyph(G, **kw), 512, 512, vb=VB, extra=LABEL)
+
 
 # ---------------------------------------------------------------- 1. the mark
-write("mark.svg", svg(glyph("currentColor", G), 512, 512,
-                      vb=f"0 0 {G:g} {G:g}", extra=LABEL))
-write("mark-small.svg", svg(glyph("currentColor", G, cut="small"), 512, 512,
-                            vb=f"0 0 {G:g} {G:g}", extra=LABEL))
-# Square-cornered cut, for contexts that impose their own shape.
-write("mark-sharp.svg", svg(glyph("currentColor", G, radius=0), 512, 512,
-                            vb=f"0 0 {G:g} {G:g}", extra=LABEL))
-# Explicitly red: an <img> can't reach currentColor, so every <img src> use needs a
-# baked fill. The channel stays a hole, so it picks up whatever sits behind — which
-# means this one file is correct on light and dark grounds alike.
-write("mark-red.svg", svg(glyph(RED, G), 512, 512,
-                          vb=f"0 0 {G:g} {G:g}", extra=LABEL))
-write("mark-white.svg", svg(glyph("#FFFFFF", G), 512, 512,
-                            vb=f"0 0 {G:g} {G:g}", extra=LABEL))
+write("mark.svg", mark_svg())                                       # primary
+write("mark-mono.svg", mark_svg(stroke="currentColor", answer="currentColor"))
+write("mark-reversed.svg", mark_svg(stroke=CREAM, answer=RED_LIFT))  # dark grounds
+write("mark-knockout.svg", mark_svg(stroke=CREAM, answer=CREAM))     # red panels
+# The site's /logo.svg is a copy of this file. It is the primary mark baked, byte for
+# byte — mark.svg would serve, but the adoption step copies out by this name and has
+# since the first mark, so the name stays.
+write("mark-red.svg", mark_svg())
+write("mark-small.svg", mark_svg(cut="small"))
+write("mark-small-reversed.svg", mark_svg(cut="small", answer=RED_LIFT,
+                                          tints=TINT_DARK))
 
 
 # ------------------------------------------------------- 2. favicon (SVG, ICO)
-# Small cut, minimal padding — at 16px every pixel of the seam counts. The embedded
-# stylesheet lets the favicon answer the browser's own dark mode.
-_fav = mark_path(456, 28, 28, cut="small")
+# Small cut, minimal padding — at 16px every pixel counts. The embedded stylesheet
+# restates the three fills so the favicon answers the browser's own dark mode.
 write("favicon.svg", svg(
     '  <style>\n'
-    f'    path {{ fill: {RED}; }}\n'
-    f'    @media (prefers-color-scheme: dark) {{ path {{ fill: {RED_LIFT}; }} }}\n'
+    '    @media (prefers-color-scheme: dark) {\n'
+    f'      .d1, .d5 {{ fill: {TINT_DARK[0]}; }}\n'
+    f'      .d2, .d4 {{ fill: {TINT_DARK[1]}; }}\n'
+    f'      .d3 {{ fill: {RED_LIFT}; }}\n'
+    '    }\n'
     '  </style>\n'
-    f'  <path fill-rule="evenodd" d="{_fav}"/>', 512, 512, extra=LABEL))
-write("favicon-small-flat.svg", svg(
-    f'  <path fill="{RED}" fill-rule="evenodd" d="{mark_path(456, 28, 28, cut="small")}"/>',
-    512, 512))
-write("favicon-display-flat.svg", svg(
-    f'  <path fill="{RED}" fill-rule="evenodd" d="{mark_path(456, 28, 28)}"/>',
-    512, 512))
+    + glyph(456, 28, 28, cut="small", classed=True), 512, 512, extra=LABEL))
+# Flat feeds for the .ico frames: no classes, no media query, since the rasteriser
+# renders these directly and would never resolve either.
+write("favicon-small-flat.svg", svg(glyph(456, 28, 28, cut="small"), 512, 512))
+write("favicon-display-flat.svg", svg(glyph(456, 28, 28), 512, 512))
 
 
 # --------------------------------------------------------------- 3. app icons
-def app_icon(district, seam, radius_px, cut="display"):
-    """The mark IS the tile — the districts run to the icon edge rather than floating
-    inside a second square, which would read as a box in a box.
+def app_icon(plate, radius_px, pad, stroke=NAVY, answer=RED, tints=TINT_LIGHT):
+    """A plate in the ground colour, with the mark centred on it.
 
-    Two layers: a solid plate in the seam colour, then the mark on top. The mark's
-    channel is a hole, so the plate is what shows through it — the seam can't be left
-    transparent here or a home screen wallpaper would show through the middle.
+    The mark is opaque, so unlike the seam mark this replaces the plate is purely a
+    ground rather than something showing through the artwork. It is still needed: a
+    transparent tile would put a home screen wallpaper behind the districts.
+
+    The mark is inset rather than full-bleed. Its bounding box is a full square, so on
+    a rounded tile its corner districts would sit outside the corner arc.
     """
-    r_cells = radius_px / (512 / G)
-    return svg(f'  <path fill="{seam}" '
+    inset = 512 * pad
+    return svg(f'  <path fill="{plate}" '
                f'd="{_rounded_rect(0, 0, 512, 512, radius_px)}"/>\n'
-               + glyph(district, 512, 0, 0, cut, r_cells), 512, 512)
+               + glyph(512 - 2 * inset, inset, inset, stroke=stroke, answer=answer,
+                       tints=tints), 512, 512)
 
 
-def maskable_icon(ground, district, seam):
-    """Android crops maskable icons to a circle inscribed in the 80% safe zone. A
-    full-bleed mark would have its seam clipped top and bottom, visually rejoining the
-    two districts and destroying the whole idea — so the mark is sized to sit entirely
-    within that circle, and the ground carries the bleed."""
+def maskable_icon(ground, plate, stroke=NAVY, answer=RED):
+    """Android crops maskable icons to a circle inscribed in the 80% safe zone, so the
+    mark is sized to sit entirely within that circle and the ground carries the bleed.
+    A full-bleed mark would lose its outer districts to the crop, leaving the answer
+    cell floating with nothing to be an answer to."""
     safe_d = 512 * 0.8                       # safe circle diameter
     side = safe_d / (2 ** 0.5)               # largest square inside it
     inset = (512 - side) / 2
     r_px = 0.10 * side
-    r_cells = r_px / (side / G)
+    pad = 0.08 * side                        # clears the plate's own corner arc
     return svg(f'  <rect width="512" height="512" fill="{ground}"/>\n'
-               f'  <path fill="{seam}" '
+               f'  <path fill="{plate}" '
                f'd="{_rounded_rect(inset, inset, side, side, r_px)}"/>\n'
-               + glyph(district, side, inset, inset, "display", r_cells), 512, 512)
+               + glyph(side - 2 * pad, inset + pad, inset + pad,
+                       stroke=stroke, answer=answer), 512, 512)
 
 
-write("icon-tile.svg", app_icon(RED, CREAM, 112))                 # PWA "any"
-write("icon-ios.svg", app_icon(RED, CREAM, 0))                    # iOS adds a squircle
-write("icon-maskable.svg", maskable_icon(RED, CREAM, RED))
-write("icon-tile-cream.svg", app_icon(CREAM, RED, 112))
-write("icon-tile-navy.svg", app_icon(NAVY, CREAM, 112))
+write("icon-tile.svg", app_icon(CREAM, 112, TILE_PAD))                  # PWA "any"
+write("icon-ios.svg", app_icon(CREAM, 0, IOS_PAD))       # iOS adds its own squircle
+write("icon-maskable.svg", maskable_icon(RED, CREAM))
+write("icon-tile-cream.svg", app_icon(RED, 112, TILE_PAD,               # knockout
+                                      stroke=CREAM, answer=CREAM))
+write("icon-tile-navy.svg", app_icon(NAVY, 112, TILE_PAD,               # reversed
+                                     stroke=CREAM, answer=RED_LIFT))
 
 
 # ----------------------------------------------------------------- 4. lockups
 _wm = open(os.path.join(ROOT, "wordmark.svg")).read()
 WORDMARK_D = re.search(r'\sd="([^"]+)"', _wm).group(1)
-WM_X0, WM_Y0, WM_X1, WM_Y1 = 2.156, 11.572, 243.904, 52.756   # inkscape --query-all
-WM_CAP_TOP, WM_BASELINE = 11.572, 44.0
-CAP = WM_BASELINE - WM_CAP_TOP
-WM_W, WM_H = WM_X1 - WM_X0, WM_Y1 - WM_Y0
+WM_VB_W, WM_VB_H = 260.0, 56.0     # wordmark.svg viewBox
+
+GAP_H = 14.0        # mark to wordmark, horizontal lockup
+WM_RATIO_H = 0.74   # wordmark height as a fraction of mark height
+GAP_V = 12.0        # mark to wordmark, stacked lockup
+WM_RATIO_V = 2.29   # wordmark width as a multiple of mark width
 
 
-def lockup_horizontal(mark_fill, word_fill):
-    mh = CAP * 1.58
-    mw = mh
-    gap = CAP * 0.68
-    pad = 6.0
-    my = WM_CAP_TOP + CAP / 2 - mh / 2            # optically centred on the cap band
-    dy = pad - min(my, WM_Y0)
-    h = (max(my + mh, WM_Y1) - min(my, WM_Y0)) + 2 * pad
-    w = pad + mw + gap + WM_W + pad
+def lockup_horizontal(stroke, answer, word):
+    """Mark at full size, wordmark scaled to 0.74 of it and centred against it."""
+    s = G * WM_RATIO_H / WM_VB_H
+    wx = G + GAP_H
+    wy = (G - WM_VB_H * s) / 2
+    w = wx + WM_VB_W * s
     return svg(
-        f'  <path fill="{mark_fill}" fill-rule="evenodd" '
-        f'd="{mark_path(mh, pad, my + dy, radius=RADIUS)}"/>\n'
-        f'  <path fill="{word_fill}" '
-        f'transform="translate({pad + mw + gap - WM_X0:.2f} {dy:.2f})" '
-        f'd="{WORDMARK_D}"/>',
-        round(w), round(h), vb=f"0 0 {w:.2f} {h:.2f}", extra=LABEL)
+        glyph(G, stroke=stroke, answer=answer) + "\n"
+        f'  <g transform="translate({t(wx)} {t(wy)}) scale({round(s, 5)})">'
+        f'<path fill="{word}" d="{WORDMARK_D}"></path></g>',
+        round(w), round(G), vb=f"0 0 {n(round(w, 1))} {n(G)}", extra=LABEL)
 
 
-def lockup_stacked(mark_fill, word_fill):
-    mw = WM_W * 0.30
-    gap = CAP * 0.78
-    h = mw + gap + WM_H
+def lockup_stacked(stroke, answer, word):
+    """Wordmark set to 2.29 mark widths, mark centred above it."""
+    ww = G * WM_RATIO_V
+    s = ww / WM_VB_W
+    wy = G + GAP_V
+    h = wy + WM_VB_H * s
     return svg(
-        f'  <path fill="{mark_fill}" fill-rule="evenodd" '
-        f'd="{mark_path(mw, (WM_W - mw) / 2, 0.0, radius=RADIUS)}"/>\n'
-        f'  <path fill="{word_fill}" '
-        f'transform="translate({-WM_X0:.2f} {mw + gap - WM_Y0:.2f})" '
-        f'd="{WORDMARK_D}"/>',
-        round(WM_W), round(h), vb=f"0 0 {WM_W:.2f} {h:.2f}", extra=LABEL)
+        f'  <g transform="translate({t((ww - G) / 2)} 0)">\n'
+        + glyph(G, stroke=stroke, answer=answer, indent="    ") + "\n"
+        '  </g>\n'
+        f'  <g transform="translate(0 {t(wy)}) scale({round(s, 5)})">'
+        f'<path fill="{word}" d="{WORDMARK_D}"></path></g>',
+        round(ww), round(h),
+        vb=f"0 0 {n(round(ww, 1))} {n(round(h, 1))}", extra=LABEL)
 
 
-write("lockup-horizontal.svg", lockup_horizontal("currentColor", "currentColor"))
-write("lockup-horizontal-red.svg", lockup_horizontal(RED, INK))
-write("lockup-horizontal-reversed.svg", lockup_horizontal("#FFFFFF", "#FFFFFF"))
-write("lockup-stacked.svg", lockup_stacked("currentColor", "currentColor"))
-write("lockup-stacked-red.svg", lockup_stacked(RED, INK))
-write("lockup-stacked-reversed.svg", lockup_stacked("#FFFFFF", "#FFFFFF"))
+write("lockup-horizontal.svg", lockup_horizontal(NAVY, RED, NAVY))     # primary
+write("lockup-horizontal-mono.svg",
+      lockup_horizontal("currentColor", "currentColor", "currentColor"))
+write("lockup-horizontal-reversed.svg", lockup_horizontal(CREAM, RED_LIFT, CREAM))
+write("lockup-stacked.svg", lockup_stacked(NAVY, RED, NAVY))
+write("lockup-stacked-mono.svg",
+      lockup_stacked("currentColor", "currentColor", "currentColor"))
+write("lockup-stacked-reversed.svg", lockup_stacked(CREAM, RED_LIFT, CREAM))
 write("wordmark.svg", _wm)
 
 
 # ------------------------------------------------------------- 5. social card
 def og_card():
     w, h = 1200.0, 630.0
-    # A low-opacity filled ghost, oversized and bleeding off the right edge. Fading
-    # off-canvas reads fine for a filled shape; a STROKED outline treated the same way
-    # reads as a cut-off picture frame instead, which is why this is fill, not stroke.
+    # A low-opacity ghost, oversized and bleeding off the right edge. It uses the SMALL
+    # (filled) cut in one colour: a filled shape fading off-canvas reads fine, where
+    # the display cut's outlines treated the same way read as cut-off picture frames.
     gs = 470.0
     gx = 838.0
-    inner = lockup_horizontal(RED, INK)
+    inner = lockup_horizontal(NAVY, RED, NAVY)
     m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', inner)
     lvw, lvh = float(m.group(1)), float(m.group(2))
     ls = 700.0 / lvw
     body = re.search(r'>\n(.*)\n</svg>', inner, re.S).group(1)
     return svg(
         f'  <rect width="{w:.0f}" height="{h:.0f}" fill="{CREAM}"/>\n'
-        f'  <path fill="{RED}" fill-opacity="0.13" fill-rule="evenodd" '
-        f'd="{mark_path(gs, gx, (h - gs) / 2)}"/>\n'
+        f'  <g fill-opacity="0.13">\n'
+        + glyph(gs, gx, (h - gs) / 2, cut="small", answer=RED, tints=(RED, RED),
+                indent="    ") + "\n"
+        f'  </g>\n'
         f'  <g transform="translate(96 {(h - lvh * ls) / 2 - 30:.1f}) scale({ls:.4f})">\n'
         f'{body}\n  </g>\n'
         f'  <text x="98" y="{h / 2 + 76:.0f}" font-family="Barlow, Helvetica, Arial, '
@@ -289,10 +317,29 @@ write("og-image.svg", og_card())
 
 
 # ------------------------------------------------------------------ 6. rasters
+def _rasteriser():
+    """First of inkscape / rsvg-convert / cairosvg that this machine actually has."""
+    for exe, argv in (("inkscape", lambda s, o, w, h: [
+                          "inkscape", s, "-w", str(w), "-h", str(h), "-o", o]),
+                      ("rsvg-convert", lambda s, o, w, h: [
+                          "rsvg-convert", s, "-w", str(w), "-h", str(h), "-o", o])):
+        if shutil.which(exe):
+            return lambda s, o, w, h: subprocess.run(argv(s, o, w, h),
+                                                     capture_output=True, check=True)
+    import cairosvg  # noqa: E402
+    return lambda s, o, w, h: cairosvg.svg2png(url=s, write_to=o,
+                                               output_width=w, output_height=h)
+
+
+RASTERISE = None
+
+
 def png(src, out, size, out_dir=DIST, height=None):
-    subprocess.run(["inkscape", os.path.join(HERE, src), "-w", str(size),
-                    "-h", str(height or size), "-o", os.path.join(out_dir, out)],
-                   capture_output=True, check=True)
+    global RASTERISE
+    if RASTERISE is None:
+        RASTERISE = _rasteriser()
+    RASTERISE(os.path.join(HERE, src), os.path.join(out_dir, out),
+              size, height or size)
 
 
 def build_rasters():

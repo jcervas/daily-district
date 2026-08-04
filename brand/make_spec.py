@@ -7,7 +7,6 @@ tells you whether the mark survives.
 """
 import base64
 import os
-import subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PX = os.path.join(HERE, "dist", "px")
@@ -16,13 +15,12 @@ os.makedirs(PX, exist_ok=True)
 import build as B  # noqa: E402  — one source of geometry
 
 RED, INK, NAVY, CREAM = B.RED, B.INK, B.NAVY, B.CREAM
+RED_LIFT = B.RED_LIFT
 G = B.G
 
 
 def render(src, name, size, height=None):
-    subprocess.run(["inkscape", os.path.join(HERE, src), "-w", str(size),
-                    "-h", str(height or size), "-o", os.path.join(PX, name)],
-                   capture_output=True, check=True)
+    B.png(src, name, size, out_dir=PX, height=height)
     return os.path.join(PX, name)
 
 
@@ -30,7 +28,8 @@ def b64(path):
     return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
 
 
-SMALL = {s: b64(render("favicon.svg", f"s{s}.png", s)) for s in (16, 20, 24, 32)}
+SMALL = {s: b64(render("favicon-small-flat.svg", f"s{s}.png", s))
+         for s in (16, 20, 24, 32)}
 DISPLAY = {s: b64(render("favicon-display-flat.svg", f"d{s}.png", s))
            for s in (16, 20, 24, 32, 48, 64)}
 TILE192 = b64(render("icon-tile.svg", "t192.png", 192))
@@ -38,62 +37,73 @@ IOS180 = b64(render("icon-ios.svg", "i180.png", 180))
 MASK = b64(render("icon-maskable.svg", "mask.png", 192))
 
 
-def mark(fill, cut="display", radius=B.RADIUS):
-    return (f'<svg viewBox="0 0 {G:g} {G:g}" fill="{fill}" aria-hidden="true">'
-            f'<path fill-rule="evenodd" d="{B.mark_path(G, cut=cut, radius=radius)}"/>'
-            f'</svg>')
+def mark(stroke, answer, cut="display", tints=("var(--tintA)", "var(--tintB)")):
+    """The mark inline, at the sheet's own colours."""
+    return (f'<svg viewBox="{B.VB}" aria-hidden="true">\n'
+            + B.glyph(G, cut=cut, stroke=stroke, answer=answer, tints=tints)
+            + '\n</svg>')
 
 
-def construction_svg(seam, ch, label):
-    """The mark as a technical drawing: grid visible through a washed fill, with the
-    channel dimensioned across a vertical run near the top."""
-    c = 24.0
-    ox, oy = 34.0, 30.0
+def construction_svg(cut):
+    """The mark as a technical drawing: the 3x3 lattice ruled through it, with the
+    gutter dimensioned across the gap between the first two columns."""
+    c = 7.4                                   # px per unit
+    ox, oy = 30.0, 26.0
     w, h = ox * 2 + G * c, oy * 2 + G * c
+
+    # Guides on the lattice boundaries only — the uneven 21/2/14/2/14 rhythm is the
+    # point, and a uniform 53-line grid would hide it.
     lines = []
-    for i in range(int(G) + 1):
-        x = ox + i * c
-        y = oy + i * c
-        lines.append(f'<line x1="{x:.0f}" y1="{oy:.0f}" x2="{x:.0f}" '
-                     f'y2="{oy + G * c:.0f}"/>')
-        lines.append(f'<line x1="{ox:.0f}" y1="{y:.0f}" x2="{ox + G * c:.0f}" '
-                     f'y2="{y:.0f}"/>')
+    for v in (0, 21, 23, 37, 39, 53):
+        x, y = ox + v * c, oy + v * c
+        lines.append(f'<line x1="{x:.1f}" y1="{oy:.1f}" '
+                     f'x2="{x:.1f}" y2="{oy + G * c:.1f}"/>')
+        lines.append(f'<line x1="{ox:.1f}" y1="{y:.1f}" '
+                     f'x2="{ox + G * c:.1f}" y2="{y:.1f}"/>')
 
-    dy = oy + 1.4 * c
-    x1, x2 = ox + (seam[0][0] - ch / 2) * c, ox + (seam[0][0] + ch / 2) * c
-    dim = (f'<line x1="{x1:.0f}" y1="{dy:.0f}" x2="{x2:.0f}" y2="{dy:.0f}"/>'
-           f'<line x1="{x1:.0f}" y1="{dy - 6:.0f}" x2="{x1:.0f}" y2="{dy + 6:.0f}"/>'
-           f'<line x1="{x2:.0f}" y1="{dy - 6:.0f}" x2="{x2:.0f}" y2="{dy + 6:.0f}"/>'
-           f'<text x="{(x1 + x2) / 2:.0f}" y="{dy - 14:.0f}" text-anchor="middle">'
-           f'{ch}</text>')
+    # The 2-unit gutter, dimensioned between column 1 and column 2.
+    x1, x2 = ox + 21 * c, ox + 23 * c
+    dy = oy + G * c + 15
+    dim = (f'<line x1="{x1:.1f}" y1="{dy:.1f}" x2="{x2:.1f}" y2="{dy:.1f}"/>'
+           f'<line x1="{x1:.1f}" y1="{dy - 5:.1f}" x2="{x1:.1f}" y2="{dy + 5:.1f}"/>'
+           f'<line x1="{x2:.1f}" y1="{dy - 5:.1f}" x2="{x2:.1f}" y2="{dy + 5:.1f}"/>'
+           f'<text x="{(x1 + x2) / 2:.1f}" y="{dy - 10:.1f}" text-anchor="middle">'
+           f'2</text>')
 
-    return f'''<svg viewBox="0 0 {w:.0f} {h:.0f}" class="cons" aria-hidden="true">
+    glyph = B.glyph(G * c, ox, oy, cut=cut, stroke="var(--red)", answer="var(--red)",
+                    tints=("var(--tintA)", "var(--tintB)"), classed=True, indent="    ")
+    return f'''<svg viewBox="0 0 {w:.0f} {h + 22:.0f}" class="cons {cut}" aria-hidden="true">
   <g class="grid">{''.join(lines)}</g>
-  <path class="fill" fill-rule="evenodd" vector-effect="non-scaling-stroke"
-        d="{B.mark_path(G * c, ox, oy, cut=label, radius=0)}"/>
+  <g class="mk">
+{glyph}
+  </g>
   <g class="dim">{dim}</g>
 </svg>'''
 
 
-LOCKUP = B.lockup_horizontal(RED, "var(--ink)")
-LOCKUP_STACK = B.lockup_stacked(RED, "var(--ink)")
+LOCKUP = B.lockup_horizontal("var(--navy)", "var(--red)", "var(--ink)")
+LOCKUP_STACK = B.lockup_stacked("var(--navy)", "var(--red)", "var(--ink)")
 
 HTML = f'''<title>Daily District — Logo System</title>
 <style>
   :root {{
     --ground:#F4F3F1; --panel:#FFFFFF; --ink:#15171B; --muted:#7B7378;
     --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; --grid:#D8D3CC;
+    --tintA:{B.TINT_LIGHT[0]}; --tintB:{B.TINT_LIGHT[1]};
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   }}
   @media (prefers-color-scheme:dark) {{
     :root {{ --ground:#131417; --panel:#1B1D22; --ink:#ECEAE7; --muted:#8E868C;
-             --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; --grid:#33373F; }}
+             --rule:#2C2F36; --red:{RED_LIFT}; --navy:#9FB4D6; --grid:#33373F;
+             --tintA:{B.TINT_DARK[0]}; --tintB:{B.TINT_DARK[1]}; }}
   }}
   :root[data-theme="dark"] {{ --ground:#131417; --panel:#1B1D22; --ink:#ECEAE7;
-    --muted:#8E868C; --rule:#2C2F36; --red:#FF3B57; --navy:#9FB4D6; --grid:#33373F; }}
+    --muted:#8E868C; --rule:#2C2F36; --red:{RED_LIFT}; --navy:#9FB4D6; --grid:#33373F;
+    --tintA:{B.TINT_DARK[0]}; --tintB:{B.TINT_DARK[1]}; }}
   :root[data-theme="light"] {{ --ground:#F4F3F1; --panel:#FFFFFF; --ink:#15171B;
-    --muted:#7B7378; --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; --grid:#D8D3CC; }}
+    --muted:#7B7378; --rule:#E3DFDA; --red:{RED}; --navy:{NAVY}; --grid:#D8D3CC;
+    --tintA:{B.TINT_LIGHT[0]}; --tintB:{B.TINT_LIGHT[1]}; }}
 
   body {{ background:var(--ground); color:var(--ink); font-family:var(--sans);
          line-height:1.55; -webkit-font-smoothing:antialiased; }}
@@ -122,8 +132,10 @@ HTML = f'''<title>Daily District — Logo System</title>
 
   .cons {{ width:100%; height:auto; display:block; }}
   .cons .grid line {{ stroke:var(--grid); stroke-width:1; }}
-  .cons .fill {{ fill:var(--red); fill-opacity:.15; stroke:var(--red);
-                 stroke-width:2; }}
+  .cons .mk rect {{ fill-opacity:.22; }}
+  .cons .mk .d3 {{ fill-opacity:1; }}
+  /* The small cut IS its tints — show them at strength, not washed back. */
+  .cons.small .mk rect {{ fill-opacity:1; }}
   .cons .dim line {{ stroke:var(--ink); stroke-width:1.4; }}
   .cons .dim text {{ font-family:var(--mono); font-size:12px; fill:var(--ink); }}
   .cuts {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -136,7 +148,7 @@ HTML = f'''<title>Daily District — Logo System</title>
   .rung {{ display:flex; flex-direction:column; align-items:center; gap:11px; }}
   .rung .true {{ display:flex; align-items:center; justify-content:center; height:66px; }}
   .rung img.mag {{ image-rendering:pixelated; border:1px solid var(--rule);
-                   border-radius:3px; background:var(--panel); }}
+                   border-radius:3px; background:#FFFFFF; }}
   .rung .cap {{ font-family:var(--mono); font-size:.7rem; color:var(--muted); }}
   .vs {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
          gap:22px; }}
@@ -194,42 +206,43 @@ HTML = f'''<title>Daily District — Logo System</title>
   <header class="hero">
     <div>
       <div class="eyebrow">Logo system</div>
-      <h1>One square, two districts.</h1>
-      <p class="lede" style="margin-top:14px">The mark depicts <em>districting</em> —
-      the act of drawing the line — rather than depicting a district. Every jog is a
-      right angle on a 12&times;12 cell grid, because congressional districts are
-      assembled from census blocks and real boundaries are all right angles and jogs.
-      Because every edge lands on a whole cell, it rasterises cleanly instead of
+      <h1>Five districts. One of them is today's.</h1>
+      <p class="lede" style="margin-top:14px">The mark is a districted map with an
+      answer sitting in it — which is the game — rather than a picture of one district.
+      The 3&times;3 lattice is deliberately uneven, because an even grid reads as a
+      word puzzle rather than a map, and the five districts interlock across it instead
+      of tiling. Every edge lands on a whole unit, so it rasterises cleanly instead of
       mushing.</p>
     </div>
-    <div class="mk">{mark("var(--red)")}</div>
+    <div class="mk">{mark("var(--navy)", "var(--red)")}</div>
   </header>
 
   <section>
     <div class="head">
       <div class="eyebrow">Construction</div>
-      <h2>One path, and the seam is a hole</h2>
+      <h2>Unequal columns, whole-unit edges</h2>
     </div>
     <div class="cuts">
       <div class="panel cut">
-        <div class="cap">Display cut &middot; 3 jogs &middot; 1.6 channel</div>
-        {construction_svg(B.SEAM_DISPLAY, B.CH_DISPLAY, "display")}
+        <div class="cap">Display cut &middot; 4 outlined + 1 filled</div>
+        {construction_svg("display")}
       </div>
       <div class="panel cut">
-        <div class="cap">Small cut &middot; 2 jogs &middot; 2.6 channel</div>
-        {construction_svg(B.SEAM_SMALL, B.CH_SMALL, "small")}
+        <div class="cap">Small cut &middot; all 5 filled</div>
+        {construction_svg("small")}
       </div>
     </div>
-    <p>The mark is built as a single path: the square, plus the channel as an
-    even&#8209;odd hole. That means the seam is always <em>transparent</em>, so one
-    file is correct on a light page, a dark page, or a photo — the channel simply
-    picks up whatever sits behind it. Only the outer corner radius changes between the
-    bare logo, the app tile and the maskable icon.</p>
-    <p class="note">Kept strictly upright. A prior diagonal variant turned the square
-    into a diamond with bent segments radiating from its centre and was pulled
-    immediately after it was flagged as reading too close to a hate symbol — never
-    rotate this mark or angle the outer square, regardless of how the seam itself is
-    drawn.</p>
+    <p>53&times;53 units. Columns 21&#8239;/&#8239;14&#8239;/&#8239;14 and rows
+    14&#8239;/&#8239;21&#8239;/&#8239;14, separated by 2&#8209;unit gutters. The five
+    districts span it 1&times;2, 2&times;1, 1&times;1, 1&times;2, 2&times;1. The
+    stroke is 1.6 units &mdash; 0.03 of the mark's width &mdash; centred on each
+    district's edge, so an outlined rect is drawn inset 0.8 on every side and nothing
+    spills past the mark's own bounding box.</p>
+    <p class="note">Kept strictly upright. A prior mark's diagonal variant was flagged
+    as reading too close to a hate symbol and pulled immediately; since then, anything
+    with a rotational or radiating structure is off the table. Never make the cells
+    equal, never colour the districts individually, and never outline the answer
+    cell.</p>
   </section>
 
   <section>
@@ -237,15 +250,13 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="eyebrow">Optical sizes</div>
       <h2>The small cut is redrawn, not shrunk</h2>
     </div>
-    <p>The mark carries its meaning in an interior seam, and interior detail is the
-    first thing lost when a mark is rasterised small. So there are two cuts, the way a
-    type family has optical sizes. Below 32px the display cut's three jogs collapse
-    into mush; the small cut drops to two jogs and widens the channel to compensate.
-    A one&#8209;jog cut was tried and rejected — it loses the interlock and reads as
-    two bars.</p>
+    <p>The display cut carries the mark in hairlines, and hairlines are the first thing
+    lost to a raster. Below 24px the outlines fill in and the five districts merge into
+    one block. The small cut drops stroke entirely and separates the districts by tint
+    instead &mdash; two greys alternating around a full-strength answer cell.</p>
     <div class="vs">
       <div class="panel mock">
-        <div class="cap">Display cut below 32px &mdash; muddy</div>
+        <div class="cap">Display cut below 24px &mdash; merges</div>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
@@ -261,9 +272,9 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div>
       </div>
     </div>
-    <p class="note">Real PNGs at those pixel sizes, magnified — not scaled vectors.
-    The <code>.ico</code> uses the small cut for its 16/24/32 frames and the display
-    cut from 48px up.</p>
+    <p class="note">Real PNGs at those pixel sizes, magnified &mdash; not scaled
+    vectors. The <code>.ico</code> uses the small cut for its 16/24/32 frames and the
+    display cut from 48px up.</p>
   </section>
 
   <section>
@@ -278,6 +289,9 @@ HTML = f'''<title>Daily District — Logo System</title>
         <div class="cap">{s}px</div>
       </div>""" for s in (24, 32, 48, 64))}
     </div>
+    <p class="note">Everywhere the site uses <code>/logo.svg</code> sits above the
+    floor: 32px in the game header, 34px on the district pages, 56px on the teaser and
+    64&ndash;104px on the welcome screen.</p>
   </section>
 
   <section>
@@ -314,9 +328,12 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div>
       </div>
     </div>
-    <p class="note">The maskable icon is sized to sit entirely inside Android's 80%
-    safe circle. A full-bleed version would have its seam clipped top and bottom,
-    visually rejoining the two districts and destroying the whole idea.</p>
+    <p class="note">The mark is inset inside the app-icon plates rather than run to
+    their edge: its bounding box is a full square, so on a rounded tile the corner
+    districts would sit outside the corner arc. The maskable icon is sized to fit
+    entirely inside Android's 80% safe circle &mdash; a full-bleed version would lose
+    its outer districts to the crop, leaving the answer cell with nothing to be an
+    answer to.</p>
   </section>
 
   <section>
@@ -325,9 +342,12 @@ HTML = f'''<title>Daily District — Logo System</title>
       <h2>Mark with wordmark</h2>
     </div>
     <div class="lockups">
-      <div class="panel lk-row">{LOCKUP}<span class="tag">Primary<br>lockup-horizontal-red.svg</span></div>
-      <div class="panel lk-row stack">{LOCKUP_STACK}<span class="tag">Stacked<br>lockup-stacked-red.svg</span></div>
+      <div class="panel lk-row">{LOCKUP}<span class="tag">Primary<br>lockup-horizontal.svg</span></div>
+      <div class="panel lk-row stack">{LOCKUP_STACK}<span class="tag">Stacked<br>lockup-stacked.svg</span></div>
     </div>
+    <p class="note">Horizontal: wordmark set to 0.74 of the mark's height, 14 units
+    clear of it, optically centred. Stacked: wordmark set to 2.29 mark widths, mark
+    centred above it with a 12&#8209;unit gap.</p>
   </section>
 
   <section>
@@ -335,18 +355,26 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="eyebrow">Colour &middot; existing tokens only</div>
       <h2>No new brand colours</h2>
     </div>
-    <p>Every value is already in <code>style.css</code>. On dark grounds the red lifts
-    to <code>#FF3B57</code>, because <code>#C41230</code> goes muddy below about 20%
-    ground luminance — a rendering correction rather than a new brand colour.</p>
+    <p>Red and navy are already in <code>style.css</code>. On dark grounds the answer
+    cell lifts to <code>#FF3B57</code>, because <code>#C41230</code> goes muddy below
+    about 20% ground luminance &mdash; a rendering correction rather than a new brand
+    colour. The two small&#8209;cut tints are mark&#8209;local: they exist only to keep
+    the districts apart once the outlines are gone.</p>
     <div class="swatches">
-      <div class="sw"><div class="chip" style="background:{CREAM}">{mark(RED)}</div>
+      <div class="sw"><div class="chip" style="background:{CREAM}">{mark(NAVY, RED)}</div>
         <div class="lbl">--bg &middot; {CREAM}</div></div>
-      <div class="sw"><div class="chip" style="background:{RED}">{mark(CREAM)}</div>
+      <div class="sw"><div class="chip" style="background:{RED}">{mark(CREAM, CREAM)}</div>
         <div class="lbl">--cmu-red &middot; {RED}</div></div>
-      <div class="sw"><div class="chip" style="background:{NAVY}">{mark(CREAM)}</div>
+      <div class="sw"><div class="chip" style="background:{NAVY}">{mark(CREAM, RED_LIFT)}</div>
         <div class="lbl">--cmu-navy &middot; {NAVY}</div></div>
-      <div class="sw"><div class="chip" style="background:{INK}">{mark("#FF3B57")}</div>
-        <div class="lbl">dark ground &middot; #FF3B57</div></div>
+      <div class="sw"><div class="chip" style="background:{INK}">{mark(CREAM, RED_LIFT)}</div>
+        <div class="lbl">dark ground &middot; {RED_LIFT}</div></div>
+      <div class="sw"><div class="chip" style="background:{CREAM}">
+        {mark(NAVY, RED, cut="small", tints=B.TINT_LIGHT)}</div>
+        <div class="lbl">small cut &middot; {B.TINT_LIGHT[0]} / {B.TINT_LIGHT[1]}</div></div>
+      <div class="sw"><div class="chip" style="background:{NAVY}">
+        {mark(CREAM, RED_LIFT, cut="small", tints=B.TINT_DARK)}</div>
+        <div class="lbl">small cut, dark &middot; {B.TINT_DARK[0]} / {B.TINT_DARK[1]}</div></div>
     </div>
   </section>
 
@@ -357,17 +385,20 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
-      <tr><td>Clear space</td><td class="f">1 cell = mark size / 12</td>
-          <td>The seam needs breathing room or it reads as part of the neighbour.</td></tr>
+      <tr><td>Clear space</td><td class="f">1 lattice unit = mark size / 3</td>
+          <td>Anything closer and the outer districts read as part of the neighbour.</td></tr>
       <tr><td>Minimum, small cut</td><td class="f">16px</td>
-          <td>Below this the 2.6-cell channel drops under 2px and the halves fuse.</td></tr>
-      <tr><td>Switch cuts at</td><td class="f">32px</td>
+          <td>Below this the 2-unit gutters drop under a pixel and the districts fuse.</td></tr>
+      <tr><td>Switch cuts at</td><td class="f">24px</td>
           <td>Display cut above, small cut at and below.</td></tr>
+      <tr><td>Minimum stroke</td><td class="f">1 device pixel</td>
+          <td>A sub-pixel hairline is what forces the small cut in the first place.</td></tr>
       <tr><td>Minimum, full lockup</td><td class="f">120px wide</td>
           <td>Set by the wordmark's counters, not the mark.</td></tr>
       <tr><td>Never</td><td class="f">&mdash;</td>
-          <td>Rotate it, fill the channel with a solid colour instead of leaving it
-              open, or re-space the jogs. The seam is the mark.</td></tr>
+          <td>Rotate the lattice, make the cells equal, colour the districts
+              individually, fill the boundaries in the display cut, or outline the
+              answer cell.</td></tr>
     </table></div>
   </section>
 
@@ -378,17 +409,20 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>File</th><th>Use</th></tr>
-      <tr><td class="f">mark.svg</td><td><code>currentColor</code>, display cut — inline in HTML.</td></tr>
-      <tr><td class="f">mark-red.svg</td><td>Baked red, for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> now is.</td></tr>
-      <tr><td class="f">mark-small.svg</td><td>Small cut, for use at or below 32px.</td></tr>
+      <tr><td class="f">mark.svg</td><td>Primary &mdash; navy boundaries, red answer cell.</td></tr>
+      <tr><td class="f">mark-mono.svg</td><td><code>currentColor</code>, one plate &mdash; stamps, embossing, single-plate print.</td></tr>
+      <tr><td class="f">mark-reversed.svg</td><td>Cream boundaries, <code>#FF3B57</code> answer &mdash; navy and dark grounds.</td></tr>
+      <tr><td class="f">mark-knockout.svg</td><td>All cream &mdash; red panels, won state.</td></tr>
+      <tr><td class="f">mark-red.svg</td><td>The primary mark baked, for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> now is.</td></tr>
+      <tr><td class="f">mark-small*.svg</td><td>Small cut, light and dark grounds. At or below 24px.</td></tr>
       <tr><td class="f">favicon.svg</td><td>Small cut; answers the browser's dark mode.</td></tr>
-      <tr><td class="f">icon-tile.svg</td><td>PWA icons, rounded tile.</td></tr>
-      <tr><td class="f">icon-ios.svg</td><td>Full-bleed; iOS applies its own squircle.</td></tr>
+      <tr><td class="f">icon-tile.svg</td><td>PWA icons, rounded plate.</td></tr>
+      <tr><td class="f">icon-ios.svg</td><td>iOS applies its own squircle.</td></tr>
       <tr><td class="f">icon-maskable.svg</td><td>Android maskable, inside the 80% safe circle.</td></tr>
-      <tr><td class="f">lockup-*.svg</td><td>Horizontal and stacked; red, reversed, currentColor.</td></tr>
+      <tr><td class="f">lockup-*.svg</td><td>Horizontal and stacked; primary, reversed, <code>currentColor</code>.</td></tr>
       <tr><td class="f">og-image.svg</td><td>1200&times;630 social card.</td></tr>
       <tr><td class="f">dist/</td><td>Rendered PNGs plus a 6-frame favicon.ico (16&ndash;128).</td></tr>
-      <tr><td class="f">build.py</td><td>Regenerates everything above from one seam definition.</td></tr>
+      <tr><td class="f">build.py</td><td>Regenerates everything above from one district table.</td></tr>
     </table></div>
   </section>
 

@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f4f4f2; }
+  a { color: #111; }
+  a:hover { color: #666; }
+</style>
+</helmet>
+
+<section style="padding: 64px 56px 40px; font-family: 'Archivo', sans-serif; color: #182C4B;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin-bottom: 44px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">Turn 5 &middot; outlined, in colour</div>
+    <h1 style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin: 0;">Outlined districts</h1>
+    <p style="font-size: 15px; line-height: 1.55; color: #55554f; margin: 0; text-wrap: pretty;">The <a href="#3c">3c</a> treatment with the real wordmark and CMU colour. Boundary lines instead of blocks, with today's district the only filled cell. Size ladder at the bottom: the outline holds to about 24px, so the filled <a href="#4a">4a</a> mark is the small cut below that.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 24px;">
+
+    <div id="5a" style="width: 420px; background: #F5F5F3; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #C41230; color: #fff; padding: 3px 7px;">5a</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">All red</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="border: 1.5px solid #C41230; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="border: 1.5px solid #C41230; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="border: 1.5px solid #C41230; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="border: 1.5px solid #C41230; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #C41230; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Lightest of the set. Single colour, so it prints one-plate.</div>
+    </div>
+
+    <div id="5b" style="width: 420px; background: #F5F5F3; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #182C4B; color: #fff; padding: 3px 7px;">5b</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Navy lines, red answer</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #182C4B; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Strongest hierarchy &mdash; the eye lands on the red cell first, then reads the map around it.</div>
+    </div>
+
+    <div id="5c" style="width: 420px; background: #182C4B; border: 1px solid #182C4B; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #2c3f5e;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #FF3B57; color: #182C4B; padding: 3px 7px;">5c</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #F5F5F3;">Reversed on navy</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="border: 1.5px solid #F5F5F3; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="border: 1.5px solid #F5F5F3; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #FF3B57; grid-column: 2; grid-row: 2;"></div>
+          <div style="border: 1.5px solid #F5F5F3; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="border: 1.5px solid #F5F5F3; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #F5F5F3; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8fa0bd; border-top: 1px solid #2c3f5e;">Hairlines thicken optically on dark, so this one reads heavier than 5a at the same weight.</div>
+    </div>
+
+    <div id="5d" style="width: 420px; background: #F5F5F3; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #182C4B; color: #fff; padding: 3px 7px;">5d</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Stacked</span>
+      </div>
+      <div style="padding: 36px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 27px 18px 18px; grid-template-rows: 18px 27px 18px; gap: 2.5px;">
+          <div style="border: 2px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="border: 2px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="border: 2px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="border: 2px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 156px; aspect-ratio: 260 / 56; background: #182C4B; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Centred lockup for the splash screen and the share card.</div>
+    </div>
+
+  </div>
+
+  <div style="background: #F5F5F3; border: 1px solid #e2e2dd; padding: 30px 40px; display: flex; align-items: flex-end; gap: 40px;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+        <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="border: 1.5px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #8a8a85;">51px</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="display: grid; grid-template-columns: 13px 9px 9px; grid-template-rows: 9px 13px 9px; gap: 1.5px;">
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #8a8a85;">34px</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="display: grid; grid-template-columns: 9px 6px 6px; grid-template-rows: 6px 9px 6px; gap: 1px;">
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #8a8a85;">23px</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <div style="display: grid; grid-template-columns: 6px 4px 4px; grid-template-rows: 4px 6px 4px; gap: 1px;">
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="border: 1px solid #182C4B; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #c0392b;">16px &mdash; mush</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding-left: 28px; border-left: 1px solid #e2e2dd;">
+      <div style="display: grid; grid-template-columns: 6px 4px 4px; grid-template-rows: 4px 6px 4px; gap: 1px;">
+        <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #8a8a85;">16px filled &mdash; holds</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 40px 56px; font-family: 'Archivo', sans-serif; color: #182C4B;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin-bottom: 44px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">Turn 4 &middot; real wordmark + CMU colour</div>
+    <h1 style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin: 0;">Colour lockups</h1>
+    <p style="font-size: 15px; line-height: 1.55; color: #55554f; margin: 0; text-wrap: pretty;">Now using the shipped <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">wordmark.svg</code> (Barlow 800 outlines) from the repo, and the brand tokens from <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">brand/README.md</code>: red <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">#C41230</code>, navy <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">#182C4B</code>, ground <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">#F5F5F3</code>, and <code style="font-family: 'DM Mono', monospace; font-size: 13.5px;">#FF3B57</code> on dark. The mark is the turn-3 unequal-districts tile; the wordmark is untouched.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 24px;">
+
+    <div id="4a" style="width: 420px; background: #F5F5F3; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #C41230; color: #fff; padding: 3px 7px;">4a</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Red on ground &mdash; primary</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #C41230; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Tints of CMU red for the unsolved districts. Site header and letterhead.</div>
+    </div>
+
+    <div id="4b" style="width: 420px; background: #F5F5F3; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #182C4B; color: #fff; padding: 3px 7px;">4b</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Navy field, red answer</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="background: #182C4B; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #4a5b76; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #182C4B; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #4a5b76; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #182C4B; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Both brand colours doing separate jobs: navy is the map, red is today's district.</div>
+    </div>
+
+    <div id="4c" style="width: 420px; background: #182C4B; border: 1px solid #182C4B; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #2c3f5e;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #FF3B57; color: #182C4B; padding: 3px 7px;">4c</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #F5F5F3;">Reversed on navy</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="background: #3a4c6b; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #56688a; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #FF3B57; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #3a4c6b; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #56688a; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #F5F5F3; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8fa0bd; border-top: 1px solid #2c3f5e;">Dark surfaces use #FF3B57, per the README &mdash; #C41230 goes muddy below ~20% ground luminance.</div>
+    </div>
+
+    <div id="4d" style="width: 420px; background: #C41230; border: 1px solid #C41230; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #d84058;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #F5F5F3; color: #C41230; padding: 3px 7px;">4d</span>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #fff;">Knockout on red</span>
+      </div>
+      <div style="padding: 44px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="background: #d9697c; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #e8a0ad; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #F5F5F3; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #d9697c; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #e8a0ad; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 176px; aspect-ratio: 260 / 56; background: #F5F5F3; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #f0c2ca; border-top: 1px solid #d84058;">For red panels &mdash; the share card, the won state.</div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+    <div style="background: #F5F5F3; border: 1px solid #e2e2dd; padding: 34px 40px; display: flex; align-items: center; gap: 34px;">
+      <div style="display: grid; grid-template-columns: 12px 8px 8px; grid-template-rows: 8px 12px 8px; gap: 1.5px;">
+        <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="display: grid; grid-template-columns: 6px 4px 4px; grid-template-rows: 4px 6px 4px; gap: 1px;">
+        <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">32px / 16px</div>
+    </div>
+    <div style="background: #F5F5F3; border: 1px solid #e2e2dd; padding: 34px 48px; display: flex; flex-direction: column; align-items: center; gap: 13px;">
+      <div style="display: grid; grid-template-columns: 27px 18px 18px; grid-template-rows: 18px 27px 18px; gap: 2.5px;">
+        <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="width: 150px; aspect-ratio: 260 / 56; background: #C41230; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+    </div>
+    <div style="width: 340px; background: #fff; border: 1px solid #e2e2dd; padding: 34px 36px; box-sizing: border-box; display: flex; flex-direction: column; gap: 26px;">
+      <div style="display: flex; align-items: center; gap: 13px;">
+        <div style="display: grid; grid-template-columns: 15px 10px 10px; grid-template-rows: 10px 15px 10px; gap: 1.5px;">
+          <div style="background: #e8b7bf; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #f3dade; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #C41230; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #e8b7bf; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #f3dade; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="width: 128px; aspect-ratio: 260 / 56; background: #C41230; mask: url(wordmark.svg) no-repeat center / contain; -webkit-mask: url(wordmark.svg) no-repeat center / contain;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 6px; background: #eeeeea; width: 88%;"></div>
+        <div style="height: 6px; background: #eeeeea; width: 96%;"></div>
+        <div style="height: 6px; background: #eeeeea; width: 64%;"></div>
+      </div>
+      <div style="border-top: 1px solid #e2e2dd; padding-top: 11px; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a85;">daily-district.com</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 40px 56px; font-family: 'Archivo', sans-serif; color: #111;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin-bottom: 48px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">Turn 3 &middot; refining <a href="#2a">2a</a></div>
+    <h1 style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin: 0;">Unequal Districts, four treatments</h1>
+    <p style="font-size: 15px; line-height: 1.55; color: #55554f; margin: 0; text-wrap: pretty;">Same five-district geometry, varying the tile contrast and the gap weight. <a href="#3d">3d</a> is my pick for the site header.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 40px;">
+
+    <div id="3a" style="width: 420px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">3a</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Original grey</span>
+        </div>
+      </div>
+      <div style="padding: 40px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 20px 13px 13px; grid-template-rows: 13px 20px 13px; gap: 3px;">
+          <div style="background: #d8d8d3; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">As shown in 2a. Light grey districts, one solved.</div>
+    </div>
+
+    <div id="3b" style="width: 420px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">3b</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">All black</span>
+        </div>
+      </div>
+      <div style="padding: 40px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 20px 13px 13px; grid-template-rows: 13px 20px 13px; gap: 3px;">
+          <div style="background: #111; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #111; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #fff; border: 1px solid #111; box-sizing: border-box; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #111; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #111; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">True one-colour: solid districts, the target knocked out. Survives a fax and a stamp.</div>
+    </div>
+
+    <div id="3c" style="width: 420px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">3c</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Outlined</span>
+        </div>
+      </div>
+      <div style="padding: 40px 22px; display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 20px 13px 13px; grid-template-rows: 13px 20px 13px; gap: 2px;">
+          <div style="border: 1.5px solid #111; box-sizing: border-box; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="border: 1.5px solid #111; box-sizing: border-box; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+          <div style="border: 1.5px solid #111; box-sizing: border-box; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="border: 1.5px solid #111; box-sizing: border-box; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Boundary lines instead of blocks &mdash; more map, less tile. Softest at small sizes.</div>
+    </div>
+
+    <div id="3d" style="width: 420px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 22px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">3d</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Two-tone, tight gaps</span>
+        </div>
+      </div>
+      <div style="padding: 40px 22px; display: flex; align-items: center; justify-content: center; gap: 15px;">
+        <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+          <div style="background: #b8b8b2; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #dcdcd7; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #b8b8b2; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #dcdcd7; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="padding: 13px 22px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Alternating greys make the five districts read as distinct territories, not one grid.</div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+    <div style="background: #111; padding: 40px 44px; display: flex; align-items: center; gap: 34px;">
+      <div style="display: grid; grid-template-columns: 21px 14px 14px; grid-template-rows: 14px 21px 14px; gap: 2px;">
+        <div style="background: #6b6b66; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #fff; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #6b6b66; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'Space Grotesk', sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -0.035em; color: #fff; line-height: 1;">Daily District</div>
+      <div style="display: grid; grid-template-columns: 12px 8px 8px; grid-template-rows: 8px 12px 8px; gap: 1.5px;">
+        <div style="background: #6b6b66; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #fff; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #6b6b66; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="display: grid; grid-template-columns: 6px 4px 4px; grid-template-rows: 4px 6px 4px; gap: 1px;">
+        <div style="background: #6b6b66; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #fff; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #6b6b66; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #3d3d39; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+    </div>
+    <div style="background: #fff; border: 1px solid #e2e2dd; padding: 40px 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px;">
+      <div style="display: grid; grid-template-columns: 27px 18px 18px; grid-template-rows: 18px 27px 18px; gap: 2.5px;">
+        <div style="background: #b8b8b2; grid-column: 1; grid-row: 1 / span 2;"></div>
+        <div style="background: #dcdcd7; grid-column: 2 / span 2; grid-row: 1;"></div>
+        <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+        <div style="background: #b8b8b2; grid-column: 3; grid-row: 2 / span 2;"></div>
+        <div style="background: #dcdcd7; grid-column: 1 / span 2; grid-row: 3;"></div>
+      </div>
+      <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-align: center;">Daily<br>District</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 40px 56px; font-family: 'Archivo', sans-serif; color: #111;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin-bottom: 48px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">Turn 2 &middot; district lines</div>
+    <h1 style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin: 0;">Boundary marks</h1>
+    <p style="font-size: 15px; line-height: 1.55; color: #55554f; margin: 0; text-wrap: pretty;">Same Space Grotesk wordmark as <a href="#1a">1a</a>, but the mark is now a shape cut by district lines rather than a uniform puzzle grid. Unequal cells and stepped borders read as redistricting, not Wordle.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+
+    <div id="2a" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">2a</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Unequal Districts</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 18px; border-bottom: 1px solid #f0f0ec;">
+        <div style="display: grid; grid-template-columns: 20px 13px 13px; grid-template-rows: 13px 20px 13px; gap: 3px;">
+          <div style="background: #d8d8d3; grid-column: 1; grid-row: 1 / span 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 2 / span 2; grid-row: 1;"></div>
+          <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 3; grid-row: 2 / span 2;"></div>
+          <div style="background: #d8d8d3; grid-column: 1 / span 2; grid-row: 3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="display: grid; grid-template-columns: 16px 10px 10px; grid-template-rows: 10px 16px 10px; gap: 2.5px;">
+            <div style="background: #d8d8d3; grid-column: 1; grid-row: 1 / span 2;"></div>
+            <div style="background: #d8d8d3; grid-column: 2 / span 2; grid-row: 1;"></div>
+            <div style="background: #111; grid-column: 2; grid-row: 2;"></div>
+            <div style="background: #d8d8d3; grid-column: 3; grid-row: 2 / span 2;"></div>
+            <div style="background: #d8d8d3; grid-column: 1 / span 2; grid-row: 3;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="display: grid; grid-template-columns: 13px 8px 8px; grid-template-rows: 8px 13px 8px; gap: 2px;">
+            <div style="background: #4a4a46; grid-column: 1; grid-row: 1 / span 2;"></div>
+            <div style="background: #4a4a46; grid-column: 2 / span 2; grid-row: 1;"></div>
+            <div style="background: #fff; grid-column: 2; grid-row: 2;"></div>
+            <div style="background: #4a4a46; grid-column: 3; grid-row: 2 / span 2;"></div>
+            <div style="background: #4a4a46; grid-column: 1 / span 2; grid-row: 3;"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 7px 4px 4px; grid-template-rows: 4px 7px 4px; gap: 1px;">
+            <div style="background: #4a4a46; grid-column: 1; grid-row: 1 / span 2;"></div>
+            <div style="background: #4a4a46; grid-column: 2 / span 2; grid-row: 1;"></div>
+            <div style="background: #fff; grid-column: 2; grid-row: 2;"></div>
+            <div style="background: #4a4a46; grid-column: 3; grid-row: 2 / span 2;"></div>
+            <div style="background: #4a4a46; grid-column: 1 / span 2; grid-row: 3;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Five districts of unequal size and shape, interlocking. No uniform cells, so it never reads as a word puzzle.</div>
+    </div>
+
+    <div id="2b" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">2b</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Stepped Border</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 18px; border-bottom: 1px solid #f0f0ec;">
+        <div style="width: 48px; height: 48px; background: #d8d8d3;">
+          <div style="width: 100%; height: 100%; background: #111; clip-path: polygon(0 40%, 40% 40%, 40% 0, 100% 0, 100% 60%, 60% 60%, 60% 100%, 0 100%);"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="width: 38px; height: 38px; background: #d8d8d3;">
+            <div style="width: 100%; height: 100%; background: #111; clip-path: polygon(0 40%, 40% 40%, 40% 0, 100% 0, 100% 60%, 60% 60%, 60% 100%, 0 100%);"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="width: 32px; height: 32px; background: #4a4a46;">
+            <div style="width: 100%; height: 100%; background: #fff; clip-path: polygon(0 40%, 40% 40%, 40% 0, 100% 0, 100% 60%, 60% 60%, 60% 100%, 0 100%);"></div>
+          </div>
+          <div style="width: 16px; height: 16px; background: #4a4a46;">
+            <div style="width: 100%; height: 100%; background: #fff; clip-path: polygon(0 40%, 40% 40%, 40% 0, 100% 0, 100% 60%, 60% 60%, 60% 100%, 0 100%);"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">A square split by a staircase boundary &mdash; the shape of a real district line. Strongest single-glyph option.</div>
+    </div>
+
+    <div id="2c" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">2c</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Outline &amp; Fill</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 18px; border-bottom: 1px solid #f0f0ec;">
+        <div style="width: 48px; height: 48px; border: 2.5px solid #111; box-sizing: border-box; position: relative;">
+          <div style="position: absolute; left: -2.5px; top: 45%; width: 62%; height: 2.5px; background: #111;"></div>
+          <div style="position: absolute; left: calc(62% - 2.5px); top: 45%; width: 2.5px; height: 55%; background: #111;"></div>
+          <div style="position: absolute; left: 22%; top: -2.5px; width: 2.5px; height: 47.5%; background: #111;"></div>
+          <div style="position: absolute; right: 6px; bottom: 6px; width: 10px; height: 10px; background: #111;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="width: 38px; height: 38px; border: 2px solid #111; box-sizing: border-box; position: relative;">
+            <div style="position: absolute; left: -2px; top: 45%; width: 62%; height: 2px; background: #111;"></div>
+            <div style="position: absolute; left: calc(62% - 2px); top: 45%; width: 2px; height: 55%; background: #111;"></div>
+            <div style="position: absolute; left: 22%; top: -2px; width: 2px; height: 47.5%; background: #111;"></div>
+            <div style="position: absolute; right: 5px; bottom: 5px; width: 8px; height: 8px; background: #111;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="width: 32px; height: 32px; border: 2px solid #fff; box-sizing: border-box; position: relative;">
+            <div style="position: absolute; left: -2px; top: 45%; width: 62%; height: 2px; background: #fff;"></div>
+            <div style="position: absolute; left: calc(62% - 2px); top: 45%; width: 2px; height: 55%; background: #fff;"></div>
+            <div style="position: absolute; left: 22%; top: -2px; width: 2px; height: 47.5%; background: #fff;"></div>
+            <div style="position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #fff;"></div>
+          </div>
+          <div style="width: 16px; height: 16px; border: 1.5px solid #fff; box-sizing: border-box; position: relative;">
+            <div style="position: absolute; left: -1.5px; top: 45%; width: 62%; height: 1.5px; background: #fff;"></div>
+            <div style="position: absolute; left: calc(62% - 1.5px); top: 45%; width: 1.5px; height: 55%; background: #fff;"></div>
+            <div style="position: absolute; right: 2px; bottom: 2px; width: 4px; height: 4px; background: #fff;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Thin boundary lines carving a territory, with today's district filled in. Lightest and most map-like.</div>
+    </div>
+
+  </div>
+</section>
+
+<section style="padding: 40px 56px 96px; font-family: 'Archivo', sans-serif; color: #111;">
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin-bottom: 48px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">Turn 1 &middot; six directions</div>
+    <h1 style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin: 0;">Daily District &mdash; logo directions</h1>
+    <p style="font-size: 15px; line-height: 1.55; color: #55554f; margin: 0; text-wrap: pretty;">Black and white only. Each direction shows a horizontal lockup, a stacked lockup, and the icon-only mark at favicon scale. All marks are built from plain geometry so they hold up at 16px and in single-colour print.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px;">
+
+    <div id="1a" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1a</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">The Grid</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 18px; border-bottom: 1px solid #f0f0ec;">
+        <div style="display: grid; grid-template-columns: repeat(3, 15px); grid-template-rows: repeat(3, 15px); gap: 3px;">
+          <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+          <div style="background: #d8d8d3;"></div><div style="background: #111;"></div><div style="background: #d8d8d3;"></div>
+          <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="display: grid; grid-template-columns: repeat(3, 12px); grid-template-rows: repeat(3, 12px); gap: 2.5px;">
+            <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+            <div style="background: #d8d8d3;"></div><div style="background: #111;"></div><div style="background: #d8d8d3;"></div>
+            <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="display: grid; grid-template-columns: repeat(3, 9px); grid-template-rows: repeat(3, 9px); gap: 2px;">
+            <div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div>
+            <div style="background: #4a4a46;"></div><div style="background: #fff;"></div><div style="background: #4a4a46;"></div>
+            <div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 4px); grid-template-rows: repeat(3, 4px); gap: 1px;">
+            <div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div>
+            <div style="background: #4a4a46;"></div><div style="background: #fff;"></div><div style="background: #4a4a46;"></div>
+            <div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div><div style="background: #4a4a46;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">One cell lit in nine &mdash; the district you're looking for. Reads as a puzzle grid and a map at once.</div>
+    </div>
+
+    <div id="1b" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1b</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Split Circle</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Archivo</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 1px solid #f0f0ec;">
+        <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(112deg, #111 0 50%, #fff 50% 100%); border: 2.5px solid #111; box-sizing: border-box;"></div>
+        <div style="font-family: 'Archivo', sans-serif; font-size: 27px; font-weight: 800; letter-spacing: 0.01em; text-transform: uppercase; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(112deg, #111 0 50%, #fff 50% 100%); border: 2.5px solid #111; box-sizing: border-box;"></div>
+          <div style="font-family: 'Archivo', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(112deg, #fff 0 50%, #111 50% 100%); border: 2px solid #fff; box-sizing: border-box;"></div>
+          <div style="width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(112deg, #fff 0 50%, #111 50% 100%); border: 1.5px solid #fff; box-sizing: border-box;"></div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">A circle cut by a boundary line. Districting in one shape; also reads as a day divided.</div>
+    </div>
+
+    <div id="1c" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1c</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Double D</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 1px solid #f0f0ec;">
+        <div style="display: flex;">
+          <div style="width: 24px; height: 46px; background: #111; border-radius: 46px 0 0 46px;"></div>
+          <div style="width: 24px; height: 46px; background: #111; border-radius: 0 46px 46px 0; margin-left: 3px;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; line-height: 1.25;">Daily<br>District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; border-right: 1px solid #f0f0ec;">
+          <div style="display: flex;">
+            <div style="width: 19px; height: 36px; background: #111; border-radius: 36px 0 0 36px;"></div>
+            <div style="width: 19px; height: 36px; background: #111; border-radius: 0 36px 36px 0; margin-left: 2.5px;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.3; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 36px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="display: flex;">
+            <div style="width: 16px; height: 30px; background: #fff; border-radius: 30px 0 0 30px;"></div>
+            <div style="width: 16px; height: 30px; background: #fff; border-radius: 0 30px 30px 0; margin-left: 2px;"></div>
+          </div>
+          <div style="display: flex;">
+            <div style="width: 8px; height: 15px; background: #fff; border-radius: 15px 0 0 15px;"></div>
+            <div style="width: 8px; height: 15px; background: #fff; border-radius: 0 15px 15px 0; margin-left: 1.5px;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Two half-rounds facing out: a DD monogram that also looks like two halves of a border.</div>
+    </div>
+
+    <div id="1d" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1d</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Drop Pin</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Archivo</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 1px solid #f0f0ec;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 34px; height: 34px; border-radius: 50%; border: 7px solid #111; box-sizing: border-box;"></div>
+          <div style="width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 14px solid #111; margin-top: -3px;"></div>
+        </div>
+        <div style="font-family: 'Archivo', sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1;">Daily District</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; border-right: 1px solid #f0f0ec;">
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; border: 5.5px solid #111; box-sizing: border-box;"></div>
+            <div style="width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 11px solid #111; margin-top: -2px;"></div>
+          </div>
+          <div style="font-family: 'Archivo', sans-serif; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; text-align: center;">Daily<br>District</div>
+        </div>
+        <div style="padding: 32px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; border: 5px solid #fff; box-sizing: border-box;"></div>
+            <div style="width: 0; height: 0; border-left: 6.5px solid transparent; border-right: 6.5px solid transparent; border-top: 10px solid #fff; margin-top: -2px;"></div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 12px; height: 12px; border-radius: 50%; border: 3px solid #fff; box-sizing: border-box;"></div>
+            <div style="width: 0; height: 0; border-left: 3.5px solid transparent; border-right: 3.5px solid transparent; border-top: 5px solid #fff; margin-top: -1px;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">The most literal of the six: a map pin, drawn as a ring and a triangle. Instantly legible, less distinctive.</div>
+    </div>
+
+    <div id="1e" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1e</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Masthead</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Instrument Serif</span>
+      </div>
+      <div style="padding: 40px 24px; display: flex; align-items: center; justify-content: center; gap: 16px; border-bottom: 1px solid #f0f0ec;">
+        <div style="width: 44px; height: 44px; background: #111; display: flex; align-items: center; justify-content: center;">
+          <div style="width: 18px; height: 18px; background: #fff; transform: rotate(45deg);"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-family: 'Instrument Serif', serif; font-size: 32px; letter-spacing: -0.01em; line-height: 1;">Daily District</div>
+          <div style="border-top: 1px solid #111; padding-top: 4px; font-family: 'DM Mono', monospace; font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase;">A geography guessing game</div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 30px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px; border-right: 1px solid #f0f0ec;">
+          <div style="width: 32px; height: 32px; background: #111; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 13px; height: 13px; background: #fff; transform: rotate(45deg);"></div>
+          </div>
+          <div style="font-family: 'Instrument Serif', serif; font-size: 24px; line-height: 1.05; text-align: center;">Daily<br>District</div>
+          <div style="border-top: 1px solid #111; padding-top: 5px; font-family: 'DM Mono', monospace; font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase;">Est. 2026</div>
+        </div>
+        <div style="padding: 30px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="width: 32px; height: 32px; border: 2px solid #fff; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 13px; height: 13px; background: #fff; transform: rotate(45deg);"></div>
+          </div>
+          <div style="width: 16px; height: 16px; border: 1.5px solid #fff; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 7px; height: 7px; background: #fff; transform: rotate(45deg);"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Newspaper masthead energy for the politics crowd. The diamond in a square is a pin abstracted to two shapes.</div>
+    </div>
+
+    <div id="1f" style="width: 560px; background: #fff; border: 1px solid #e2e2dd; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid #e2e2dd;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; background: #111; color: #fff; padding: 3px 7px;">1f</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Getting Warmer</span>
+        </div>
+        <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #8a8a85;">Space Grotesk</span>
+      </div>
+      <div style="padding: 44px 24px; display: flex; align-items: center; justify-content: center; gap: 18px; border-bottom: 1px solid #f0f0ec;">
+        <div style="display: flex; gap: 4px; align-items: flex-end;">
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #d8d8d3;"></div>
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #d8d8d3;"></div>
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #d8d8d3;"></div>
+          <div style="width: 16px; height: 16px; border-radius: 50%; background: #111;"></div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 29px; font-weight: 500; letter-spacing: -0.03em; line-height: 1;">daily district</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr;">
+        <div style="padding: 34px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; border-right: 1px solid #f0f0ec;">
+          <div style="display: flex; gap: 3.5px; align-items: flex-end;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #d8d8d3;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #d8d8d3;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #d8d8d3;"></div>
+            <div style="width: 13px; height: 13px; border-radius: 50%; background: #111;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.1; text-align: center;">daily<br>district</div>
+        </div>
+        <div style="padding: 34px 24px; display: flex; align-items: center; justify-content: center; gap: 28px; background: #111;">
+          <div style="display: flex; gap: 3px; align-items: flex-end;">
+            <div style="width: 7px; height: 7px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 7px; height: 7px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 7px; height: 7px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: #fff;"></div>
+          </div>
+          <div style="display: flex; gap: 1.5px; align-items: flex-end;">
+            <div style="width: 3.5px; height: 3.5px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 3.5px; height: 3.5px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 3.5px; height: 3.5px; border-radius: 50%; background: #55554f;"></div>
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #fff;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding: 14px 24px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.5; color: #8a8a85; border-top: 1px solid #f0f0ec;">Guesses getting warmer, ending on the answer. Playful and clearly a daily-game brand.</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 56px; display: flex; flex-direction: column; gap: 20px;">
+    <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8a85;">In context &mdash; letterhead</div>
+    <div style="display: flex; gap: 28px; flex-wrap: wrap;">
+      <div style="width: 420px; height: 545px; background: #fff; border: 1px solid #e2e2dd; padding: 44px 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 11px); grid-template-rows: repeat(3, 11px); gap: 2px;">
+            <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+            <div style="background: #d8d8d3;"></div><div style="background: #111;"></div><div style="background: #d8d8d3;"></div>
+            <div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div><div style="background: #d8d8d3;"></div>
+          </div>
+          <div style="font-family: 'Space Grotesk', sans-serif; font-size: 21px; font-weight: 700; letter-spacing: -0.03em;">Daily District</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <div style="height: 7px; background: #eeeeea; width: 88%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 96%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 72%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 91%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 40%;"></div>
+        </div>
+        <div style="border-top: 1px solid #e2e2dd; padding-top: 12px; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a85;">dailydistrict.com</div>
+      </div>
+      <div style="width: 420px; height: 545px; background: #fff; border: 1px solid #e2e2dd; padding: 44px 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+          <div style="width: 30px; height: 30px; background: #111; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 12px; height: 12px; background: #fff; transform: rotate(45deg);"></div>
+          </div>
+          <div style="font-family: 'Instrument Serif', serif; font-size: 27px; line-height: 1;">Daily District</div>
+          <div style="border-top: 1px solid #111; border-bottom: 1px solid #111; padding: 5px 0; width: 100%; text-align: center; font-family: 'DM Mono', monospace; font-size: 8.5px; letter-spacing: 0.26em; text-transform: uppercase;">A geography guessing game</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 9px; width: 100%;">
+          <div style="height: 7px; background: #eeeeea; width: 88%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 96%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 72%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 91%;"></div>
+          <div style="height: 7px; background: #eeeeea; width: 40%;"></div>
+        </div>
+        <div style="font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a85;">dailydistrict.com</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+</body>
+</html>
