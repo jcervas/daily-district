@@ -3424,10 +3424,18 @@ a:not(.got-it-btn):not(.donate-modal-cta):hover {
   .header-signin-btn .hdr-btn-icon { display: block; }
   /* Progressive hiding: hide header beta badge on narrow screens, but keep it on welcome modal */
   .header-inner .beta-badge { display: none; }
-  .game-logo { display: none; }   /* hide the US-map logo on mobile — saves header space */
+  /* The mark stays on mobile. It was hidden back when the logo was the wide US map,
+     which cost real header width; the district mark is a compact square and earns its
+     place. It is the WORDMARK that gives way first when the header runs out of room:
+     h1 clips with an ellipsis, and .game-logo is flex-shrink:0, so the mark survives
+     for as long as the header has any room at all. 26px matches the district pages'
+     mobile header and stays above the display cut's 24px floor. */
+  .game-logo { width: 26px; height: 26px; }
   /* Compact the icon row so the centered wordmark keeps room beside the groups. */
   .header-left { gap: 2px; }
   .btn-icon { width: 32px; height: 32px; }
+  /* Last resort: drop the wordmark and let the mark alone carry the header. Before the
+     mark was shown here this hid the only thing in the h1, leaving it empty. */
   @media (max-width: 300px) { .header-wordmark { display: none; } }
 
   /* ── Game layout: fit in one screen ── */
