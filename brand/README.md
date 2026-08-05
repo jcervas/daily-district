@@ -1,8 +1,8 @@
 # Daily District — logo system
 
-**Live on the site.** The district mark, shipped from the design handoff in
-`explorations/district-mark-handoff/`. It replaces the split-square seam mark. See
-[History](#history) before reaching for any of the earlier directions again.
+**Live on the site.** The district mark, built from a design handoff that is not kept
+in this repo — see [History](#history). It replaces the split-square seam mark; read
+that section before reaching for any of the earlier directions again.
 
 ## The mark
 
@@ -183,13 +183,16 @@ split-square work, 7–9 are non-letterform alternatives considered alongside th
 split-square, 10 (`make_compare.py`) is the head-to-head between the D, the
 split-square, and those alternatives, and the puzzle/outline rounds (`explore10.py`,
 `explore11.py`, `make_rings_review.py`, `rings-review.html`) cover the two later
-directions. `outline-mark-shipped-then-reverted/` holds that direction's full kit, and
-`district-mark-handoff/` is the design handoff this mark was built from — including
-the reference SVGs `build.py`'s output is verified against.
-The handoff arrived as `Daily District logo concepts.zip`. The zip itself is **not
-tracked** — `explorations/*.zip` is ignored, since the static site would otherwise
-serve it and `district-mark-handoff/` already holds the same 17 files unpacked. Keep
-the original in Drive; read the directory here.
+directions. `outline-mark-shipped-then-reverted/` holds that direction's full kit.
+
+The district mark's own design handoff — `Daily District logo concepts.zip` and the
+same 17 files unpacked — is **deliberately not in the repo**; both are ignored, since
+the site is served straight from it. The original lives in Drive. Its reference SVGs
+were what `build.py`'s output was checked against when the mark was built, and every
+generated file matched them exactly apart from the root `width`/`height` attributes
+this repo adds; from here on `build.py`'s district table is the source of truth. To
+re-run that check, drop the bundle back into `explorations/` and diff
+`brand/mark*.svg` and `brand/lockup-*.svg` against its `assets/`.
 
 Every candidate is rendered large and again as a true 16px raster, since a scaled-down
 vector always flatters a mark and only a real raster tells you whether it survives.

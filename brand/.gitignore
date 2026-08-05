@@ -6,6 +6,8 @@ explorations/compare/
 dist/px/
 __pycache__/
 .ico/
-# The design handoff as delivered. The unpacked copy in district-mark-handoff/
-# is the one to read, and this is a 51KB binary the static site would otherwise serve.
+# The design handoff the district mark was built from — the zip as delivered and the
+# same files unpacked. Kept out of the repo because the site is served straight from
+# it; the original lives in Drive. build.py is the source of truth for the geometry.
 explorations/*.zip
+explorations/district-mark-handoff/
