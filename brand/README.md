@@ -186,6 +186,9 @@ split-square, and those alternatives, and the puzzle/outline rounds (`explore10.
 directions. `outline-mark-shipped-then-reverted/` holds that direction's full kit, and
 `district-mark-handoff/` is the design handoff this mark was built from — including
 the reference SVGs `build.py`'s output is verified against.
+`Daily District logo concepts.zip` is that handoff exactly as it was delivered;
+`district-mark-handoff/` is the same 17 files unpacked, so read the directory and keep
+the zip only as the untouched original.
 
 Every candidate is rendered large and again as a true 16px raster, since a scaled-down
 vector always flatters a mark and only a real raster tells you whether it survives.
