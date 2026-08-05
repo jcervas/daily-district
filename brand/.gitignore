@@ -6,3 +6,6 @@ explorations/compare/
 dist/px/
 __pycache__/
 .ico/
+# The design handoff as delivered. The unpacked copy in district-mark-handoff/
+# is the one to read, and this is a 51KB binary the static site would otherwise serve.
+explorations/*.zip
