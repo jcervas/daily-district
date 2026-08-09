@@ -51,13 +51,17 @@ const T = announced ? {
   howto:    `The game launches ${full}.`,
   comment:  `until ${epoch}`,
 } : {
-  title:    `Daily District — Coming soon`,
-  ogTitle:  `Daily District — Coming soon`,
-  metaDesc: `Daily District is a free daily game to identify all 435 U.S. House districts. Coming soon. Meanwhile, explore profiles of every congressional district.`,
-  ogDesc:   `A free daily game to identify all 435 U.S. House districts. Coming soon.`,
-  headline: `Launching soon`,
-  sub:      `A free daily game to identify all 435 U.S. House districts from their shape — geographic, map-based, and contextual clues, one puzzle a day. Check back soon.`,
-  howto:    `The game launches soon.`,
+  // Unannounced: deliberately NOT "coming soon" copy. The homepage is a real
+  // content destination pre-launch (AdSense/i and crawlers treat
+  // under-construction language as a disqualifying signal), so the dateless
+  // state reads as a live site that happens not to have announced a date.
+  title:    `Daily District — The Daily Congressional District Puzzle`,
+  ogTitle:  `Daily District — The Daily Congressional District Puzzle`,
+  metaDesc: `A free daily puzzle about the 435 U.S. House districts — plus in-depth profiles of every district: representatives, demographics, election results and maps.`,
+  ogDesc:   `A free daily game about the 435 U.S. House districts, with profiles of every seat.`,
+  headline: `Know every district`,
+  sub:      `Daily District is a free daily puzzle — and a crash course in the U.S. House. Learn all 435 congressional districts by shape, by place and by the facts behind them, then explore the full profile of every seat.`,
+  howto:    `The daily game is in final playtesting — sign up to be first to play.`,
   comment:  `until launch`,
 };
 
@@ -71,8 +75,8 @@ const swaps = [
   [/(<meta name="description" content=")[^"]*(")/, `$1${T.metaDesc}$2`],
   [/(<meta property="og:title" content=")[^"]*(")/, `$1${T.ogTitle}$2`],
   [/(<meta property="og:description" content=")[^"]*(")/, `$1${T.ogDesc}$2`],
-  [/(<h1 class="teaser-headline">)[\s\S]*?(<\/h1>)/, `$1${T.headline}$2`],
-  [/(<p class="teaser-sub">)[\s\S]*?(<\/p>)/, `$1${T.sub}$2`],
+  [/(<h1 class="teaser-headline"[^>]*>)[\s\S]*?(<\/h1>)/, `$1${T.headline}$2`],
+  [/(<p class="teaser-sub"[^>]*>)[\s\S]*?(<\/p>)/, `$1${T.sub}$2`],
   [/(<span class="how-to-note">)[^<]*(<\/span>)/, `$1${T.howto}$2`],
   [/(TEMPORARY pre-launch teaser \()[^)]*(\))/, `$1${T.comment}$2`],
 ];

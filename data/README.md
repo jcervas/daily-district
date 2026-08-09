@@ -65,6 +65,61 @@ normalize -> national -> map (needs acs-district, acs-state, compactness)
 `make build` runs the map stage + all of the above except `lang` (a targeted
 single-field recompute, run standalone). `make all` = `build` + `push`.
 
+**`drivetime` (opt-in, not part of `build`/`push`)** — `max_drive_min`: the max drive
+time across a district **without leaving it**. Sample points around the district, ask a
+local OSRM server's `/table` for every pairwise duration, take the max. Free — no paid
+routing API.
+
+The routing graph is clipped to the district polygon, so the number measures the
+district's **internal road connectivity**, not absolute distance. A district you cannot
+traverse without leaving it isn't an error — it's the interesting case, and it's reported
+explicitly (`max_drive_connected`, `max_drive_component`) rather than hidden in a number.
+
+Three things this gets right that the obvious implementation does not:
+
+- **Geometry fidelity.** Clipping uses `output/national-cd-{year}-raw.geojson`, *not*
+  `districts-core.topojson`. The latter is mapshaper-simplified for the browser (VA-08
+  keeps 128 of its 513 vertices, NY-12 28 of 204); a simplified outline cuts across real
+  road corridors and severs the network. Using it put Arlington's VA-08 at 34%
+  "unreachable" — an obviously road-connected urban district. Raw geometry: 0%.
+- **Inset sampling.** Points are pulled a few hundred metres inside the district before
+  sampling. `osmium`'s `complete_ways` keeps whole roads that merely clip a corner, and a
+  point sampled exactly on the edge snaps to such a stub and reads as disconnected.
+- **Snapped endpoints.** OSRM matches a coordinate to the nearest road at *any* distance,
+  so a point in roadless country (AK-01's North Slope) silently resolves to a road far
+  away. Stored endpoints are OSRM's snapped road positions, and points snapping farther
+  than `DD_DRIVETIME_MAX_SNAP_M` (default 5000 m) are dropped rather than anchoring the
+  statistic. `max_snap_m` records the worst snap per district.
+
+**Ferries are reported separately.** OSRM's stock `car.lua` routes over `route=ferry`, so
+an island district would otherwise return a mostly-boat "drive time". `car.lua` declares
+ferry as an *excludable* class, so both figures come off one graph via `?exclude=ferry`:
+`max_drive_min` is road-only, `max_drive_min_ferry` is ferry-inclusive. They are equal for
+most districts and diverge only where it matters — MA-09 is 173.8 min road-only (15 of 23
+points reachable; Nantucket and Martha's Vineyard genuinely have no road link) versus
+291.3 min with ferries. The ferry figure is OSRM's synthetic duration with no schedule
+wait, so treat it as indicative, not a travel estimate.
+
+Running it needs `osmium-tool` (`brew install osmium-tool`) and Docker. Per state: download
+the Geofabrik extract once, clip per district, build a small OSRM graph, query, discard.
+Port 5000 is often taken by macOS AirPlay Receiver, hence 5002.
+
+```bash
+make -C data drivetime                        # all 50 states (hours; resumable)
+make -C data drivetime DD_DRIVETIME_STATE=VA  # one state
+make -C data push-drivetime                   # push to puzzles.census
+```
+
+Re-running skips any district that already has a result, so an interrupted run resumes
+where it stopped. `make -C data drivetime-clean` discards them to force a full recompute.
+
+Interpreting the output: compare `max_drive_min` against the straight-line distance between
+the stored endpoints. A genuinely circuitous district and a broken graph both look slow,
+but the connectivity columns tell them apart. Some very low implied speeds are real —
+`CA-20` crosses the Sierra crest, which has no through road, and `VA-02` is a real ~250-mile
+loop down the Eastern Shore, across the Chesapeake Bay Bridge-Tunnel and back up the
+Northern Neck.
+
 ## Requirements
 
 - **R** (`Rscript`) with packages `sf`, `lwgeom`, `jsonlite`, `rvest` (only `reps.R`
@@ -73,6 +128,8 @@ single-field recompute, run standalone). `make all` = `build` + `push`.
   downloads the TIGER cartographic-boundary shapefile directly for land area.
 - **mapshaper** ≥ 0.6 (`npm install -g mapshaper`)
 - **psql** (for the `push-*` targets only)
+- **osmium-tool** + **Docker** (for the `drivetime` target only — `brew install osmium-tool`;
+  Docker runs the `osrm/osrm-backend` image, no local OSRM build needed)
 
 ## Config (env overrides)
 
@@ -133,7 +190,8 @@ the number in the map and the number in the DB are provably the same computation
 in the stored census: `area_sqmi`, `perimeter_mi`, `reock` (written by
 `push-compactness`), `pop2020` / `planYear` / `Margin2024Pres` / `DemPct2024Pres` /
 `RepPct2024Pres` (written by their own targeted pushes), `rep` (current House
-member), and `pct` (percentile ranks, written by `push-derived`).
+member), `pct` (percentile ranks, written by `push-derived`), and the `max_drive_*` keys
+(written by `push-drivetime`).
 
 ## Field glossary (`census_out.json`)
 
@@ -188,5 +246,8 @@ member), and `pct` (percentile ranks, written by `push-derived`).
 - `census.R` / `apply_census.R` — ACS tract aggregation → DB push SQL
 - `reps.R`, `clues.R`, `pop2020.R`, `lang.R`, `plan_year.R`, `apply_compactness.R` —
   the rest of the District Profile data
+- `drivetime.R` / `apply_drivetime.R` / `drivetime.sh` — max drive time without leaving
+  the district, via per-district-clipped local OSRM graphs (see the `drivetime` section
+  above). `drivetime.sh` is the orchestrator: download, clip, build, query, discard.
 - `derived_update.sql` — percentile ranks (`census.pct`), pure SQL, unchanged
 - `*_out.json` / `*_out.csv` / `*_update.sql` — generated artifacts (regenerable, committed)

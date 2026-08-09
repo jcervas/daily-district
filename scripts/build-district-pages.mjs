@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..'); // repo root (script lives in scripts/)
 const SITE = 'https://daily-district.com';
-const CSS_V = 6; // bump when district-pages.css changes
+const CSS_V = 10; // bump when district-pages.css changes
 const MAP_V = 1; // bump when districts-map.topojson changes
 const DETAIL_V = 1; // bump when districts-detail/*.topojson changes
 const MAP_JS_V = 5; // bump when the emitted district-map.js changes
@@ -151,6 +151,40 @@ for (const [state, dists] of Object.entries(districtNames)) {
 }
 records.sort((a, b) => a.id.localeCompare(b.id));
 
+// ---- national ranks & aggregates -------------------------------------------
+// Precomputed across all 435 districts; used to give every page unique,
+// data-driven prose ("ranks 37th of 435 by median household income") and to
+// build the homepage highlights.
+for (const r of records) {
+  r.density = r.geo.area > 0 && r.c.pop ? Math.round(r.c.pop / r.geo.area) : null;
+}
+function ranker(get, dir = -1) {
+  // dir -1: rank 1 = largest value; dir 1: rank 1 = smallest value.
+  const ranked = records.filter((r) => get(r) != null)
+    .sort((a, b) => dir * (get(a) - get(b)));
+  const m = new Map();
+  ranked.forEach((r, i) => m.set(r.id, i + 1));
+  return { of: (id) => m.get(id), n: ranked.length, first: ranked[0], last: ranked[ranked.length - 1] };
+}
+const rankArea    = ranker((r) => r.geo.area);
+const rankDensity = ranker((r) => r.density);
+const rankIncome  = ranker((r) => r.c.income);
+const rankPP      = ranker((r) => r.geo.pp);
+const rankAge     = ranker((r) => r.c.medianAge);
+const rankClose24 = ranker((r) => r.pres.mar24 != null ? Math.abs(r.pres.mar24) : null, 1);
+// Crossover seats: a representative of one party in a district the other
+// party's presidential candidate carried in 2024.
+const crossoverR = records.filter((r) => (r.rep?.partyCode || '') === 'R' && r.pres.mar24 > 0).length;
+const crossoverD = records.filter((r) => (r.rep?.partyCode || '') === 'D' && r.pres.mar24 < 0).length;
+
+function densityCharacter(d) {
+  if (d == null) return null;
+  if (d >= 3000) return 'a heavily urban district';
+  if (d >= 800) return 'a largely suburban district';
+  if (d >= 150) return 'a mix of small cities, suburbs and countryside';
+  return 'a predominantly rural district';
+}
+
 // ---- page renderers --------------------------------------------------------
 function shell({ title, description, canonical, body, scripts = '' }) {
   return `<!DOCTYPE html>
@@ -166,8 +200,9 @@ function shell({ title, description, canonical, body, scripts = '' }) {
   <meta property="og:type" content="article" />
   <meta property="og:url" content="${canonical}" />
   <meta name="google-adsense-account" content="ca-pub-2164002681613672" />
-  <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" href="/favicon.svg?v=9" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico?v=9" sizes="any" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=9" />
   <meta name="theme-color" content="#C41230" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -178,9 +213,9 @@ function shell({ title, description, canonical, body, scripts = '' }) {
 <body>
   <header class="dd-header">
     <div class="dd-header-inner">
-      <img src="/logo.svg" alt="" aria-hidden="true" />
-      <a class="dd-wordmark" href="/">Daily District</a>
-      <a class="dd-play" href="/">Play today&rsquo;s puzzle</a>
+      <img src="/logo.svg?v=9" alt="" aria-hidden="true" />
+      <a class="dd-wordmark" href="/" aria-label="Daily District — home"></a>
+      <a class="dd-play" id="dd-auth" href="/?signup=1">Sign up</a>
     </div>
   </header>
   <main class="dd-main">
@@ -190,13 +225,109 @@ ${body}
     <div>
       <a href="/">Play</a> ·
       <a href="/districts/">All districts</a> ·
+      <a href="/about/">About</a> ·
+      <a href="/how-to-play/">How to play</a> ·
+      <a href="/methodology/">Data &amp; methodology</a> ·
       <a href="/privacy.html">Privacy</a>
     </div>
     <p>Daily District — a daily game about U.S. congressional districts.<br>
     Demographics from the U.S. Census Bureau (ACS 5-year); presidential results via The Downballot.</p>
   </footer>
-${scripts}</body>
+${scripts}${authAssets()}</body>
 </html>`;
+}
+
+// Header Sign up / Sign out control. Reuses the game's real auth stack
+// (supabase-js + backend.js → window.DistrictBackend). The Supabase session
+// lives in localStorage and is shared same-origin, so a visitor who created an
+// account on the homepage is recognised here. Signed out → "Sign up" links to
+// /?signup=1, which opens the homepage's real sign-in/sign-up modal (the game
+// isn't live yet); signed in → "Sign out" in place.
+function authAssets() {
+  // Real sign-up/sign-in modal, opened in place so visitors never leave the
+  // district page. Wired directly to window.DistrictBackend (same Supabase
+  // stack as the homepage); Google OAuth and the email-confirm link both
+  // redirect back to the current page.
+  const googleG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>';
+  const modal = `  <div id="dd-auth-modal" class="dd-auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dd-auth-title">
+    <div class="dd-auth-card">
+      <button type="button" class="dd-auth-close" id="dd-auth-close" aria-label="Close">&times;</button>
+      <h2 id="dd-auth-title">Sign up</h2>
+      <p class="dd-auth-sub" id="dd-auth-sub">Sign up for a chance to win prizes and be first to know when we launch.</p>
+      <button type="button" class="dd-auth-google" id="dd-auth-google">${googleG}Continue with Google</button>
+      <div class="dd-auth-or">or</div>
+      <form id="dd-auth-form" novalidate>
+        <input type="email" id="dd-auth-email" placeholder="Email" autocomplete="email" />
+        <input type="password" id="dd-auth-password" placeholder="Password" autocomplete="new-password" />
+        <label class="dd-auth-check" id="dd-auth-marketing-wrap"><input type="checkbox" id="dd-auth-marketing" checked /> Email me occasional updates</label>
+        <button type="submit" class="dd-auth-submit" id="dd-auth-submit">Sign up</button>
+      </form>
+      <div class="dd-auth-error" id="dd-auth-error"></div>
+      <button type="button" class="dd-auth-toggle" id="dd-auth-toggle">Already have an account? Sign in</button>
+      <p class="dd-auth-legal">By continuing you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
+    </div>
+  </div>`;
+  const js = `(function(){
+  function init(){
+    var el=document.getElementById('dd-auth'), B=window.DistrictBackend;
+    if(!el||!B) return;
+    var modal=document.getElementById('dd-auth-modal');
+    var title=document.getElementById('dd-auth-title'), sub=document.getElementById('dd-auth-sub');
+    var form=document.getElementById('dd-auth-form');
+    var emailI=document.getElementById('dd-auth-email'), pwI=document.getElementById('dd-auth-password');
+    var mkWrap=document.getElementById('dd-auth-marketing-wrap'), mk=document.getElementById('dd-auth-marketing');
+    var submit=document.getElementById('dd-auth-submit'), errEl=document.getElementById('dd-auth-error');
+    var toggle=document.getElementById('dd-auth-toggle'), googleBtn=document.getElementById('dd-auth-google');
+    var closeBtn=document.getElementById('dd-auth-close');
+    var mode='signup', busy=false;
+    function setErr(m,ok){ errEl.textContent=m||''; errEl.className='dd-auth-error'+(ok?' ok':''); }
+    function label(){ return mode==='signup'?'Sign up':'Sign in'; }
+    function setBusy(on){ busy=on; submit.disabled=on; googleBtn.disabled=on; submit.textContent=on?'Please wait…':label(); }
+    function setMode(m){
+      mode=m; setErr('');
+      if(m==='signup'){ title.textContent='Sign up'; sub.textContent='Sign up for a chance to win prizes and be first to know when we launch.'; if(mkWrap) mkWrap.style.display=''; pwI.setAttribute('autocomplete','new-password'); toggle.textContent='Already have an account? Sign in'; }
+      else { title.textContent='Sign in'; sub.textContent='Welcome back — sign in to your account.'; if(mkWrap) mkWrap.style.display='none'; pwI.setAttribute('autocomplete','current-password'); toggle.textContent='Need an account? Sign up'; }
+      submit.textContent=label();
+    }
+    function open(m){ setMode(m||'signup'); modal.classList.remove('hidden'); setTimeout(function(){ try{ emailI.focus(); }catch(_){ } },40); }
+    function close(){ modal.classList.add('hidden'); setBusy(false); }
+    function render(user){
+      if(user){ el.textContent='Sign out'; el.dataset.auth='in'; el.setAttribute('href','#'); }
+      else { el.textContent='Sign up'; el.dataset.auth='out'; el.setAttribute('href','/?signup=1'); }
+    }
+    el.addEventListener('click',function(e){
+      e.preventDefault();
+      if(el.dataset.auth==='in'){ Promise.resolve(B.signOut()).then(function(){ render(null); }).catch(function(){}); }
+      else { open('signup'); }
+    });
+    closeBtn.addEventListener('click',close);
+    modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !modal.classList.contains('hidden')) close(); });
+    toggle.addEventListener('click',function(){ setMode(mode==='signup'?'signin':'signup'); });
+    googleBtn.addEventListener('click',function(){ if(busy) return; setErr(''); setBusy(true); Promise.resolve(B.signInWithOAuth('google')).catch(function(ex){ setErr((ex&&ex.message)||'Could not start Google sign-in'); setBusy(false); }); });
+    form.addEventListener('submit',function(e){
+      e.preventDefault(); if(busy) return; setErr('');
+      var email=emailI.value.trim(), pw=pwI.value;
+      if(!email || pw.length<6){ setErr('Enter an email and a 6+ character password.'); return; }
+      setBusy(true);
+      var p = mode==='signup' ? B.signUpWithEmail(email, pw, undefined, mk?mk.checked:false) : B.signInWithEmail(email, pw);
+      Promise.resolve(p).then(function(res){
+        if(res && res.error) throw res.error;
+        if(mode==='signup' && res && res.data && !res.data.session){ setErr('Account created! Check your email to confirm — then you are signed in.', true); setBusy(false); return; }
+        // Otherwise a session exists now; onAuthChange closes + re-renders.
+      }).catch(function(ex){ setErr((ex&&ex.message)||'Something went wrong'); setBusy(false); });
+    });
+    Promise.resolve(B.getUser()).then(function(u){ render(u); if(u) close(); }).catch(function(){ render(null); });
+    if(B.onAuthChange){ try{ B.onAuthChange(function(user){ render(user); if(user) close(); }); }catch(_){ } }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();`;
+  return `
+${modal}
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/backend.js?v=24" defer></script>
+  <script>${js}</script>
+`;
 }
 
 // Responsive Display ad (one reused unit, slot 3771556759). A labeled placeholder box
@@ -211,6 +342,52 @@ function adUnit() {
         data-ad-format="auto" data-full-width-responsive="true"></ins></div>
       <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
     </div>`;
+}
+
+// The opening prose paragraph for a district — used as the profile lede and on
+// the homepage featured-district card.
+function ledeFor(r) {
+  const { c } = r;
+  const fullName = `${possessive(r.stateName)} ${districtLabel(r.state, r.dnum, r.atLarge)}`;
+  const total = c.pop || 0;
+  const pctOf = (x) => total > 0 && x != null ? Math.round((x / total) * 100) : null;
+  const whPct = pctOf(c.whiteNH), blPct = pctOf(c.black), hiPct = pctOf(c.hispanic), asPct = pctOf(c.asian);
+  const otherPct = [whPct, blPct, hiPct, asPct].every((v) => v != null)
+    ? Math.max(0, 100 - (whPct + blPct + hiPct + asPct)) : null;
+  const groups = [
+    { name: 'White', pct: whPct }, { name: 'Black', pct: blPct },
+    { name: 'Hispanic', pct: hiPct }, { name: 'Asian', pct: asPct },
+    { name: 'Other', pct: otherPct },
+  ].filter((g) => g.pct != null);
+  const raceTop = groups.length ? groups.reduce((a, b) => b.pct > a.pct ? b : a) : null;
+  const bachPlus = (c.bach || 0) + (c.master || 0);
+  const eduPct = c.edu_total > 0 ? Math.round((bachPlus / c.edu_total) * 100) : null;
+  const lean24 = presLean(r.pres.mar24);
+  const repName = r.rep?.name || null;
+  const repParty = r.rep?.party || null;
+
+  const sentences = [];
+  sentences.push(
+    `${fullName} is ${r.atLarge ? 'the statewide seat covering all of ' + r.stateName
+      : 'one of ' + districtNames[r.state].length + ' U.S. House districts in ' + r.stateName}` +
+    (repName ? `, represented in Congress by ${repName}${repParty ? ` (${repParty})` : ''}.` : '.'));
+  if (total) {
+    let s = `It is home to roughly ${fmt(total)} people`;
+    if (c.medianAge != null) s += `, with a median age of ${c.medianAge}`;
+    if (raceTop) s += `. The population is about ${raceTop.pct}% ${raceTop.name}`;
+    sentences.push(s + '.');
+  }
+  if (c.income != null) {
+    let s = `The median household income is ${money(c.income)}`;
+    if (eduPct != null) s += `, and ${eduPct}% of adults 25 and older hold a bachelor’s degree or higher`;
+    sentences.push(s + '.');
+  }
+  if (lean24) {
+    sentences.push(lean24.competitive
+      ? `In the 2024 presidential election the district was highly competitive (${lean24.tag}).`
+      : `In the 2024 presidential election it voted ${lean24.strength} ${lean24.party} (${lean24.tag}).`);
+  }
+  return sentences.join(' ');
 }
 
 function districtPage(r) {
@@ -252,33 +429,79 @@ function districtPage(r) {
   const raceTop = raceGroups.length ? raceGroups.reduce((a, b) => b.pct > a.pct ? b : a) : null;
 
   // ---- prose lede (unique, data-driven) ----
-  const sentences = [];
-  sentences.push(
-    `${fullName} is ${r.atLarge ? 'the statewide seat covering all of ' + r.stateName
-      : 'one of ' + districtNames[r.state].length + ' U.S. House districts in ' + r.stateName}` +
-    (repName ? `, represented in Congress by ${repName}${repParty ? ` (${repParty})` : ''}.` : '.'));
-  if (total) {
-    let s = `It is home to roughly ${fmt(total)} people`;
-    if (c.medianAge != null) s += `, with a median age of ${c.medianAge}`;
-    if (raceTop) s += `. The population is about ${raceTop.pct}% ${raceTop.name}`;
-    sentences.push(s + '.');
-  }
-  if (c.income != null) {
-    let s = `The median household income is ${money(c.income)}`;
-    if (eduPct != null) s += `, and ${eduPct}% of adults 25 and older hold a bachelor’s degree or higher`;
-    sentences.push(s + '.');
-  }
-  if (lean24) {
-    sentences.push(lean24.competitive
-      ? `In the 2024 presidential election the district was highly competitive (${lean24.tag}).`
-      : `In the 2024 presidential election it voted ${lean24.strength} ${lean24.party} (${lean24.tag}).`);
-  }
-  const lede = sentences.join(' ');
+  const lede = ledeFor(r);
 
   const metaDesc =
     `${fullName}: ${repName ? repName + ' represents this seat. ' : ''}` +
     `Population ${fmt(total)}${c.income != null ? `, median household income ${money(c.income)}` : ''}` +
     `${lean24 ? `, 2024 presidential lean ${lean24.tag}` : ''}. Census demographics, election results and maps.`;
+
+  // ---- unique per-card prose (national context via precomputed ranks) ----
+  const geoProse = [];
+  if (geo.area) {
+    const ar = rankArea.of(r.id);
+    const sizePhrase = ar === 1 ? 'the largest' : ar === rankArea.n ? 'the smallest'
+      : `the ${ordinal(ar)}-largest`;
+    geoProse.push(`Covering ${fmt(geo.area)} square miles, ${r.id} is ${sizePhrase} of the ${rankArea.n} congressional districts by land area.`);
+    if (density != null) geoProse.push(density < 2
+      ? `With about one resident per square mile, it is ${densityCharacter(density)}.`
+      : `With about ${fmt(density)} residents per square mile, it is ${densityCharacter(density)}.`);
+    if (geo.pp != null && ppLabel) geoProse.push(`Its shape is ${ppLabel.replace(' in shape', '')}: the district's Polsby-Popper score of ${geo.pp.toFixed(2)} ranks ${ordinal(rankPP.of(r.id))} of ${rankPP.n} nationally, where 1st is the most compact.`);
+  }
+
+  const presProse = [];
+  if (p.dem24 != null && p.rep24 != null && lean24) {
+    const closeRank = rankClose24.of(r.id);
+    presProse.push(`In the 2024 presidential election, ${p.dem24}% of ${r.id} voters backed Kamala Harris and ${p.rep24}% Donald Trump — a ${lean24.tag} margin${closeRank != null && closeRank <= 40 ? `, the ${ordinal(closeRank)}-closest result of any district in the country` : ''}.`);
+  }
+  if (p.mar24 != null && p.mar20 != null && lean20) {
+    const shift = p.mar24 - p.mar20;
+    presProse.push(Math.abs(shift) >= 0.5
+      ? `That is a ${Math.abs(shift).toFixed(1)}-point shift toward the ${shift < 0 ? 'Republicans' : 'Democrats'} from 2020, when the district voted ${lean20.tag}.`
+      : `The district's presidential lean was essentially unchanged from 2020 (${lean20.tag}).`);
+  }
+  if (repName && p.mar24 != null) {
+    if (repCode === 'R' && p.mar24 > 0) presProse.push(crossoverR > 1
+      ? `${repName} is one of only ${crossoverR} House Republicans representing a district Kamala Harris carried.`
+      : `${repName} is the only House Republican representing a district Kamala Harris carried.`);
+    else if (repCode === 'D' && p.mar24 < 0) presProse.push(crossoverD > 1
+      ? `${repName} is one of only ${crossoverD} House Democrats representing a district Donald Trump carried.`
+      : `${repName} is the only House Democrat representing a district Donald Trump carried.`);
+  }
+
+  const demoProse = [];
+  if (c.medianAge != null) {
+    const ar = rankAge.of(r.id);
+    let note = '';
+    if (ar != null && ar <= 30) note = ', making this one of the oldest districts in the nation by median age';
+    else if (ar != null && ar > rankAge.n - 30) note = ', making this one of the youngest districts in the nation by median age';
+    let s = `The median resident of the district is ${c.medianAge} years old${note}`;
+    if (c.under18Pct != null && c.age65Pct != null) s += `; ${c.under18Pct}% of residents are under 18 and ${c.age65Pct}% are 65 or older`;
+    demoProse.push(s + '.');
+  }
+  if (c.foreignBornPct != null) {
+    let s = `About ${c.foreignBornPct}% of residents were born outside the United States`;
+    if (c.nonEnglishPct != null) s += `, and ${c.nonEnglishPct}% speak a language other than English at home`;
+    demoProse.push(s + '.');
+  }
+
+  const econProse = [];
+  if (c.income != null) {
+    econProse.push(`At ${money(c.income)}, the district's median household income ranks ${ordinal(rankIncome.of(r.id))} of ${rankIncome.n} districts nationwide.`);
+  }
+  if (c.medianHome != null) {
+    let s = `The typical owner-occupied home is worth ${money(c.medianHome)}`;
+    if (c.medianRent != null) s += `, and the median rent is ${money(c.medianRent)} a month`;
+    econProse.push(s + '.');
+  }
+  if (c.povertyPct != null) {
+    let s = `${c.povertyPct}% of residents live below the poverty line`;
+    if (c.meanCommuteMin != null) s += `, and workers average a ${c.meanCommuteMin}-minute commute`;
+    if (c.wfhPct != null) s += ` (${c.wfhPct}% work from home)`;
+    econProse.push(s + '.');
+  }
+
+  const prose = (arr) => arr.length ? `<p class="dd-prose">${arr.join(' ')}</p>` : '';
 
   // ---- sections ----
   const S = [];
@@ -312,7 +535,7 @@ ${mapFigure({
         ${density != null ? statBox(fmt(density) + '/mi²', 'Pop. density') : ''}
         ${geo.pp != null ? statBox(geo.pp.toFixed(2), 'Compactness (Polsby-Popper)') : ''}
       </div>
-      ${ppLabel ? `<p style="margin:10px 0 0">By the Polsby-Popper measure, ${r.id} is ${ppLabel} compared with other districts.</p>` : ''}
+      ${prose(geoProse)}
     </section>`);
   }
 
@@ -330,6 +553,7 @@ ${mapFigure({
         ${p.dem24 != null ? statBox(p.dem24 + '% / ' + p.rep24 + '%', '2024 Dem / Rep') : ''}
         ${lean20 ? statBox(lean20.tag, '2020 margin') : ''}
       </div>
+      ${prose(presProse)}
       <p class="dd-source">Two-party presidential vote by district (source: The Downballot).</p>
     </section>`);
   }
@@ -350,6 +574,7 @@ ${mapFigure({
         ${statBox(pctS(c.foreignBornPct), 'Foreign-born')}
         ${statBox(pctS(c.veteranPct), 'Veterans')}
       </div>
+      ${prose(demoProse)}
       <p class="dd-source">U.S. Census Bureau, American Community Survey (5-year estimates).</p>
     </section>`);
 
@@ -365,6 +590,7 @@ ${mapFigure({
         ${statBox(c.meanCommuteMin != null ? c.meanCommuteMin + ' min' : '—', 'Mean commute')}
         ${statBox(pctS(c.uninsuredPct), 'Uninsured')}
       </div>
+      ${prose(econProse)}
       <p class="dd-source">U.S. Census Bureau, American Community Survey (5-year estimates).</p>
     </section>`);
   }
@@ -394,7 +620,7 @@ ${mapFigure({
     ${S.join('\n    ')}
     <div class="dd-cta"><a href="/">Can you guess this district? Play Daily District →</a></div>`;
 
-  return shell({ title: `${fullName} — Representative, Demographics &amp; Map | Daily District`,
+  return shell({ title: `${fullName} — Representative, Demographics & Map | Daily District`,
     description: metaDesc, canonical, body, scripts: mapAssets() });
 }
 
@@ -425,7 +651,7 @@ function browsePage() {
 
   const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>Districts</nav>
     <h1 class="dd-title">All U.S. House Districts</h1>
-    <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat. Then <a href="/">play today’s Daily District puzzle</a>.</p>
+    <p class="dd-lede">Browse profiles for all ${records.length} U.S. congressional districts — the current representative, Census demographics, presidential results and geography for each seat.</p>
 ${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its profile.' })}
     ${adUnit()}
     <details class="dd-browse-all">
@@ -438,6 +664,209 @@ ${mapFigure({ hint: 'Click a state to zoom in, then click a district to open its
     description: `Directory of all ${records.length} U.S. House districts with representatives, Census demographics, and election results. Explore any district, then play the daily game.`,
     canonical, body, scripts: mapAssets(),
   });
+}
+
+// ---- static editorial pages (about / how-to-play / methodology) ------------
+// Real crawlable pages for content that previously lived only in homepage
+// modals. Same shell as the district profiles, one ad unit each.
+function contentPage({ path, crumb, title, metaTitle, description, lede, cards, cta }) {
+  // One in-content ad after the second card, matching the district profiles.
+  const S = cards.slice();
+  S.splice(Math.min(2, S.length), 0, adUnit());
+  const body = `    <nav class="dd-crumbs"><a href="/">Home</a><span>›</span>${esc(crumb)}</nav>
+    <h1 class="dd-title">${esc(title)}</h1>
+    <p class="dd-lede">${lede}</p>
+    ${S.join('\n    ')}
+    <div class="dd-cta"><a href="/">${cta || 'Play Daily District →'}</a></div>`;
+  return shell({ title: metaTitle, description, canonical: `${SITE}${path}`, body });
+}
+
+function aboutPage() {
+  return contentPage({
+    path: '/about/', crumb: 'About',
+    title: 'About Daily District',
+    metaTitle: 'About Daily District — The Daily Congressional District Game',
+    description: 'Daily District is a free daily geography game about the 435 U.S. House districts, created by Dr. Jonathan Cervas of Carnegie Mellon University and Jason Fierman of the Redistrict Network.',
+    lede: 'Daily District is a free daily puzzle about American democracy: every day, one of the 435 U.S. House districts appears on the map, and your job is to figure out which one it is from its shape, its geography, and contextual clues.',
+    cards: [
+`<section class="dd-card">
+      <h2>What is Daily District?</h2>
+      <p>Each day, every player around the world gets the same mystery congressional district. You study its outline and location clues, then narrow it down — first to a state, then to the exact district — in six guesses or fewer. Wrong guesses aren't wasted: each one tells you whether you're getting warmer or colder geographically, eliminating whole regions of the country as you go. (See <a href="/how-to-play/">How to play</a> for the full rules.)</p>
+      <p>Behind the game sits a reference library: a <a href="/districts/">profile page for every one of the 435 districts</a>, with its current representative, Census demographics, recent presidential results, an interactive map, and shape statistics. Miss a puzzle and you can read exactly what makes that district distinctive — which is the point. Daily District is designed so that playing it, even badly, teaches you something about how the country is divided up.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Why congressional districts matter</h2>
+      <p>The U.S. House of Representatives has 435 voting members, each elected from a single district. After every decennial census, those districts are redrawn — a process called redistricting — to reflect where people live. How the lines are drawn shapes who runs, who wins, and ultimately which party controls the House, which is why redistricting (and its abuse, gerrymandering) is one of the most consequential and contested processes in American politics.</p>
+      <p>Yet most Americans would struggle to draw their own district from memory, let alone recognize any of the other 434. Districts range from dense urban seats a few dozen square miles in area to rural districts larger than entire states; some are compact and intuitive, others snake across a map in ways only a line-drawer could love. Learning to recognize them — their shapes, their communities, their politics — is a surprisingly effective way to build real civic knowledge. That's the gap Daily District tries to fill, one district a day.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Who's behind it</h2>
+      <p>Daily District was created through a partnership between <a href="https://jonathancervas.com" target="_blank" rel="noopener">Dr. Jonathan Cervas of Carnegie Mellon University</a> and <a href="https://x.com/RedistrictNet" target="_blank" rel="noopener">Jason Fierman of the Redistrict Network</a>. It grew out of their shared work on redistricting: an interactive way to learn how congressional districts shape American democracy, built for curious people of all backgrounds — students, teachers, political junkies, and anyone who likes a good map puzzle.</p>
+      <p>The data behind the game — Census demographics, election results, district geometry — is documented in detail on the <a href="/methodology/">Data &amp; methodology</a> page.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Support Daily District</h2>
+      <p>Daily District is committed to making civic education interactive, approachable, and fun. Donations to the <a href="https://www.givecampus.com/campaigns/42524/donations/new?designation=carnegiemelloninstituteforstrategyandtechnologyfund&amp;a=10546035" target="_blank" rel="noopener">Carnegie Mellon Institute for Strategy &amp; Technology</a> support research and help make educational projects like Daily District possible.</p>
+      <p>Daily District is also seeking sponsors and organizational partners to support ongoing updates and maintenance of the game. If your organization is interested in sponsoring or partnering with Daily District, please contact <a href="mailto:RedistrictNetwork@gmail.com">RedistrictNetwork@gmail.com</a>.</p>
+      <p>Follow <a href="https://x.com/daily_district_" target="_blank" rel="noopener">@daily_district_ on X (Twitter)</a> for each day's puzzle and the latest updates.</p>
+    </section>`,
+    ],
+    cta: 'Ready to test yourself? Play Daily District →',
+  });
+}
+
+function howToPlayPage() {
+  return contentPage({
+    path: '/how-to-play/', crumb: 'How to play',
+    title: 'How to Play',
+    metaTitle: 'How to Play Daily District — Rules, Hot/Cold Clues & Tips',
+    description: 'The complete rules of Daily District: six guesses to identify the day\'s U.S. House district, hot/cold geographic elimination, a worked example, and tips for getting better.',
+    lede: 'Every day, one congressional district. You get six guesses to name it — and every wrong guess teaches you geography. Here are the full rules, a worked example, and some tips.',
+    cards: [
+`<section class="dd-card">
+      <h2>The basics</h2>
+      <ul>
+        <li>A new mystery district appears <strong>every day</strong> — the same one for all players, using the current district boundaries.</li>
+        <li>You have <strong>6 guesses</strong> to identify it.</li>
+        <li>Guess in two steps: first click a <strong>state</strong> on the reference map; once you nail the state, pick the <strong>district number</strong> within it.</li>
+        <li>Your timer starts when you submit your first guess.</li>
+        <li><strong>Sign in</strong> (free) to track your statistics, keep your streak, and compare with other players on the leaderboard.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Hot / cold elimination</h2>
+      <p>Wrong state guesses aren't wasted — each one comes back with a geographic clue:</p>
+      <ul>
+        <li><strong>Hot / Adjacent</strong> — the correct state <em>borders</em> the state you guessed. Only that state's neighbors stay in play; everything else is eliminated.</li>
+        <li><strong>Cold / Not adjacent</strong> — the correct state is farther away. The guessed state <em>and all of its neighbors</em> are eliminated.</li>
+      </ul>
+      <p>Eliminated states grey out on the map and in the state list automatically, so you can always see exactly which states are still possible. Playing the clues well usually matters more than your first guess being close.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>A worked example</h2>
+      <p>Say the day's outline is a huge, blocky, sparsely populated district.</p>
+      <ul>
+        <li><strong>Guess 1 — Missouri.</strong> The game answers <em>Hot</em>: the mystery district's state borders Missouri. Everything except Missouri's eight neighbors is eliminated — you're down to Iowa, Illinois, Kentucky, Tennessee, Arkansas, Oklahoma, Kansas, and Nebraska.</li>
+        <li><strong>Guess 2 — Kansas.</strong> Correct state! The enormous outline fits a plains state with a handful of districts.</li>
+        <li><strong>Guess 3 — Kansas's 1st.</strong> Kansas has four districts, and the vast shape covering most of the state can only be the "Big First," which spans western and central Kansas. Solved in three.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Tips for getting better</h2>
+      <ul>
+        <li><strong>Size is a population clue.</strong> Every district holds roughly 760,000 people, so a physically huge district means rural (think Montana or western Kansas) and a tiny one means a dense city.</li>
+        <li><strong>Look for borders you know.</strong> Coastlines, the Great Lakes, and big rivers like the Mississippi and Rio Grande often form one edge of a district and give the state away.</li>
+        <li><strong>Weird shapes are information.</strong> A long, contorted district often connects separated communities — common in and around large metro areas.</li>
+        <li><strong>Study between puzzles.</strong> Every answer links to its <a href="/districts/">district profile</a>; browsing neighboring districts after each game builds the mental map fast.</li>
+      </ul>
+    </section>`,
+`<section class="dd-card">
+      <h2>Frequently asked questions</h2>
+      <h3>When does a new puzzle come out?</h3>
+      <p>Once a day, every day. Everyone in the world gets the same district on the same day.</p>
+      <h3>Is it free?</h3>
+      <p>Yes. Daily District is free to play, supported by ads and by <a href="/about/">donations and sponsorships</a>.</p>
+      <h3>Do I need an account?</h3>
+      <p>No — anyone can play. A free account adds saved statistics, streaks, and the leaderboard.</p>
+      <h3>Which district boundaries does the game use?</h3>
+      <p>The congressional districts currently in effect, as described on the <a href="/methodology/">Data &amp; methodology</a> page.</p>
+    </section>`,
+    ],
+    cta: 'Got it? Play today\'s district →',
+  });
+}
+
+function methodologyPage() {
+  return contentPage({
+    path: '/methodology/', crumb: 'Data & methodology',
+    title: 'Data & Methodology',
+    metaTitle: 'Data & Methodology — The Sources Behind Daily District',
+    description: 'Where Daily District\'s numbers come from: Census Bureau ACS demographics, precinct-based presidential results, house.gov representative data, and how compactness scores are computed.',
+    lede: 'Every number on Daily District — the demographics, election results, and shape statistics on all 435 district profiles — comes from a public source and a documented pipeline. This page explains where the data comes from and how it\'s processed.',
+    cards: [
+`<section class="dd-card">
+      <h2>District boundaries &amp; maps</h2>
+      <p>The game and the district profiles use the congressional district boundaries currently in effect — the plans used to elect the current U.S. House. District geometry is built from official block-assignment files, which specify exactly which Census blocks belong to each district, paired with U.S. Census Bureau TIGER/Line and cartographic boundary geography. When a state adopts a new map (through litigation or mid-decade redistricting), the affected districts are rebuilt from the new plan.</p>
+      <p>The interactive maps are rendered from simplified versions of this geometry so pages load quickly; zooming into a state swaps in higher-detail boundaries. Land area figures come from the same geometry, so the acreage, density, and compactness figures on a profile all describe the same shape.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Demographics</h2>
+      <p>Population and demographic figures come from the U.S. Census Bureau's <strong>American Community Survey (ACS) 5-year estimates</strong>, retrieved directly from the Census Bureau API and aggregated from census tracts to districts using the block-assignment files above. That tract-level aggregation is what lets the profiles report demographics for current district lines even where they differ from the boundaries the Census Bureau publishes district tables for.</p>
+      <p>A note on categories: "White" refers to non-Hispanic White alone; "Hispanic" includes people of any race; "Black" and "Asian" refer to people identifying with those races alone. Percentages may not sum to 100 because of rounding and smaller groups collected under "Other." As with all ACS estimates, figures are survey-based and carry margins of error — treat small differences between districts as approximate.</p>
+      <p class="dd-source">Source: U.S. Census Bureau, American Community Survey 5-year estimates; 2020 Decennial Census (P.L. 94-171) for total population baselines.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Election results</h2>
+      <p><strong>2024 presidential results</strong> by congressional district (Harris vs. Trump) come from <a href="https://www.the-downballot.com/" target="_blank" rel="noopener">The Downballot</a>'s district-level calculations. <strong>2020 presidential results</strong> are computed from precinct-level election returns reallocated to the current district boundaries, so both elections describe the same lines even where districts have since been redrawn. Margins are reported as two-party leans — for example, D+3 means the Democratic candidate ran three points ahead of the Republican in that district.</p>
+      <p class="dd-source">Sources: The Downballot (2024); precinct-level returns aggregated to current districts (2020).</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Representatives</h2>
+      <p>The current U.S. House member for each district comes from official House sources (house.gov) and is updated periodically. When a seat is vacant — after a resignation or death, before a special election — the profile says so rather than listing a former member. Party labels are those the member serves under in the House.</p>
+      <p class="dd-source">Source: Official listings at house.gov.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Compactness &amp; shape statistics</h2>
+      <p>Each profile reports a <strong>Polsby-Popper</strong> compactness score: 4πA / P², where A is the district's area and P its perimeter. The score runs from 0 to 1 — a perfect circle scores 1.0, and the more contorted a district's boundary, the closer it falls to 0. It's one of the standard measures courts and scholars use when evaluating whether a district's shape is "regular," though no single number can prove or disprove a gerrymander on its own.</p>
+      <p>All geometric calculations — area, perimeter, compactness, and which districts border which — are done in an equal-area map projection (the US National Atlas projection) so that scores are comparable across every state, including Alaska and Hawaii. One caveat inherent to the measure: districts whose edges follow naturally jagged features like coastlines score lower than their appearance on a map might suggest.</p>
+    </section>`,
+`<section class="dd-card">
+      <h2>Accuracy &amp; corrections</h2>
+      <p>All of this data is assembled for education, not as an official record — for authoritative figures, consult the underlying sources directly. If you spot something that looks wrong on a district profile, please email <a href="mailto:jcervas@andrew.cmu.edu">jcervas@andrew.cmu.edu</a> and we'll investigate and correct it.</p>
+    </section>`,
+    ],
+    cta: 'See the data in action — play Daily District →',
+  });
+}
+
+// ---- homepage highlights (injected into index.html between markers) --------
+// A featured district (rotates with the build date) plus a grid of national
+// superlatives — real crawlable content for the interim pre-launch homepage.
+// Margin tag with sensible precision for near-zero margins ("D+0.05").
+function closeTag(m) {
+  if (m == null) return null;
+  return (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(Math.abs(m) < 1 ? 2 : 1);
+}
+
+function homeHighlights() {
+  const f = records[Math.floor(Date.now() / 86400000) % records.length];
+  const fName = `${possessive(f.stateName)} ${districtLabel(f.state, f.dnum, f.atLarge)}`;
+  const fLean = presLean(f.pres.mar24);
+  const chips = [
+    f.c.pop != null ? `<span class="hl-chip"><b>${fmt(f.c.pop)}</b> people</span>` : '',
+    f.geo.area != null ? `<span class="hl-chip"><b>${fmt(f.geo.area)}</b> mi²</span>` : '',
+    f.c.income != null ? `<span class="hl-chip"><b>${money(f.c.income)}</b> median income</span>` : '',
+    fLean ? `<span class="hl-chip"><b>${fLean.tag}</b> in 2024</span>` : '',
+  ].filter(Boolean).join('');
+
+  const sup = [
+    [rankArea.first, 'Largest district', `${fmt(rankArea.first?.geo.area)} mi²`],
+    [rankArea.last, 'Smallest district', `${fmt(rankArea.last?.geo.area)} mi²`],
+    [rankDensity.first, 'Densest district', `${fmt(rankDensity.first?.density)}/mi²`],
+    [rankPP.first, 'Most compact shape', `${rankPP.first?.geo.pp.toFixed(2)} Polsby-Popper`],
+    [rankPP.last, 'Least compact shape', `${rankPP.last?.geo.pp.toFixed(2)} Polsby-Popper`],
+    [rankIncome.first, 'Highest median income', money(rankIncome.first?.c.income)],
+    [rankIncome.last, 'Lowest median income', money(rankIncome.last?.c.income)],
+    [rankClose24.first, 'Closest 2024 margin', closeTag(rankClose24.first?.pres.mar24)],
+  ].filter(([r2, , val]) => r2 && val != null)
+    .map(([r2, label, val]) =>
+      `<a class="hl-item" href="${districtUrl(r2.id)}"><b>${esc(r2.id)}</b><span>${esc(label)}</span><em>${val}</em></a>`)
+    .join('\n        ');
+
+  return `    <div class="home-card">
+      <p class="home-kicker">Featured district</p>
+      <h2><a href="${districtUrl(f.id)}">${esc(fName)}</a></h2>
+      <p>${ledeFor(f)}</p>
+      <div class="hl-chips">${chips}</div>
+      <p><a href="${districtUrl(f.id)}">Read the full ${esc(f.id)} profile →</a></p>
+    </div>
+    <div class="home-card">
+      <h2>Districts of extremes</h2>
+      <p>Every district holds roughly the same number of people — almost everything else varies wildly. A few records from the <a href="/districts/">435 district profiles</a>:</p>
+      <div class="hl-grid">
+        ${sup}
+      </div>
+    </div>`;
 }
 
 // Map figure markup, shared by the browse hub (no focus) and each district
@@ -643,14 +1072,45 @@ for (const r of records) {
 mkdirSync(join(ROOT, 'districts'), { recursive: true });
 writeFileSync(join(ROOT, 'districts', 'index.html'), browsePage());
 
+// Static editorial pages.
+const staticPages = [
+  ['about', aboutPage()],
+  ['how-to-play', howToPlayPage()],
+  ['methodology', methodologyPage()],
+];
+for (const [dir, html] of staticPages) {
+  mkdirSync(join(ROOT, dir), { recursive: true });
+  writeFileSync(join(ROOT, dir, 'index.html'), html);
+}
+
 // Shared interactive-map client, loaded by the browse hub and every profile.
 writeFileSync(join(ROOT, 'district-map.js'), mapClientJs());
+
+// Homepage highlights: refresh the marker block in index.html when present
+// (the interim pre-launch homepage has it; the real game index does not).
+{
+  const homeFile = join(ROOT, 'index.html');
+  const markerRe = /(<!-- HOME-HIGHLIGHTS:START -->)[\s\S]*?(<!-- HOME-HIGHLIGHTS:END -->)/;
+  if (existsSync(homeFile)) {
+    const home = readFileSync(homeFile, 'utf8');
+    if (markerRe.test(home)) {
+      // Replacer function, NOT a replacement string: generated content contains
+      // dollar amounts ("$177,521") whose "$1" a replacement string would
+      // interpret as a capture-group reference.
+      writeFileSync(homeFile, home.replace(markerRe, (_, start, end) => `${start}\n${homeHighlights()}\n    ${end}`));
+      console.log('Homepage highlights refreshed.');
+    }
+  }
+}
 
 // sitemap.xml
 const today = new Date().toISOString().slice(0, 10);
 const urls = [
   { loc: `${SITE}/`, pri: '1.0' },
   { loc: `${SITE}/districts/`, pri: '0.9' },
+  { loc: `${SITE}/about/`, pri: '0.5' },
+  { loc: `${SITE}/how-to-play/`, pri: '0.5' },
+  { loc: `${SITE}/methodology/`, pri: '0.5' },
   { loc: `${SITE}/privacy.html`, pri: '0.2' },
   ...records.map((r) => ({ loc: `${SITE}${districtUrl(r.id)}`, pri: '0.7' })),
 ];
