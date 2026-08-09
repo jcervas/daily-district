@@ -1,198 +1,168 @@
 # Daily District — logo system
 
-**Live on the site.** The district mark, built from a design handoff that is not kept
-in this repo — see [History](#history). It replaces the split-square seam mark; read
+**Live on the site.** The Ghost D mark, built from a design handoff that is not kept
+in this repo — see [History](#history). It replaces the district-lattice mark; read
 that section before reaching for any of the earlier directions again.
 
 ## The mark
 
-**Five unequal districts on a 3×3 lattice, one filled** — the district you're looking
-for today. It depicts a *districted map with an answer sitting in it*, which is the
-game, rather than depicting a single district.
+**A closed square frame with two D's carved into the negative space** — one letterform
+and its 180° rotation about the centre. Their stems land on the frame's inner edge and
+their bowls overlap across the middle, so four regions meet with no gaps. It reads as a
+monogram (two D's for Daily District) and as a bordered map cell at once.
 
-The lattice is deliberately uneven — columns 21/14/14, rows 14/21/14, 2-unit gutters
-— because an even 3×3 grid reads as a word puzzle, not a map. The districts span it
-1×2, 2×1, 1×1, 1×2, 2×1, so they interlock instead of tiling. Every edge lands on a
-whole unit, so the mark rasterises cleanly instead of mushing.
+**One colour plate.** The frame and both D's are always the same colour. Red (`#C41230`)
+is an in-product state — the *solved* fill of one D region — never the resting mark. No
+gradients, no two-colour splits.
 
-Four boundary districts are drawn as **outlines**; the answer cell is **solid**. Never
-fill the boundaries in the display cut, never outline the answer cell, and never
-colour the districts individually.
-
-**Kept strictly upright.** Do not rotate the lattice — see [History](#history).
+**Kept strictly upright and square.** Do not rotate it or stretch the square to a
+rectangle — see [History](#history).
 
 ### Geometry
 
-53 × 53 units. Stroke 1.6 units (0.03 × mark width), centered, so each outlined rect
-is drawn inset 0.8 on every side. Never render the stroke below 1 device pixel; that
-is the constraint that forces the small cut.
+100 × 100 units. Two elements, one colour:
 
-| # | Cells | Rect | Role |
-| --- | --- | --- | --- |
-| 1 | col 1, rows 1–2 | `0, 0, 21, 37` | boundary |
-| 2 | cols 2–3, row 1 | `23, 0, 30, 14` | boundary |
-| 3 | col 2, row 2 | `23, 16, 14, 21` | **answer cell — filled** |
-| 4 | col 3, rows 2–3 | `39, 16, 14, 37` | boundary |
-| 5 | cols 1–2, row 3 | `0, 39, 37, 14` | boundary |
+| Element | Spec |
+| --- | --- |
+| Frame | even-odd square ring, 17 units wide, inset 4 from the artboard edge |
+| D one | `M21 21v37h19l12-12V33L40 21Z`, stroked |
+| D two | `M79 79V42H60L48 54v13l12 12Z`, stroked (D one rotated 180°) |
+| Joins | `stroke-linejoin="miter"`, butt caps, no radii |
 
-The mark is five separate rects, not one path — a structural break from the seam mark,
-which was a single even-odd path with a transparent channel punched through it.
+The D stroke is **7.5** units (0.44 × the frame weight) in the display cut. The path data
+lives in `build.py` (`DISPLAY` / `SMALL`) and is never redrawn — assets only scale and
+tint it.
 
 ### Optical sizes
 
-The display cut carries the mark in hairlines, and hairlines are the first thing lost
-to a raster. So there are two cuts, the way a type family has optical sizes:
+The display cut carries the frame in hairlines, the first thing lost to a raster. So
+there are two cuts, the way a type family has optical sizes:
 
-| Cut | Districts | Use at |
-| --- | --- | --- |
-| Display | 4 outlined + 1 filled | above 24px |
-| Small | all 5 filled, boundaries tinted | 24px and below |
-
-**The small cut is redrawn, not shrunk.** Below 24px the outlines fill in and the five
-districts merge into one block; the small cut replaces stroke with tint so they stay
-separable. Verified against true 16px rasters, not scaled-down vectors.
-
-Small-cut tints alternate by district index — 1 and 5 take tint A, 2 and 4 take tint
-B, and the answer cell is always full red.
-
-| Ground | Tint A | Tint B | Answer |
+| Cut | Frame | D stroke | Use at |
 | --- | --- | --- | --- |
-| Light | `#B9C1CD` | `#D5DAE1` | `#C41230` |
-| Dark | `#3A4C6B` | `#56688A` | `#FF3B57` |
+| Display | inset 4 | 7.5 | above 24px |
+| Small | full-bleed | 14 | 24px and below |
 
-Clear space is one lattice unit (53/3 ≈ 17.7 units) on all four sides.
+**The small cut is redrawn, not shrunk.** Below 24px the interior closes and the mark
+reads as a solid square; the small cut reclaims the 4-unit inset and thickens the D
+stroke so the letters stay open. Verified against true 16px rasters, not scaled-down
+vectors.
+
+Clear space is one frame stroke (17 units, 0.17 × width) on all four sides — the mark
+is a closed square and reads as part of any rule or box it touches.
 
 ## Files
 
 | File | Use |
 | --- | --- |
-| `mark.svg` | **Primary** — navy boundaries, red answer cell |
-| `mark-mono.svg` | `currentColor`, one plate — stamps, embossing, single-plate print |
-| `mark-reversed.svg` | Cream boundaries, `#FF3B57` answer — navy and dark grounds |
-| `mark-knockout.svg` | All cream — red panels, won state |
-| `mark-red.svg` | The primary mark baked, for `<img src>`. **This is what the site's `logo.svg` is** |
-| `mark-small.svg` | Small cut, light ground. At or below 24px |
-| `mark-small-reversed.svg` | Small cut, dark ground |
-| `favicon.svg` | Small cut; answers the browser's dark mode |
-| `favicon-small-flat.svg`, `favicon-display-flat.svg` | Feed the `.ico` frames — no classes or media query, since the rasteriser renders them directly |
-| `icon-tile.svg` | PWA icons — solid plate, mark inset |
-| `icon-ios.svg` | iOS applies its own squircle, so the mark is inset further |
-| `icon-maskable.svg` | Android maskable, inside the 80% safe circle |
-| `icon-tile-cream.svg`, `icon-tile-navy.svg` | Knockout on red, reversed on navy |
-| `lockup-horizontal.svg` | **Primary lockup** |
-| `lockup-*-mono.svg` | `currentColor` |
-| `lockup-*-reversed.svg` | Cream, for navy and photographic grounds |
-| `lockup-stacked*.svg` | Stacked lockups |
+| `mark.svg` | **Primary** — `currentColor`, one plate; inline it and set `color` |
+| `mark-small.svg` | Small cut, `currentColor`. At or below 24px |
+| `mark-navy.svg` | Primary baked navy |
+| `logo.svg` | The navy mark baked for `<img src>`. **This is what the site's `logo.svg` is** |
+| `favicon.svg` | Small cut in navy; answers the browser's dark mode (flips to white) |
+| `favicon-small-navy.svg`, `favicon-display-navy.svg` | Feed the `.ico` frames — flat navy, no classes or media query, since the rasteriser renders them directly |
+| `app-icon.svg` | Navy plate, white mark, 19% inset — PWA `purpose: any` and iOS |
+| `app-icon-maskable.svg` | Same, 27% inset — inside Android's 80% safe circle |
+| `app-icon-red.svg` | CMU Red plate, white mark — alternate icon / event skins |
+| `lockup-horizontal.svg` | **Primary lockup** — `currentColor`, mark + wordmark |
+| `lockup-stacked.svg` | Stacked lockup — `currentColor`, for square crops and avatars |
+| `wordmark.svg` | Wordmark alone (unchanged across the mark swap) |
 | `og-image.svg` | 1200×630 social card |
-| `spec.html` | The presentation sheet — open it in a browser |
 
-`mark-red.svg` is byte-for-byte `mark.svg`. `mark.svg` would serve, but the adoption
-step has copied out by the `-red` name since the first mark, so the name stays.
+Because the mark is a single `currentColor` plate, the previous family's `-mono` /
+`-reversed` / `-knockout` colourway files are gone: mono *is* `mark.svg`, and reversed
+is the same file with `color` set to cream on a dark ground.
 
 `dist/` holds `favicon.ico` (6 frames, 16–128), `icon-192.png`, `icon-512.png`,
 `apple-touch-icon.png`, `icon-maskable-512.png`, `og-image.png` and `logo-96.png`.
 
-The app icons inset the mark inside their plate rather than running it to the tile
-edge. The seam mark was itself a rounded square and could *be* the tile; this mark's
-bounding box is a full square, so on a rounded tile its corner districts would sit
-outside the corner arc.
-
-The maskable icon is sized to sit entirely inside Android's 80% safe circle. A
-full-bleed version would lose its outer districts to the crop, leaving the answer cell
-floating with nothing to be an answer to.
-
-The social card's ghost graphic uses the **small (filled) cut** at low opacity in a
-single colour. A filled shape can bleed off the canvas edge and still read fine; the
-display cut's outlines treated the same way read as cut-off picture frames.
+The app icons **inset** the mark inside their plate rather than running it to the tile
+edge. The mark's bounding box is a full square, so on a rounded tile its corners would
+sit outside the corner arc. The maskable icon is sized to sit entirely inside Android's
+80% safe circle. The social card's ghost graphic is the mark at low opacity in one
+colour, oversized and bleeding off the right edge.
 
 ## Colour
 
-Every value is already a token in `style.css` except the two small-cut tints, which
-are mark-local rather than brand colours.
+Every value is also a token in `style.css`.
 
 | Role | Value | Token |
 | --- | --- | --- |
-| Answer cell | `#C41230` | `--cmu-red` |
-| Boundaries, wordmark | `#182C4B` | `--cmu-navy` |
-| Ground | `#F5F5F3` | `--bg` |
-| Answer cell, dark grounds | `#FF3B57` | *(existing correction)* |
-| Small-cut tints | `#B9C1CD` / `#D5DAE1` | *(mark-local)* |
+| Primary mark, primary text | `#182C4B` | `--dd-navy` |
+| Accent, solved state, red plate | `#C41230` | `--dd-red` |
+| Red on dark grounds | `#FF3B57` | `--dd-red-dark` |
+| Light ground | `#F4F3F1` | `--dd-bg` |
 
 `#FF3B57` is a rendering correction rather than a brand colour: `#C41230` goes muddy
-below roughly 20% ground luminance. `favicon.svg` applies the dark-ground palette
-automatically via `prefers-color-scheme`.
+below roughly 20% ground luminance. The resting mark is one navy plate; on dark grounds
+it flips to white (`favicon.svg` via `prefers-color-scheme`; the in-page marks via a
+CSS `filter` on `.game-logo` / `.teaser-logo` / `.welcome-logo-svg`).
 
 ## What's live on the site
 
 - `/logo.svg`, `favicon.ico`, `favicon.svg`, `icon-192.png`, `icon-512.png`,
   `apple-touch-icon.png`, `icon-maskable-512.png`, `og-image.png`, and the
   `manifest.json` maskable entry are all copies of this mark's output.
-- `VERSION_NUMBER` in `script.js` and every `?v=` cache-busting parameter on the
-  affected filenames — across all seven top-level pages and all 435 district pages —
-  were bumped together with the swap, per this repo's bump-every-push convention.
-  Every `?v=8` in the repo was on an affected filename, so the bump to `?v=9` touched
-  nothing unrelated; assets on their own version numbers (`district-pages.css?v=10`,
-  `backend.js?v=24`, `style.css?v=220`) were left alone.
-- `og:image`/`twitter:image` point at `og-image.png` (a real 1200×630 card) with
+- Every `?v=` cache-busting parameter on the affected brand filenames — across
+  `index.html`, `mica.html`, `demo.html` and `manifest.json` — was bumped `?v=9` →
+  `?v=10` with the swap. Those were the only `?v=9` refs in the repo; assets on their
+  own version numbers were left alone.
+- `og:image` / `twitter:image` point at `og-image.png` (a real 1200×630 card) with
   `twitter:card` set to `summary_large_image`.
-- The mark is square, same as the one it replaced, so `.game-logo` (32px),
-  `.welcome-logo-svg` (64–104px), `.teaser-logo` (56px) and the district pages' header
-  mark (34px) needed no CSS changes. All of them sit above the display cut's 24px
-  floor.
+- The mark is a single navy plate, so unlike the two-colour lattice it needs a dark-mode
+  treatment: `.game-logo` (header, 32px), `.teaser-logo` (56px) and `.welcome-logo-svg`
+  (welcome splash) flip to white on dark grounds via a CSS `filter`, matching the
+  wordmark. All sit above the display cut's 24px floor.
 - `.dd-wordmark` masks `/wordmark.svg` — unchanged, no action.
 
 ## Rebuilding
 
 ```bash
 python3 brand/build.py      # regenerates every SVG here + all rasters in dist/
-python3 brand/make_spec.py  # regenerates spec.html
 ```
 
-`build.py` derives every asset from the one district table, so the family can't drift
-out of sync. It rasterises with the first of `inkscape`, `rsvg-convert` or the
-`cairosvg` module that the machine has. The `.ico` is assembled by hand — Pillow's ICO
-writer silently collapses multi-frame input to a single frame, so each size is
+`build.py` embeds the canonical Ghost D path data and reads only the tracked
+`wordmark.svg`, so it reproduces every asset without the handoff present — the family
+can't drift out of sync. It rasterises with the first of `inkscape`, `rsvg-convert` or
+the `cairosvg` module that the machine has. The `.ico` is assembled by hand — Pillow's
+ICO writer silently collapses multi-frame input to a single frame, so each size is
 rendered from vector at its own resolution instead, small cut at 16/24/32 and display
 cut from 48px up.
+
+> `make_spec.py` / `spec.html` (the presentation sheet) still depict the previous
+> lattice mark; they are internal reference only (not served) and are pending a refresh
+> for Ghost D.
 
 ## History
 
 In order:
 
 1. **A stepped letter D**, built from census-block-style right angles. Read as a
-   damaged letter at a glance, not a map — the concept needed a paragraph of
-   explanation to land, which means it hadn't landed. Dropped before shipping.
-2. **The split square** — one square, two districts, divided by a jogged seam.
-   Shipped, worked cleanly upright. It was then rotated 45° for a diagonal look, which
-   turned the square into a diamond with bent segments radiating from its centre;
-   someone flagged it as reading too close to a hate symbol, and it was reverted
-   immediately, no iterating on it live. A follow-up that kept the square upright and
-   only angled the seam's own waypoints shipped safely. It was later dropped for the
-   outline mark, brought back, and has now been replaced by this one.
-   **Lesson that stays in force regardless:** anything with a rotational or radiating
-   structure is off the table, no matter how it's oriented.
-3. **A puzzle piece** — one tab, one notch. Built out completely (favicon, tile,
-   maskable, lockups, og-image) and held up at every size tested; a different
-   direction was asked for before it shipped.
-4. **An outlined district boundary** — a single asymmetric stroked loop, nothing
-   filled. Shipped for a time, then reverted back to the split square.
-5. **This mark — the district lattice.** Replaced the split square.
+   damaged letter at a glance, not a map — dropped before shipping.
+2. **The split square** — one square, two districts, divided by a jogged seam. Shipped,
+   worked cleanly upright. A 45° diagonal variant turned it into a diamond radiating
+   from its centre; someone flagged it as reading too close to a hate symbol, and it was
+   reverted immediately. **Lesson that stays in force:** anything with a rotational or
+   radiating structure is off the table, no matter how it's oriented.
+3. **A puzzle piece** — one tab, one notch. Built out completely; a different direction
+   was asked for before it shipped.
+4. **An outlined district boundary** — a single asymmetric stroked loop. Shipped for a
+   time, then reverted back to the split square.
+5. **The district lattice** — five unequal districts on a 3×3 grid, one filled. Replaced
+   the split square; shipped.
+6. **This mark — Ghost D.** Two interlocking D's carved into a square frame, one colour
+   plate. Replaced the lattice. Red drops to an in-product *solved* state rather than
+   sitting in the resting mark.
 
-`explorations/` holds the contact sheets for all of this — sheets 1–6 are the D and
-split-square work, 7–9 are non-letterform alternatives considered alongside the
-split-square, 10 (`make_compare.py`) is the head-to-head between the D, the
-split-square, and those alternatives, and the puzzle/outline rounds (`explore10.py`,
-`explore11.py`, `make_rings_review.py`, `rings-review.html`) cover the two later
-directions. `outline-mark-shipped-then-reverted/` holds that direction's full kit.
+`explorations/` holds the contact sheets for the earlier rounds. Each candidate is
+rendered large and again as a true 16px raster, since a scaled-down vector always
+flatters a mark and only a real raster tells you whether it survives.
 
-The district mark's own design handoff — `Daily District logo concepts.zip` and the
-same 17 files unpacked — is **deliberately not in the repo**; both are ignored, since
-the site is served straight from it. The original lives in Drive. Its reference SVGs
-were what `build.py`'s output was checked against when the mark was built, and every
-generated file matched them exactly apart from the root `width`/`height` attributes
-this repo adds; from here on `build.py`'s district table is the source of truth. To
-re-run that check, drop the bundle back into `explorations/` and diff
-`brand/mark*.svg` and `brand/lockup-*.svg` against its `assets/`.
-
-Every candidate is rendered large and again as a true 16px raster, since a scaled-down
-vector always flatters a mark and only a real raster tells you whether it survives.
+The Ghost D design handoff — the delivered zip and the same files unpacked — is
+**deliberately not in the repo**; both are ignored (`explorations/ghost-d-handoff/` and
+the root bundle), since the site is served straight from it. The original lives in
+Drive. Its reference SVGs are what `build.py`'s output was checked against; the path
+data is byte-for-byte, and the app-icon transforms match apart from number formatting
+(`scale(3.2)` vs `scale(3.2000)`) and the ¼-px maskable inset rounding. To re-run that
+check, drop the bundle back into `explorations/ghost-d-handoff/` and diff `brand/*.svg`
+against its `assets/`.

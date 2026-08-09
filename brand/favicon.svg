@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Daily District">
-  <style>
-    @media (prefers-color-scheme: dark) {
-      .d1, .d5 { fill: #3A4C6B; }
-      .d2, .d4 { fill: #56688A; }
-      .d3 { fill: #FF3B57; }
-    }
-  </style>
-  <rect class="d1" x="28" y="28" width="180.679" height="318.34" fill="#B9C1CD"></rect>
-  <rect class="d2" x="225.887" y="28" width="258.113" height="120.453" fill="#D5DAE1"></rect>
-  <rect class="d3" x="225.887" y="165.66" width="120.453" height="180.679" fill="#C41230"></rect>
-  <rect class="d4" x="363.547" y="165.66" width="120.453" height="318.34" fill="#D5DAE1"></rect>
-  <rect class="d5" x="28" y="363.547" width="318.34" height="120.453" fill="#B9C1CD"></rect>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Daily District"><style>@media (prefers-color-scheme:dark){.gd-s{stroke:#fff}.gd-f{fill:#fff}}</style><g fill="none" class="gd-s" stroke="#182C4B" stroke-width="14" stroke-linejoin="miter"><path d="M22 22v36h18l12-12V34L40 22Z"></path><path d="M78 78V42H60L48 54v12l12 12Z"></path></g><g class="gd-f" fill="#182C4B"><path fill-rule="evenodd" d="M0 0h100v100H0z M22 22h56v56H22z"></path></g></svg>

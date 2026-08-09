@@ -11,3 +11,6 @@ __pycache__/
 # it; the original lives in Drive. build.py is the source of truth for the geometry.
 explorations/*.zip
 explorations/district-mark-handoff/
+
+# The Ghost D design handoff the current mark was built from (reference only).
+explorations/ghost-d-handoff/

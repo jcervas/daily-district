@@ -2688,6 +2688,15 @@ body.dark-mode .archive-modal-content .archive-item { background: rgba(44, 44, 5
 }
 body.dark-mode .welcome-wordmark-svg { filter: brightness(0) invert(1); }
 body.light-mode .welcome-wordmark-svg { filter: none; }
+
+/* The Ghost D mark (logo.svg) is a single navy plate; on dark grounds it flips
+   to white, matching the wordmark treatment above. Applies to the header mark,
+   the teaser hero mark, and the welcome-splash mark. */
+@media (prefers-color-scheme: dark) {
+  .game-logo, .teaser-logo, .welcome-logo-svg { filter: brightness(0) invert(1); }
+}
+body.dark-mode .game-logo, body.dark-mode .teaser-logo, body.dark-mode .welcome-logo-svg { filter: brightness(0) invert(1); }
+body.light-mode .game-logo, body.light-mode .teaser-logo, body.light-mode .welcome-logo-svg { filter: none; }
 .welcome-back-text {
   font-family: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
   font-size: clamp(1.1rem, 3vh, 1.6rem);

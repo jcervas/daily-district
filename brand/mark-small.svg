@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 53 53" width="512" height="512" role="img" aria-label="Daily District">
-  <rect x="0" y="0" width="21" height="37" fill="#B9C1CD"></rect>
-  <rect x="23" y="0" width="30" height="14" fill="#D5DAE1"></rect>
-  <rect x="23" y="16" width="14" height="21" fill="#C41230"></rect>
-  <rect x="39" y="16" width="14" height="37" fill="#D5DAE1"></rect>
-  <rect x="0" y="39" width="37" height="14" fill="#B9C1CD"></rect>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Daily District"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="miter"><path d="M22 22v36h18l12-12V34L40 22Z"></path><path d="M78 78V42H60L48 54v12l12 12Z"></path></g><g fill="currentColor"><path fill-rule="evenodd" d="M0 0h100v100H0z M22 22h56v56H22z"></path></g></svg>

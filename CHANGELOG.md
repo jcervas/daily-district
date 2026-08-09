@@ -1,5 +1,11 @@
 # District Guess — Changelog
 
+## v2.17.0 — New logo: the "Ghost D" mark
+
+- Replaced the district-lattice mark with **Ghost D** — a square frame with two interlocking D's (one letterform and its 180° rotation) carved into the negative space, a single navy colour plate. Regenerated the whole asset family — `logo.svg`, `favicon.svg`/`.ico`, `icon-192`/`512`, `apple-touch-icon`, `icon-maskable-512`, `og-image`, and the lockups — from a rewritten, self-contained `brand/build.py` that embeds the canonical geometry and reproduces every asset without the design handoff present (the handoff stays gitignored).
+- The mark is now single-colour (red drops to the in-product *solved* state), so the header, teaser, and welcome marks flip navy→white on dark grounds via a CSS `filter`, matching the wordmark. The wordmark itself is unchanged.
+- Bumped the brand-asset cache-busters `?v=9` → `?v=10` across `index.html`, `mica.html`, `demo.html`, and `manifest.json`; removed the superseded lattice colourway variants from `brand/`.
+
 ## v2.16.0 — One-off "Special Edition" mode at /mica.html
 
 - **New `/mica.html`** — a one-off game mode where every player, signed in or
