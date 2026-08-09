@@ -101,24 +101,27 @@ def write(name, text):
 # ---------------------------------------------------------------- 1. the mark
 write("mark.svg", svg(glyph()))                                 # primary, currentColor
 write("mark-small.svg", svg(glyph(cut=SMALL)))
-write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked, for <img>
-# The site's /logo.svg is the primary mark baked navy (currentColor renders black
-# in an <img>); the site flips it to white on dark grounds with a CSS filter.
-write("logo.svg", svg(glyph(color=NAVY)))
+write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked navy (alternate)
+write("mark-red.svg", svg(glyph(color=RED)))                    # baked red (site primary)
+# The site's /logo.svg is the primary mark baked in CMU Red (currentColor renders
+# black in an <img>), so it matches the red wordmark it sits beside — in both light
+# and dark, where the red wordmark does not shift, so the mark holds red too.
+write("logo.svg", svg(glyph(color=RED)))
 
 
 # ------------------------------------------------------- 2. favicon (SVG, ICO)
-# Small cut in navy, flipping to white under the browser's own dark mode.
-_fav_body = glyph(cut=SMALL, color=NAVY)
+# Small cut in CMU Red, lifting to #FF3B57 under the browser's own dark mode
+# (plain #C41230 goes muddy on a dark tab bar).
+_fav_body = glyph(cut=SMALL, color=RED)
 _fav_body = _fav_body.replace(
-    f'stroke="{NAVY}"', f'class="gd-s" stroke="{NAVY}"').replace(
-    f'<g fill="{NAVY}">', f'<g class="gd-f" fill="{NAVY}">')
+    f'stroke="{RED}"', f'class="gd-s" stroke="{RED}"').replace(
+    f'<g fill="{RED}">', f'<g class="gd-f" fill="{RED}">')
 write("favicon.svg", svg(
-    '<style>@media (prefers-color-scheme:dark){.gd-s{stroke:#fff}.gd-f{fill:#fff}}'
-    '</style>' + _fav_body))
+    f'<style>@media (prefers-color-scheme:dark){{.gd-s{{stroke:{RED_LIFT}}}'
+    f'.gd-f{{fill:{RED_LIFT}}}}}</style>' + _fav_body))
 # Flat feeds for the .ico frames — no media query, no currentColor.
-write("favicon-small-navy.svg", svg(glyph(cut=SMALL, color=NAVY)))
-write("favicon-display-navy.svg", svg(glyph(color=NAVY)))
+write("favicon-small-red.svg", svg(glyph(cut=SMALL, color=RED)))
+write("favicon-display-red.svg", svg(glyph(color=RED)))
 
 
 # --------------------------------------------------------------- 3. app icons
@@ -134,9 +137,9 @@ def app_icon(plate, mark_color, pad):
                vb="0 0 512 512")
 
 
-write("app-icon.svg", app_icon(NAVY, WHITE, 0.1875))       # PWA "any" / iOS
-write("app-icon-maskable.svg", app_icon(NAVY, WHITE, 0.27))  # Android safe circle
-write("app-icon-red.svg", app_icon(RED, WHITE, 0.1875))    # alternate / event skin
+write("app-icon.svg", app_icon(RED, WHITE, 0.1875))        # PWA "any" / iOS (primary)
+write("app-icon-maskable.svg", app_icon(RED, WHITE, 0.27))   # Android safe circle
+write("app-icon-navy.svg", app_icon(NAVY, WHITE, 0.1875))  # alternate / event skin
 
 
 # ----------------------------------------------------------------- 4. lockups
@@ -178,7 +181,7 @@ write("wordmark.svg", _wm)
 # ------------------------------------------------------------- 5. social card
 def og_card():
     w, h = 1200.0, 630.0
-    lock = lockup_horizontal(NAVY)
+    lock = lockup_horizontal(RED)
     lvw = float(re.search(r'viewBox="0 0 ([\d.]+)', lock).group(1))
     inner = re.search(r'">(.*)</svg>', lock, re.S).group(1)
     ls = 660.0 / lvw
@@ -187,11 +190,11 @@ def og_card():
     gy = (h - gs) / 2
     return svg(
         f'<rect width="{w:.0f}" height="{h:.0f}" fill="{CREAM}"></rect>'
-        f'<g opacity="0.1">{glyph(gs, gx, gy, color=NAVY)}</g>'
+        f'<g opacity="0.1">{glyph(gs, gx, gy, color=RED)}</g>'
         f'<g transform="translate(96 {ly:.1f}) scale({ls:.4f})">{inner}</g>'
         f'<text x="98" y="{h / 2 + 82:.0f}" font-family="Space Grotesk, Barlow, '
         f'Helvetica, Arial, sans-serif" font-size="40" font-weight="500" '
-        f'fill="{NAVY}">Name the congressional district from its shape.</text>'
+        f'fill="{INK}">Name the congressional district from its shape.</text>'
         f'<text x="98" y="{h / 2 + 136:.0f}" font-family="JetBrains Mono, Barlow, '
         f'Helvetica, Arial, sans-serif" font-size="30" font-weight="700" '
         f'fill="{RED}" letter-spacing="2">A NEW ONE EVERY DAY</text>',
@@ -242,7 +245,7 @@ def build_rasters():
     sizes = [16, 24, 32, 48, 64, 128]
     frames = []
     for s in sizes:
-        src = "favicon-small-navy.svg" if s <= 32 else "favicon-display-navy.svg"
+        src = "favicon-small-red.svg" if s <= 32 else "favicon-display-red.svg"
         png(src, f"f{s}.png", s, out_dir=tmp)
         frames.append(open(os.path.join(tmp, f"f{s}.png"), "rb").read())
     offset = 6 + 16 * len(sizes)

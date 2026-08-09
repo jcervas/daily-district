@@ -1,5 +1,9 @@
 # District Guess — Changelog
 
+## v2.17.1 — Ghost D mark in CMU Red, matching the wordmark
+
+- The mark now renders in **CMU Red** (`#C41230`) instead of navy, so it matches the red "Daily District" wordmark it sits beside in the header. Since the wordmark holds `#C41230` in both light and dark, `logo.svg` does too (dropped the navy→white dark-mode `filter`). Regenerated the icon family on the red colourway: red-plate app icons, a red favicon (lifting to `#FF3B57` on a dark tab bar), and a red-lockup og-image. Navy stays in `brand/` as the alternate colourway (`mark-navy.svg`, `app-icon-navy.svg`).
+
 ## v2.17.0 — New logo: the "Ghost D" mark
 
 - Replaced the district-lattice mark with **Ghost D** — a square frame with two interlocking D's (one letterform and its 180° rotation) carved into the negative space, a single navy colour plate. Regenerated the whole asset family — `logo.svg`, `favicon.svg`/`.ico`, `icon-192`/`512`, `apple-touch-icon`, `icon-maskable-512`, `og-image`, and the lockups — from a rewritten, self-contained `brand/build.py` that embeds the canonical geometry and reproduces every asset without the design handoff present (the handoff stays gitignored).

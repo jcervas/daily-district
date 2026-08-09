@@ -57,13 +57,13 @@ is a closed square and reads as part of any rule or box it touches.
 | --- | --- |
 | `mark.svg` | **Primary** — `currentColor`, one plate; inline it and set `color` |
 | `mark-small.svg` | Small cut, `currentColor`. At or below 24px |
-| `mark-navy.svg` | Primary baked navy |
-| `logo.svg` | The navy mark baked for `<img src>`. **This is what the site's `logo.svg` is** |
-| `favicon.svg` | Small cut in navy; answers the browser's dark mode (flips to white) |
-| `favicon-small-navy.svg`, `favicon-display-navy.svg` | Feed the `.ico` frames — flat navy, no classes or media query, since the rasteriser renders them directly |
-| `app-icon.svg` | Navy plate, white mark, 19% inset — PWA `purpose: any` and iOS |
+| `mark-red.svg`, `mark-navy.svg` | The mark baked CMU Red (site primary) / navy (alternate) |
+| `logo.svg` | The mark baked in **CMU Red** for `<img src>`, to match the red wordmark it sits beside. **This is what the site's `logo.svg` is** |
+| `favicon.svg` | Small cut in CMU Red; lifts to `#FF3B57` under the browser's dark mode |
+| `favicon-small-red.svg`, `favicon-display-red.svg` | Feed the `.ico` frames — flat red, no classes or media query, since the rasteriser renders them directly |
+| `app-icon.svg` | CMU Red plate, white mark, 19% inset — PWA `purpose: any` and iOS |
 | `app-icon-maskable.svg` | Same, 27% inset — inside Android's 80% safe circle |
-| `app-icon-red.svg` | CMU Red plate, white mark — alternate icon / event skins |
+| `app-icon-navy.svg` | Navy plate, white mark — alternate icon / event skins |
 | `lockup-horizontal.svg` | **Primary lockup** — `currentColor`, mark + wordmark |
 | `lockup-stacked.svg` | Stacked lockup — `currentColor`, for square crops and avatars |
 | `wordmark.svg` | Wordmark alone (unchanged across the mark swap) |
@@ -88,15 +88,18 @@ Every value is also a token in `style.css`.
 
 | Role | Value | Token |
 | --- | --- | --- |
-| Primary mark, primary text | `#182C4B` | `--dd-navy` |
-| Accent, solved state, red plate | `#C41230` | `--dd-red` |
+| Primary mark + wordmark **on this site** | `#C41230` | `--dd-red` (`--cmu-red`) |
+| Handoff primary (kept as the alternate) | `#182C4B` | `--dd-navy` |
 | Red on dark grounds | `#FF3B57` | `--dd-red-dark` |
 | Light ground | `#F4F3F1` | `--dd-bg` |
 
-`#FF3B57` is a rendering correction rather than a brand colour: `#C41230` goes muddy
-below roughly 20% ground luminance. The resting mark is one navy plate; on dark grounds
-it flips to white (`favicon.svg` via `prefers-color-scheme`; the in-page marks via a
-CSS `filter` on `.game-logo` / `.teaser-logo` / `.welcome-logo-svg`).
+The Ghost D handoff specifies navy as the primary; **this site overrides that to CMU
+Red** so the mark matches the "Daily District" wordmark it sits beside. The wordmark is
+`#C41230` in both light and dark (it does not shift), so `logo.svg` holds `#C41230` in
+both too — no dark flip. `favicon.svg` is the one exception: it lifts to `#FF3B57` under
+`prefers-color-scheme: dark`, since `#C41230` goes muddy on a dark browser tab bar
+(below ~20% ground luminance). The navy colourway (`mark-navy.svg`, `app-icon-navy.svg`)
+stays in the kit as the alternate.
 
 ## What's live on the site
 
@@ -109,10 +112,11 @@ CSS `filter` on `.game-logo` / `.teaser-logo` / `.welcome-logo-svg`).
   own version numbers were left alone.
 - `og:image` / `twitter:image` point at `og-image.png` (a real 1200×630 card) with
   `twitter:card` set to `summary_large_image`.
-- The mark is a single navy plate, so unlike the two-colour lattice it needs a dark-mode
-  treatment: `.game-logo` (header, 32px), `.teaser-logo` (56px) and `.welcome-logo-svg`
-  (welcome splash) flip to white on dark grounds via a CSS `filter`, matching the
-  wordmark. All sit above the display cut's 24px floor.
+- The mark (`.game-logo` 32px header, `.teaser-logo` 56px) is CMU Red and holds `#C41230`
+  in both themes — the red wordmark beside it does not shift, so the mark doesn't either
+  (no dark-mode `filter`). All sit above the display cut's 24px floor. Note: on the very
+  darkest grounds (the teaser hero) `#C41230` reads a little muted — the same tradeoff
+  the red wordmark already carries there.
 - `.dd-wordmark` masks `/wordmark.svg` — unchanged, no action.
 
 ## Rebuilding
