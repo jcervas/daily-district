@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble brand/spec.html — the presentation sheet for the Ghost D logo system.
+"""Assemble brand/spec.html — the presentation sheet for the Split Ring logo system.
 
 Small-size renders are embedded as base64 of the ACTUAL rasters build.py produces, not
 as scaled-down vectors. A scaled vector always looks fine; only a real 16px raster tells
@@ -28,10 +28,10 @@ def b64(path):
     return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
 
 
-# Flat navy cuts feed the raster ladders (currentColor would render black in a raster).
-SMALL = {s: b64(render("favicon-small-navy.svg", f"s{s}.png", s))
+# Flat red cuts feed the raster ladders (currentColor would render black in a raster).
+SMALL = {s: b64(render("favicon-small-red.svg", f"s{s}.png", s))
          for s in (16, 20, 24, 32)}
-DISPLAY = {s: b64(render("favicon-display-navy.svg", f"d{s}.png", s))
+DISPLAY = {s: b64(render("favicon-display-red.svg", f"d{s}.png", s))
            for s in (16, 20, 24, 32, 48, 64)}
 TILE192 = b64(render("app-icon.svg", "t192.png", 192))
 IOS180 = b64(render("app-icon.svg", "i180.png", 180))
@@ -44,50 +44,64 @@ def mark(color, cut=B.DISPLAY):
             + B.glyph(cut=cut, color=color) + '</svg>')
 
 
-# Frame edges per cut: (outer, inner_lo, inner_hi, outer_hi), and the D stroke.
+# On-curve anchor points of the S-spine per cut: top, right shoulder, centre,
+# left shoulder, bottom. The spine is two mirrored cubics meeting at the centre.
 CUTS = {
-    "display": (4, 21, 79, 96, B.DISPLAY),
-    "small": (0, 22, 78, 100, B.SMALL),
+    "display": dict(cut=B.DISPLAY, anchors=[(50, 6), (78, 28), (50, 50), (22, 72), (50, 94)]),
+    "small":   dict(cut=B.SMALL,   anchors=[(50, 5), (81, 28), (50, 50), (19, 72), (50, 95)]),
 }
 
 
 def construction_svg(name):
-    """The mark as a technical drawing: the frame's outer/inner edges ruled through it,
-    with the frame stroke dimensioned across the gap between the two square rings."""
-    o0, i0, i1, o1, cut = CUTS[name]
+    """The mark as a technical drawing: the bounding box and centre cross ruled through
+    it, a dashed guide circle on the ring's centreline, the ring radius dimensioned, and
+    the S-spine's on-curve anchors dotted."""
+    spec = CUTS[name]
+    cut = spec["cut"]
+    r, sw = cut["r"], cut["stroke"]
     c = 3.6                                    # px per unit
-    ox, oy = 30.0, 26.0
-    w = ox * 2 + G * c
+    ox, oy = 34.0, 26.0
+    W = ox * 2 + G * c
 
-    lines = []
-    for v in (o0, i0, 50, i1, o1):
-        x, y = ox + v * c, oy + v * c
-        lines.append(f'<line x1="{x:.1f}" y1="{oy:.1f}" '
-                     f'x2="{x:.1f}" y2="{oy + G * c:.1f}"/>')
-        lines.append(f'<line x1="{ox:.1f}" y1="{y:.1f}" '
-                     f'x2="{ox + G * c:.1f}" y2="{y:.1f}"/>')
+    def X(u):
+        return ox + u * c
 
-    # The frame stroke (outer edge -> inner edge), dimensioned along the top.
-    x1, x2 = ox + o0 * c, ox + i0 * c
-    dy = oy + G * c + 15
-    dim = (f'<line x1="{x1:.1f}" y1="{dy:.1f}" x2="{x2:.1f}" y2="{dy:.1f}"/>'
-           f'<line x1="{x1:.1f}" y1="{dy - 5:.1f}" x2="{x1:.1f}" y2="{dy + 5:.1f}"/>'
-           f'<line x1="{x2:.1f}" y1="{dy - 5:.1f}" x2="{x2:.1f}" y2="{dy + 5:.1f}"/>'
-           f'<text x="{(x1 + x2) / 2:.1f}" y="{dy - 10:.1f}" text-anchor="middle">'
-           f'{i0 - o0}</text>')
+    def Y(u):
+        return oy + u * c
 
-    glyph = B.glyph(G * c, ox, oy, cut=cut, color="var(--navy)", indent="    ")
-    return f'''<svg viewBox="0 0 {w:.0f} {oy * 2 + G * c + 22:.0f}" class="cons" aria-hidden="true">
-  <g class="grid">{''.join(lines)}</g>
+    cx, cy = X(50), Y(50)
+
+    grid = [
+        f'<rect x="{X(0):.1f}" y="{Y(0):.1f}" width="{G * c:.1f}" height="{G * c:.1f}"/>',
+        f'<line x1="{cx:.1f}" y1="{Y(0):.1f}" x2="{cx:.1f}" y2="{Y(100):.1f}"/>',
+        f'<line x1="{X(0):.1f}" y1="{cy:.1f}" x2="{X(100):.1f}" y2="{cy:.1f}"/>',
+    ]
+    guide = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r * c:.1f}" fill="none" '
+             f'stroke-dasharray="3 4"/>')
+
+    # Ring radius, dimensioned along the clear left centreline (spine avoids it there).
+    rx = X(50 - r)
+    radius = (f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{rx:.1f}" y2="{cy:.1f}"/>'
+              f'<line x1="{rx:.1f}" y1="{cy - 5:.1f}" x2="{rx:.1f}" y2="{cy + 5:.1f}"/>'
+              f'<text x="{(cx + rx) / 2:.1f}" y="{cy - 8:.1f}" text-anchor="middle">'
+              f'r{r}</text>')
+
+    dots = ''.join(f'<circle cx="{X(px):.1f}" cy="{Y(py):.1f}" r="3.2" class="anchor"/>'
+                   for px, py in spec["anchors"])
+
+    glyph = B.glyph(G * c, ox, oy, cut=cut, color="var(--ink)", indent="    ")
+    return f'''<svg viewBox="0 0 {W:.0f} {oy + G * c + 26:.0f}" class="cons" aria-hidden="true">
+  <g class="grid">{''.join(grid)}{guide}</g>
   <g class="mk">
 {glyph}
   </g>
-  <g class="dim">{dim}</g>
+  <g class="dim">{radius}</g>
+  <g class="anchors">{dots}</g>
 </svg>'''
 
 
-LOCKUP = B.lockup_horizontal("var(--navy)")
-LOCKUP_STACK = B.lockup_stacked("var(--navy)")
+LOCKUP = B.lockup_horizontal("var(--red)")
+LOCKUP_STACK = B.lockup_stacked("var(--red)")
 
 HTML = f'''<title>Daily District — Logo System</title>
 <style>
@@ -126,13 +140,16 @@ HTML = f'''<title>Daily District — Logo System</title>
 
   .hero {{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:52px;
            align-items:center; }}
-  .hero .mk {{ width:190px; color:var(--navy); }}
+  .hero .mk {{ width:190px; color:var(--red); }}
   .hero .mk svg {{ display:block; width:100%; height:auto; }}
   @media (max-width:720px) {{ .hero {{ grid-template-columns:1fr; gap:34px; }}
                               .hero .mk {{ width:138px; }} }}
 
   .cons {{ width:100%; height:auto; display:block; }}
   .cons .grid line {{ stroke:var(--grid); stroke-width:1; }}
+  .cons .grid rect {{ fill:none; stroke:var(--grid); stroke-width:1; }}
+  .cons .grid circle {{ stroke:var(--grid); stroke-width:1; }}
+  .cons .anchor {{ fill:var(--red); }}
   .cons .dim line {{ stroke:var(--ink); stroke-width:1.4; }}
   .cons .dim text {{ font-family:var(--mono); font-size:12px; fill:var(--ink); }}
   .cuts {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -167,15 +184,20 @@ HTML = f'''<title>Daily District — Logo System</title>
   .app img {{ width:62px; height:62px; border-radius:14px; display:block; }}
   .app .nm {{ font-size:.62rem; color:#fff; opacity:.92; text-align:center; }}
   .app.ghost .sq {{ background:#ffffff1f; border-radius:14px; width:62px; height:62px; }}
+  .avatars {{ display:flex; gap:20px; flex-wrap:wrap; }}
+  .avatar {{ display:flex; flex-direction:column; align-items:center; gap:9px; }}
+  .avatar img {{ width:84px; height:84px; border-radius:50%; display:block;
+                 border:1px solid var(--rule); }}
+  .avatar .cap {{ font-family:var(--mono); font-size:.68rem; color:var(--muted); }}
   .appbar {{ display:flex; align-items:center; gap:10px; padding:11px 14px;
              border:1px solid var(--rule); border-radius:8px; background:var(--panel); }}
-  .appbar .lk {{ height:24px; color:var(--navy); }}
+  .appbar .lk {{ height:24px; color:var(--red); }}
   .appbar .lk svg {{ height:100%; width:auto; display:block; }}
   .appbar .sp {{ margin-left:auto; display:flex; gap:6px; }}
   .appbar .dot {{ width:9px; height:9px; border-radius:50%; background:var(--rule); }}
 
   .lockups {{ display:flex; flex-direction:column; gap:16px; }}
-  .lk-row {{ padding:26px; display:flex; align-items:center; gap:20px; color:var(--navy); }}
+  .lk-row {{ padding:26px; display:flex; align-items:center; gap:20px; color:var(--red); }}
   .lk-row svg {{ height:44px; width:auto; max-width:100%; display:block; }}
   .lk-row.stack svg {{ height:120px; }}
   .lk-row .tag {{ margin-left:auto; font-family:var(--mono); font-size:.68rem;
@@ -203,41 +225,41 @@ HTML = f'''<title>Daily District — Logo System</title>
   <header class="hero">
     <div>
       <div class="eyebrow">Logo system</div>
-      <h1>Two D's in a bordered square.</h1>
-      <p class="lede" style="margin-top:14px">Ghost D is a closed square frame with two
-      D letterforms carved into the negative space &mdash; one glyph and its 180&deg;
-      rotation about the centre. Their stems land on the frame's inner edge and their
-      bowls overlap across the middle, so four regions meet with no gaps. It reads as a
-      monogram &mdash; two D's for Daily District &mdash; and as a bordered map cell at
-      once. One colour plate: the frame and both D's are always the same colour.</p>
+      <h1>A ring split into two D's.</h1>
+      <p class="lede" style="margin-top:14px">The Split Ring is a circle bisected by a
+      vertical S-spine. The spine sweeps the top of the ring to the right and the bottom
+      to the left, so the circle reads as two interlocking D letterforms &mdash; two D's
+      for Daily District &mdash; and, at a glance, as a single continuous stroke folding
+      back on itself. One weight, one colour, all strokes with round caps and joins.</p>
     </div>
-    <div class="mk">{mark("var(--navy)")}</div>
+    <div class="mk">{mark("var(--red)")}</div>
   </header>
 
   <section>
     <div class="head">
       <div class="eyebrow">Construction</div>
-      <h2>One frame, two rotated D's</h2>
+      <h2>One ring, one S-spine</h2>
     </div>
     <div class="cuts">
       <div class="panel cut">
-        <div class="cap">Display cut &middot; frame inset 4, D stroke 7.5</div>
+        <div class="cap">Display cut &middot; ring r44, stroke 6</div>
         {construction_svg("display")}
       </div>
       <div class="panel cut">
-        <div class="cap">Small cut &middot; full-bleed frame, D stroke 14</div>
+        <div class="cap">Small cut &middot; ring r45, stroke 10</div>
         {construction_svg("small")}
       </div>
     </div>
-    <p>100&times;100 units. The frame is an even-odd square ring 17 units wide, inset 4
-    from the artboard edge. Each D is a stroked path landing on the frame's inner edge;
-    the second is the first rotated 180&deg; about the centre. The D stroke is 7.5 units
-    &mdash; 0.44 of the frame weight &mdash; with mitred joins and butt caps.</p>
-    <p class="note">Kept strictly upright and square. A prior mark's diagonal variant was
-    flagged as reading too close to a hate symbol and pulled immediately; since then,
-    anything with a rotational or radiating structure is off the table. Never redraw the
-    D's, never round the joins, never float them off the frame's inner edge, and never
-    set them at the frame's own weight.</p>
+    <p>100&times;100 units, centred on (50,&nbsp;50). The ring is a plain circle; the
+    spine is two mirrored cubic B&eacute;zier curves that meet at the centre and land on
+    the ring at top and bottom. Because the spine is 180&deg;-rotationally symmetric
+    about the centre, the two D regions are one shape and its turn. Dots mark the spine's
+    five on-curve anchors; the dashed circle is the ring's centreline.</p>
+    <p class="note">Kept upright. A prior mark's diagonal variant was flagged as reading
+    too close to a hate symbol and pulled immediately; since then, anything set on a
+    diagonal or with a radiating structure is off the table. Never rotate the mark to a
+    diagonal, stretch the circle to an ellipse, square off the caps, redraw the spine, or
+    split the ring and spine into two colours.</p>
   </section>
 
   <section>
@@ -245,13 +267,14 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="eyebrow">Optical sizes</div>
       <h2>The small cut is redrawn, not shrunk</h2>
     </div>
-    <p>The display cut carries the frame in hairlines, and hairlines are the first thing
-    lost to a raster. Below 24px the interior closes and the mark reads as a solid
-    square. The small cut reclaims the 4-unit inset (the frame runs full-bleed) and
-    thickens the D stroke to 14, so the letters stay open at favicon sizes.</p>
+    <p>The display cut carries the ring and spine in thin strokes, and thin strokes are
+    the first thing lost to a raster. Below 24px the strokes silt up and the interior
+    closes to a solid disc. The small cut fattens the ring (r45) and the spine (stroke
+    10) and pulls the spine's shoulders wider, so the two D's stay open at favicon
+    sizes.</p>
     <div class="vs">
       <div class="panel mock">
-        <div class="cap">Display cut below 24px &mdash; closes up</div>
+        <div class="cap">Display cut below 24px &mdash; silts up</div>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
@@ -285,8 +308,7 @@ HTML = f'''<title>Daily District — Logo System</title>
       </div>""" for s in (24, 32, 48, 64))}
     </div>
     <p class="note">Everywhere the site uses <code>/logo.svg</code> sits above the
-    floor: 32px in the game header, 34px on the district pages, 56px on the teaser and
-    64&ndash;104px on the welcome screen.</p>
+    floor: the game header, the district pages, the teaser and the welcome screen.</p>
   </section>
 
   <section>
@@ -323,11 +345,32 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div>
       </div>
     </div>
-    <p class="note">The mark is inset inside the app-icon plates rather than run to their
-    edge: its bounding box is a full square, so on a rounded tile the corners would sit
-    outside the corner arc. The maskable icon is sized to fit entirely inside Android's
-    80% safe circle. The plate is navy with a white mark; a CMU Red plate
-    (<code>app-icon-red.svg</code>) is the alternate.</p>
+    <p class="note">The ring is inset inside the app-icon plates rather than run to their
+    edge, so a rounded tile or a circle crop never clips it. The maskable icon is sized
+    to fit entirely inside Android's 80% safe circle. The plate is CMU Red with a white
+    mark; a navy plate (<code>app-icon-navy.svg</code>) is the alternate.</p>
+  </section>
+
+  <section>
+    <div class="head">
+      <div class="eyebrow">Social</div>
+      <h2>Profile pictures</h2>
+    </div>
+    <div class="panel mock">
+      <div class="cap">avatar-*.svg &middot; 1000px &middot; safe for a circle crop</div>
+      <div class="avatars">
+        <div class="avatar"><img src="{b64(render("avatar-red.svg", "av-r.png", 168))}" alt="">
+          <div class="cap">red &middot; primary</div></div>
+        <div class="avatar"><img src="{b64(render("avatar-navy.svg", "av-n.png", 168))}" alt="">
+          <div class="cap">navy &middot; alternate</div></div>
+        <div class="avatar"><img src="{b64(render("avatar-cream.svg", "av-c.png", 168))}" alt="">
+          <div class="cap">cream &middot; light</div></div>
+      </div>
+    </div>
+    <p class="note">The plated mark at a 16% inset, so the ring sits well inside the
+    circle X, Instagram and the rest crop to. Rastered to
+    <code>dist/avatar-*-1000.png</code>. The 1200&times;630
+    <code>og-image.png</code> is the share card.</p>
   </section>
 
   <section>
@@ -347,27 +390,28 @@ HTML = f'''<title>Daily District — Logo System</title>
 
   <section>
     <div class="head">
-      <div class="eyebrow">Colour &middot; existing tokens only</div>
-      <h2>One plate, no new brand colours</h2>
+      <div class="eyebrow">Colour</div>
+      <h2>One colour, CMU Red on this site</h2>
     </div>
-    <p>The resting mark is a single plate &mdash; navy on light, cream on dark or on a
-    red panel. Red (<code>#C41230</code>) is an in-product <em>solved</em> state, not a
-    second plate in the logo. On dark grounds red lifts to <code>#FF3B57</code>, because
-    <code>#C41230</code> goes muddy below about 20% ground luminance &mdash; a rendering
-    correction rather than a new brand colour.</p>
+    <p>The mark is a single colour that matches the "Daily District" wordmark beside it:
+    CMU Red (<code>#C41230</code>). Red is also the in-product <em>solved</em> fill
+    (<code>mark-solved.svg</code>), never a second colour inside the resting mark. On
+    dark grounds red lifts to <code>#FF3B57</code>, because <code>#C41230</code> goes
+    muddy below about 20% ground luminance &mdash; a rendering correction, not a new
+    brand colour. Navy (<code>#182C4B</code>) stays in the kit as the alternate plate.</p>
     <div class="swatches">
-      <div class="sw"><div class="chip" style="background:{CREAM};color:{NAVY}">{mark("currentColor")}</div>
-        <div class="lbl">--dd-bg &middot; navy mark</div></div>
+      <div class="sw"><div class="chip" style="background:{CREAM};color:{RED}">{mark("currentColor")}</div>
+        <div class="lbl">--dd-bg &middot; red mark</div></div>
       <div class="sw"><div class="chip" style="background:{RED};color:{WHITE}">{mark("currentColor")}</div>
         <div class="lbl">--dd-red &middot; knockout</div></div>
       <div class="sw"><div class="chip" style="background:{NAVY};color:{WHITE}">{mark("currentColor")}</div>
-        <div class="lbl">--dd-navy &middot; reversed</div></div>
+        <div class="lbl">--dd-navy &middot; alternate</div></div>
       <div class="sw"><div class="chip" style="background:{INK};color:{WHITE}">{mark("currentColor")}</div>
         <div class="lbl">dark ground &middot; white</div></div>
-      <div class="sw"><div class="chip" style="background:{CREAM};color:{NAVY}">{mark("currentColor", cut=B.SMALL)}</div>
-        <div class="lbl">small cut &middot; navy</div></div>
-      <div class="sw"><div class="chip" style="background:{NAVY};color:{WHITE}">{mark("currentColor", cut=B.SMALL)}</div>
-        <div class="lbl">small cut &middot; reversed</div></div>
+      <div class="sw"><div class="chip" style="background:{CREAM};color:{RED}">{mark("currentColor", cut=B.SMALL)}</div>
+        <div class="lbl">small cut &middot; red</div></div>
+      <div class="sw"><div class="chip" style="background:{RED};color:{WHITE}">{mark("currentColor", cut=B.SMALL)}</div>
+        <div class="lbl">small cut &middot; knockout</div></div>
     </div>
   </section>
 
@@ -378,20 +422,19 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
-      <tr><td>Clear space</td><td class="f">1 frame stroke = 0.17 &times; width</td>
-          <td>The mark is a closed square and reads as part of any rule or box it touches.</td></tr>
+      <tr><td>Clear space</td><td class="f">1 ring stroke on all sides</td>
+          <td>Keeps the ring from fusing with any rule or box it sits against.</td></tr>
       <tr><td>Minimum, small cut</td><td class="f">16px</td>
-          <td>Below this the interior closes and the mark reads as a solid square.</td></tr>
+          <td>Below this the strokes silt up and the interior closes to a disc.</td></tr>
       <tr><td>Switch cuts at</td><td class="f">24px</td>
           <td>Display cut above, small cut at and below.</td></tr>
       <tr><td>Minimum stroke</td><td class="f">1 device pixel</td>
-          <td>A sub-pixel hairline is what forces the small cut in the first place.</td></tr>
+          <td>A sub-pixel stroke is what forces the small cut in the first place.</td></tr>
       <tr><td>Minimum, full lockup</td><td class="f">120px wide</td>
           <td>Set by the wordmark's counters, not the mark.</td></tr>
       <tr><td>Never</td><td class="f">&mdash;</td>
-          <td>Rotate or stretch the square, redraw the D's, round the caps or joins,
-              float the D's off the frame's inner edge, set them at frame weight, or
-              split the mark into two colours.</td></tr>
+          <td>Set the mark on a diagonal, stretch the circle to an ellipse, square off
+              the caps, redraw the spine, or split the ring and spine into two colours.</td></tr>
     </table></div>
   </section>
 
@@ -402,17 +445,19 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>File</th><th>Use</th></tr>
-      <tr><td class="f">mark.svg</td><td>Primary &mdash; <code>currentColor</code>, one plate. Inline it and set <code>color</code>.</td></tr>
+      <tr><td class="f">mark.svg</td><td>Primary &mdash; <code>currentColor</code>, one colour. Inline it and set <code>color</code>.</td></tr>
       <tr><td class="f">mark-small.svg</td><td>Small cut, <code>currentColor</code>. At or below 24px.</td></tr>
-      <tr><td class="f">mark-navy.svg</td><td>Primary baked navy.</td></tr>
-      <tr><td class="f">logo.svg</td><td>The navy mark for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> is.</td></tr>
-      <tr><td class="f">favicon.svg</td><td>Small cut in navy; flips to white in the browser's dark mode.</td></tr>
-      <tr><td class="f">app-icon.svg</td><td>Navy plate, white mark, 19% inset &mdash; PWA "any" and iOS.</td></tr>
+      <tr><td class="f">mark-red.svg / mark-navy.svg</td><td>Baked CMU Red (primary) / navy (alternate).</td></tr>
+      <tr><td class="f">mark-solved.svg</td><td>In-product <em>solved</em> state &mdash; one D region filled, ring drawn over.</td></tr>
+      <tr><td class="f">logo.svg</td><td>The red mark for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> is.</td></tr>
+      <tr><td class="f">favicon.svg</td><td>Small cut in CMU Red; lifts to <code>#FF3B57</code> in the browser's dark mode.</td></tr>
+      <tr><td class="f">app-icon.svg</td><td>CMU Red plate, white mark, 19% inset &mdash; PWA "any" and iOS.</td></tr>
       <tr><td class="f">app-icon-maskable.svg</td><td>27% inset, inside Android's 80% safe circle.</td></tr>
-      <tr><td class="f">app-icon-red.svg</td><td>CMU Red plate, white mark &mdash; alternate / event skins.</td></tr>
+      <tr><td class="f">app-icon-navy.svg</td><td>Navy plate, white mark &mdash; alternate / event skins.</td></tr>
+      <tr><td class="f">avatar-*.svg</td><td>Social profile pictures &mdash; red / navy / cream, 16% inset.</td></tr>
       <tr><td class="f">lockup-*.svg</td><td>Horizontal and stacked, <code>currentColor</code>.</td></tr>
       <tr><td class="f">og-image.svg</td><td>1200&times;630 social card.</td></tr>
-      <tr><td class="f">dist/</td><td>Rendered PNGs plus a 6-frame favicon.ico (16&ndash;128).</td></tr>
+      <tr><td class="f">dist/</td><td>Rendered PNGs, the avatars at 1000px, and a 6-frame favicon.ico (16&ndash;128).</td></tr>
       <tr><td class="f">build.py</td><td>Regenerates everything above from the canonical path data.</td></tr>
     </table></div>
   </section>
