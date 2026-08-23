@@ -226,11 +226,11 @@ HTML = f'''<title>Daily District — Logo System</title>
     <div>
       <div class="eyebrow">Logo system</div>
       <h1>A ring split into two D's.</h1>
-      <p class="lede" style="margin-top:14px">The Split Ring is a circle bisected by a
-      vertical S-spine. The spine sweeps the top of the ring to the right and the bottom
-      to the left, so the circle reads as two interlocking D letterforms &mdash; two D's
-      for Daily District &mdash; and, at a glance, as a single continuous stroke folding
-      back on itself. One weight, one colour, all strokes with round caps and joins.</p>
+      <p class="lede" style="margin-top:14px">The Split Ring is a circle divided by a
+      straight vertical stem and a curved S-spine. The spine bows right across the top
+      half and left across the bottom, closing against the stem into the bowl of a D
+      &mdash; one upright, one rotated 180&deg; &mdash; two D's for Daily District. One
+      weight, one colour, all strokes with round caps and joins.</p>
     </div>
     <div class="mk">{mark("var(--red)")}</div>
   </header>
@@ -238,7 +238,7 @@ HTML = f'''<title>Daily District — Logo System</title>
   <section>
     <div class="head">
       <div class="eyebrow">Construction</div>
-      <h2>One ring, one S-spine</h2>
+      <h2>Ring, stem, spine</h2>
     </div>
     <div class="cuts">
       <div class="panel cut">
@@ -246,15 +246,16 @@ HTML = f'''<title>Daily District — Logo System</title>
         {construction_svg("display")}
       </div>
       <div class="panel cut">
-        <div class="cap">Small cut &middot; ring r45, stroke 10</div>
+        <div class="cap">Small cut &middot; ring r45, stroke 9</div>
         {construction_svg("small")}
       </div>
     </div>
-    <p>100&times;100 units, centred on (50,&nbsp;50). The ring is a plain circle; the
-    spine is two mirrored cubic B&eacute;zier curves that meet at the centre and land on
-    the ring at top and bottom. Because the spine is 180&deg;-rotationally symmetric
-    about the centre, the two D regions are one shape and its turn. Dots mark the spine's
-    five on-curve anchors; the dashed circle is the ring's centreline.</p>
+    <p>100&times;100 units, centred on (50,&nbsp;50). Three strokes: the ring (a plain
+    circle), the stem (a straight line on the centre axis from top to bottom), and the
+    spine (two mirrored cubic B&eacute;zier curves that meet at the centre and land on
+    the ring at top and bottom). Because both stem and spine are 180&deg;-rotationally
+    symmetric about the centre, the two D regions are one shape and its turn. Dots mark
+    the spine's five on-curve anchors; the dashed circle is the ring's centreline.</p>
     <p class="note">Kept upright. A prior mark's diagonal variant was flagged as reading
     too close to a hate symbol and pulled immediately; since then, anything set on a
     diagonal or with a radiating structure is off the table. Never rotate the mark to a
@@ -269,8 +270,8 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <p>The display cut carries the ring and spine in thin strokes, and thin strokes are
     the first thing lost to a raster. Below 24px the strokes silt up and the interior
-    closes to a solid disc. The small cut fattens the ring (r45) and the spine (stroke
-    10) and pulls the spine's shoulders wider, so the two D's stay open at favicon
+    closes to a solid disc. The small cut fattens the ring (r45) and the strokes (to 9)
+    and pulls the spine's shoulders wider, so the two D's stay open at favicon
     sizes.</p>
     <div class="vs">
       <div class="panel mock">
@@ -447,7 +448,7 @@ HTML = f'''<title>Daily District — Logo System</title>
       <tr><th>File</th><th>Use</th></tr>
       <tr><td class="f">mark.svg</td><td>Primary &mdash; <code>currentColor</code>, one colour. Inline it and set <code>color</code>.</td></tr>
       <tr><td class="f">mark-small.svg</td><td>Small cut, <code>currentColor</code>. At or below 24px.</td></tr>
-      <tr><td class="f">mark-red.svg / mark-navy.svg</td><td>Baked CMU Red (primary) / navy (alternate).</td></tr>
+      <tr><td class="f">mark-red / -navy / -white.svg</td><td>Baked CMU Red (primary), navy (alternate), white (dark grounds).</td></tr>
       <tr><td class="f">mark-solved.svg</td><td>In-product <em>solved</em> state &mdash; one D region filled, ring drawn over.</td></tr>
       <tr><td class="f">logo.svg</td><td>The red mark for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> is.</td></tr>
       <tr><td class="f">favicon.svg</td><td>Small cut in CMU Red; lifts to <code>#FF3B57</code> in the browser's dark mode.</td></tr>
@@ -457,6 +458,7 @@ HTML = f'''<title>Daily District — Logo System</title>
       <tr><td class="f">avatar-*.svg</td><td>Social profile pictures &mdash; red / navy / cream, 16% inset.</td></tr>
       <tr><td class="f">lockup-*.svg</td><td>Horizontal and stacked, <code>currentColor</code>.</td></tr>
       <tr><td class="f">og-image.svg</td><td>1200&times;630 social card.</td></tr>
+      <tr><td class="f">logo.css</td><td>Palette tokens + <code>.dd-mark</code> / <code>.dd-wordmark</code> mask helpers.</td></tr>
       <tr><td class="f">dist/</td><td>Rendered PNGs, the avatars at 1000px, and a 6-frame favicon.ico (16&ndash;128).</td></tr>
       <tr><td class="f">build.py</td><td>Regenerates everything above from the canonical path data.</td></tr>
     </table></div>

@@ -2,21 +2,22 @@
 """Generate the Daily District "Split Ring" logo system from one parametric source.
 
 THE MARK
-    A circle bisected by a vertical S-spine. The spine sweeps the top bowl to the
-    right and the bottom bowl to the left, so the ring reads as two interlocking
-    D letterforms (Daily District). ONE colour: ring and spine are always the same
-    colour, all strokes with round caps and joins. Red (#C41230) is the site
-    primary and the in-product "solved" fill; never a two-colour split.
+    A circle divided by a straight vertical stem and a curved S-spine. The spine
+    bows right across the top half and left across the bottom, closing against the
+    stem into the bowl of a D — one upright, one rotated 180° (Daily District).
+    ONE colour: ring, stem and spine are always the same colour, all strokes with
+    round caps and joins. Red (#C41230) is the site primary and the in-product
+    "solved" fill; never a two-colour split.
 
     Drawn on a 100 x 100 grid. This file is the source of truth for the geometry
     (the two cuts below); it reproduces every asset byte-for-byte.
 
 OPTICAL SIZES
     Two cuts, like a type family's optical sizes:
-      DISPLAY  ring r44, spine stroke 6    above 24px
-      SMALL    ring r45, spine stroke 10   24px and below
-    The small cut fattens the ring and spine so the interior stays open at favicon
-    sizes instead of silting up into a solid disc.
+      DISPLAY  ring r44, stroke 6   above 24px
+      SMALL    ring r45, stroke 9   24px and below
+    The small cut fattens the ring and strokes and pushes the spine's shoulders
+    wider so the interior stays open at favicon sizes instead of silting up.
 
     python3 brand/build.py
 
@@ -44,22 +45,24 @@ CREAM = "#F4F3F1"       # --dd-bg     light ground
 INK = "#15171B"
 
 # ------------------------------------------------------------------- geometry
-# Canonical "Split Ring" path data on the 100-unit grid. A ring bisected by a
-# vertical S-spine: the spine hands the top bowl to the right and the bottom bowl
-# to the left, so the ring reads as two interlocking D's (Daily District). Two
-# elements, one colour, all strokes with round caps/joins. These strings ARE the
-# mark — never redrawn, only scaled/tinted.
+# Canonical "Split Ring" path data on the 100-unit grid. A ring divided by a
+# straight vertical stem and a curved S-spine: the spine bows right across the top
+# half and left across the bottom, closing against the stem into the bowl of a D —
+# one upright, one rotated 180°. Three strokes (ring, stem, spine), one colour,
+# round caps/joins. These strings ARE the mark — never redrawn, only scaled/tinted.
 DISPLAY = {
     "r": 44,
     "spine": ("M50 6 C 70 6 78 16 78 28 C 78 40 68 50 50 50 "
               "C 32 50 22 60 22 72 C 22 84 30 94 50 94"),
+    "stem": (6, 94),
     "stroke": 6,
 }
-SMALL = {   # 24px and below: fuller ring, thicker spine so it holds at favicon sizes
+SMALL = {   # 24px and below: fuller ring, thicker strokes so it holds at favicon sizes
     "r": 45,
     "spine": ("M50 5 C 72 5 81 16 81 28 C 81 41 68 50 50 50 "
               "C 32 50 19 59 19 72 C 19 84 28 95 50 95"),
-    "stroke": 10,
+    "stem": (5, 95),
+    "stroke": 9,
 }
 G = 100.0  # grid size
 
@@ -80,7 +83,9 @@ def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
     body = (f'<g fill="none" stroke="{color}" stroke-width="{num(cut["stroke"])}" '
             f'stroke-linecap="round" stroke-linejoin="round">'
             f'<circle cx="50" cy="50" r="{num(cut["r"])}"></circle>'
-            f'<path d="{cut["spine"]}"></path></g>')
+            f'<path d="{cut["spine"]}"></path>'
+            f'<line x1="50" y1="{num(cut["stem"][0])}" x2="50" '
+            f'y2="{num(cut["stem"][1])}"></line></g>')
     if size == G and x == 0 and y == 0:
         return indent + body
     s = size / G
@@ -115,6 +120,7 @@ write("mark.svg", svg(glyph()))                                 # primary, curre
 write("mark-small.svg", svg(glyph(cut=SMALL)))
 write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked navy (alternate)
 write("mark-red.svg", svg(glyph(color=RED)))                    # baked red (site primary)
+write("mark-white.svg", svg(glyph(color=WHITE)))               # baked white (dark grounds)
 write("mark-solved.svg", svg(glyph_solved()))                  # in-product "solved" state
 # The site's /logo.svg is the primary mark baked in CMU Red (currentColor renders
 # black in an <img>), so it matches the red wordmark it sits beside — in both light

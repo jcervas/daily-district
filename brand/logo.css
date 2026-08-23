@@ -1,0 +1,38 @@
+/* Daily District — Split Ring mark. Drop-in tokens + mark helpers. */
+:root {
+  --dd-red: #C41230;
+  --dd-red-dark: #FF3B57;
+  --dd-navy: #182C4B;
+  --dd-ink: #1a1a1a;
+  --dd-muted: #5a5f6b;
+  --dd-bg: #F4F3F1;
+}
+
+/* Mark as a tintable mask: colour it with `color`, size it with width/height. */
+.dd-mark {
+  display: inline-block;
+  aspect-ratio: 1;
+  background: currentColor;
+  -webkit-mask: url(mark.svg) no-repeat center / contain;
+  mask: url(mark.svg) no-repeat center / contain;
+}
+/* 24px and below — swap to the small cut. */
+.dd-mark--small {
+  -webkit-mask-image: url(mark-small.svg);
+  mask-image: url(mark-small.svg);
+}
+/* Wordmark, unchanged artwork, same tinting approach. */
+.dd-wordmark {
+  display: inline-block;
+  aspect-ratio: 260 / 56;
+  background: currentColor;
+  -webkit-mask: url(../brand/wordmark.svg) no-repeat center / contain;
+  mask: url(../brand/wordmark.svg) no-repeat center / contain;
+}
+
+.dd-lockup { display: flex; align-items: center; gap: 0.28em; color: var(--dd-red); }
+.dd-lockup .dd-mark { width: 1em; height: 1em; }
+.dd-lockup .dd-wordmark { height: 0.6em; width: 2.786em; }
+
+/* Clear space: 12% of the mark's width on all sides. */
+.dd-mark--padded { padding: 12%; box-sizing: content-box; }

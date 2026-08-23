@@ -5,13 +5,12 @@
 
 ## The mark
 
-**A ring bisected by a vertical S-spine.** The spine sweeps the top of the ring to
-the right and the bottom to the left, so the circle reads as two interlocking **D**
-letterforms (Daily District) — and, at a glance, as a single continuous stroke
-folding back on itself. One weight, one colour, drawn entirely in strokes with round
-caps and joins.
+**A ring divided by a straight vertical stem and a curved S-spine.** The spine bows
+right across the top half and left across the bottom, closing against the stem into the
+bowl of a **D** — one upright, one rotated 180° (Daily District). One weight, one
+colour, drawn entirely in strokes with round caps and joins.
 
-**One colour.** The ring and the spine are always the same colour. Red (`#C41230`) is
+**One colour.** The ring, stem and spine are always the same colour. Red (`#C41230`) is
 the site primary and the in-product *solved* fill (`mark-solved.svg` fills one D
 region); never a two-colour split, never a gradient.
 
@@ -21,18 +20,19 @@ diagonal or radiating stays off the table.
 
 ### Geometry
 
-100 × 100 units. Two elements, one colour, both stroked:
+100 × 100 units. Three strokes, one colour:
 
 | Element | Spec |
 | --- | --- |
 | Ring | `<circle cx="50" cy="50" r="44">`, stroked |
+| Stem | `<line x1="50" y1="6" x2="50" y2="94">` |
 | Spine | `M50 6 C 70 6 78 16 78 28 C 78 40 68 50 50 50 C 32 50 22 60 22 72 C 22 84 30 94 50 94` |
 | Caps / joins | `stroke-linecap="round"`, `stroke-linejoin="round"` |
 
-The spine is two mirrored cubic curves meeting at the centre `(50,50)`; it is
-180°-rotationally symmetric about that point, so the two D's are one shape and its
-turn. The ring stroke is **6** units in the display cut. The path data lives in
-`build.py` (`DISPLAY` / `SMALL`) and is never redrawn — assets only scale and tint it.
+Stem and spine are both 180°-rotationally symmetric about the centre `(50,50)`, so the
+two D's are one shape and its turn. All three parts share the stroke — **6** units in
+the display cut. The path data lives in `build.py` (`DISPLAY` / `SMALL`) and is never
+redrawn — assets only scale and tint it.
 
 ### Optical sizes
 
@@ -42,7 +42,7 @@ raster. So there are two cuts, the way a type family has optical sizes:
 | Cut | Ring | Stroke | Use at |
 | --- | --- | --- | --- |
 | Display | r 44 | 6 | above 24px |
-| Small | r 45 | 10 | 24px and below |
+| Small | r 45 | 9 | 24px and below |
 
 **The small cut is redrawn, not shrunk.** Below 24px the thin strokes silt up and the
 interior closes to a solid disc; the small cut fattens the ring and the spine and pulls
@@ -57,7 +57,7 @@ Clear space is one ring stroke on all four sides.
 | --- | --- |
 | `mark.svg` | **Primary** — `currentColor`, one colour; inline it and set `color` |
 | `mark-small.svg` | Small cut, `currentColor`. At or below 24px |
-| `mark-red.svg`, `mark-navy.svg` | The mark baked CMU Red (site primary) / navy (alternate) |
+| `mark-red.svg`, `mark-navy.svg`, `mark-white.svg` | The mark baked CMU Red (site primary) / navy (alternate) / white (dark grounds) |
 | `mark-solved.svg` | In-product *solved* state — one D region filled, ring drawn over |
 | `logo.svg` | The mark baked in **CMU Red** for `<img src>`, to match the red wordmark it sits beside. **This is what the site's `logo.svg` is** |
 | `favicon.svg` | Small cut in CMU Red; lifts to `#FF3B57` under the browser's dark mode |
@@ -70,6 +70,7 @@ Clear space is one ring stroke on all four sides.
 | `lockup-stacked.svg` | Stacked lockup — `currentColor`, for square crops and avatars |
 | `wordmark.svg` | Wordmark alone (unchanged across the mark swap) |
 | `og-image.svg` | 1200×630 social card |
+| `logo.css` | Palette tokens + `.dd-mark` / `.dd-wordmark` mask helpers (drop-in) |
 
 Because the mark is a single `currentColor` plate, there are no `-mono` /
 `-reversed` / `-knockout` colourway files: mono *is* `mark.svg`, and reversed is the
