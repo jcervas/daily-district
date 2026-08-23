@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
-"""Generate the Daily District "Ghost D" logo system from one parametric source.
+"""Generate the Daily District "Split Ring" logo system from one parametric source.
 
 THE MARK
-    A closed square frame with two D letterforms carved into the negative space —
-    one glyph and its 180-degree rotation about the centre. Their stems land on
-    the frame's inner edge and their bowls overlap across the middle, so four
-    regions meet with no gaps. ONE colour plate: frame and both D's are always
-    the same colour. Red (#C41230) is an in-product state, never the resting mark.
+    A circle bisected by a vertical S-spine. The spine sweeps the top bowl to the
+    right and the bottom bowl to the left, so the ring reads as two interlocking
+    D letterforms (Daily District). ONE colour: ring and spine are always the same
+    colour, all strokes with round caps and joins. Red (#C41230) is the site
+    primary and the in-product "solved" fill; never a two-colour split.
 
     Drawn on a 100 x 100 grid. This file is the source of truth for the geometry
-    (the two cuts below); it reproduces every asset byte-for-byte without the
-    design handoff present. The handoff lives, gitignored, under
-    explorations/ghost-d-handoff/ for re-verification only.
+    (the two cuts below); it reproduces every asset byte-for-byte.
 
 OPTICAL SIZES
     Two cuts, like a type family's optical sizes:
-      DISPLAY  frame inset 4, D stroke 7.5   above 24px
-      SMALL    full-bleed frame, D stroke 14  24px and below
-    The small cut reclaims the 4-unit inset and thickens the stroke so the
-    interior holds at favicon sizes instead of closing to a solid square.
+      DISPLAY  ring r44, spine stroke 6    above 24px
+      SMALL    ring r45, spine stroke 10   24px and below
+    The small cut fattens the ring and spine so the interior stays open at favicon
+    sizes instead of silting up into a solid disc.
 
     python3 brand/build.py
 
@@ -46,20 +44,22 @@ CREAM = "#F4F3F1"       # --dd-bg     light ground
 INK = "#15171B"
 
 # ------------------------------------------------------------------- geometry
-# Canonical Ghost D path data on the 100-unit grid, per the brand book. The two
-# D's are one letterform and its 180-degree rotation; the frame is an even-odd
-# square ring. These strings ARE the mark — never redrawn, only scaled/tinted.
+# Canonical "Split Ring" path data on the 100-unit grid. A ring bisected by a
+# vertical S-spine: the spine hands the top bowl to the right and the bottom bowl
+# to the left, so the ring reads as two interlocking D's (Daily District). Two
+# elements, one colour, all strokes with round caps/joins. These strings ARE the
+# mark — never redrawn, only scaled/tinted.
 DISPLAY = {
-    "frame": "M4 4h92v92H4z M21 21h58v58H21z",
-    "d1": "M21 21v37h19l12-12V33L40 21Z",
-    "d2": "M79 79V42H60L48 54v13l12 12Z",
-    "stroke": 7.5,
+    "r": 44,
+    "spine": ("M50 6 C 70 6 78 16 78 28 C 78 40 68 50 50 50 "
+              "C 32 50 22 60 22 72 C 22 84 30 94 50 94"),
+    "stroke": 6,
 }
-SMALL = {   # 24px and below: full-bleed frame, thicker stroke
-    "frame": "M0 0h100v100H0z M22 22h56v56H22z",
-    "d1": "M22 22v36h18l12-12V34L40 22Z",
-    "d2": "M78 78V42H60L48 54v12l12 12Z",
-    "stroke": 14,
+SMALL = {   # 24px and below: fuller ring, thicker spine so it holds at favicon sizes
+    "r": 45,
+    "spine": ("M50 5 C 72 5 81 16 81 28 C 81 41 68 50 50 50 "
+              "C 32 50 19 59 19 72 C 19 84 28 95 50 95"),
+    "stroke": 10,
 }
 G = 100.0  # grid size
 
@@ -73,19 +73,31 @@ def num(v):
 def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
     """The mark at `size`, top-left at (x, y), in one colour.
 
-    Emitted as the canonical 100-grid paths wrapped in a translate+scale, so the
-    path data (and byte-for-byte identity of the primary files) never changes.
+    Emitted as the canonical 100-grid ring + spine wrapped in a translate+scale,
+    so the path data (and byte-for-byte identity of the primary files) never
+    changes.
     """
-    d_grp = (f'<g fill="none" stroke="{color}" stroke-width="{num(cut["stroke"])}" '
-             f'stroke-linejoin="miter"><path d="{cut["d1"]}"></path>'
-             f'<path d="{cut["d2"]}"></path></g>')
-    frame = f'<g fill="{color}"><path fill-rule="evenodd" d="{cut["frame"]}"></path></g>'
-    body = d_grp + frame
+    body = (f'<g fill="none" stroke="{color}" stroke-width="{num(cut["stroke"])}" '
+            f'stroke-linecap="round" stroke-linejoin="round">'
+            f'<circle cx="50" cy="50" r="{num(cut["r"])}"></circle>'
+            f'<path d="{cut["spine"]}"></path></g>')
     if size == G and x == 0 and y == 0:
         return indent + body
     s = size / G
     return (f'{indent}<g transform="translate({num(x)} {num(y)}) '
             f'scale({num(s)})">{body}</g>')
+
+
+def glyph_solved(color="currentColor", cut=DISPLAY):
+    """The in-product "solved" state: the right-hand D filled, the ring drawn over.
+
+    The fill closes the spine back up the ring's right edge with an arc, so exactly
+    one of the two D regions reads as filled."""
+    top = cut["spine"].split()[1]          # y of the spine's start point
+    r = num(cut["r"])
+    fill = (f'<path fill="{color}" d="{cut["spine"]} '
+            f'A{r} {r} 0 0 0 50 {top} Z"></path>')
+    return fill + glyph(color=color, cut=cut)
 
 
 def svg(body, vb="0 0 100 100", label=True):
@@ -103,6 +115,7 @@ write("mark.svg", svg(glyph()))                                 # primary, curre
 write("mark-small.svg", svg(glyph(cut=SMALL)))
 write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked navy (alternate)
 write("mark-red.svg", svg(glyph(color=RED)))                    # baked red (site primary)
+write("mark-solved.svg", svg(glyph_solved()))                  # in-product "solved" state
 # The site's /logo.svg is the primary mark baked in CMU Red (currentColor renders
 # black in an <img>), so it matches the red wordmark it sits beside — in both light
 # and dark, where the red wordmark does not shift, so the mark holds red too.
@@ -111,14 +124,13 @@ write("logo.svg", svg(glyph(color=RED)))
 
 # ------------------------------------------------------- 2. favicon (SVG, ICO)
 # Small cut in CMU Red, lifting to #FF3B57 under the browser's own dark mode
-# (plain #C41230 goes muddy on a dark tab bar).
-_fav_body = glyph(cut=SMALL, color=RED)
-_fav_body = _fav_body.replace(
-    f'stroke="{RED}"', f'class="gd-s" stroke="{RED}"').replace(
-    f'<g fill="{RED}">', f'<g class="gd-f" fill="{RED}">')
+# (plain #C41230 goes muddy on a dark tab bar). The mark is a single stroked
+# group now, so one class hook (.sr) carries the dark-mode swap.
+_fav_body = glyph(cut=SMALL, color=RED).replace(
+    f'stroke="{RED}"', f'class="sr" stroke="{RED}"')
 write("favicon.svg", svg(
-    f'<style>@media (prefers-color-scheme:dark){{.gd-s{{stroke:{RED_LIFT}}}'
-    f'.gd-f{{fill:{RED_LIFT}}}}}</style>' + _fav_body))
+    f'<style>@media (prefers-color-scheme:dark){{.sr{{stroke:{RED_LIFT}}}}}</style>'
+    + _fav_body))
 # Flat feeds for the .ico frames — no media query, no currentColor.
 write("favicon-small-red.svg", svg(glyph(cut=SMALL, color=RED)))
 write("favicon-display-red.svg", svg(glyph(color=RED)))
@@ -128,8 +140,8 @@ write("favicon-display-red.svg", svg(glyph(color=RED)))
 def app_icon(plate, mark_color, pad):
     """A square plate in `plate`, the mark inset by `pad` (fraction of the tile).
 
-    The mark's bounding box is a full square, so it insets inside the plate — it
-    never bleeds to the edge, or a rounded tile would clip its corners.
+    The ring insets well inside the plate — it never bleeds to the edge, or a
+    rounded tile would clip it.
     """
     inset = 512 * pad
     return svg(f'<rect width="512" height="512" fill="{plate}"></rect>'
@@ -140,6 +152,13 @@ def app_icon(plate, mark_color, pad):
 write("app-icon.svg", app_icon(RED, WHITE, 0.1875))        # PWA "any" / iOS (primary)
 write("app-icon-maskable.svg", app_icon(RED, WHITE, 0.27))   # Android safe circle
 write("app-icon-navy.svg", app_icon(NAVY, WHITE, 0.1875))  # alternate / event skin
+
+# Social avatars — the same plated mark, tuned for a platform's circle crop
+# (X/Instagram/etc.). The ring sits well inside the inscribed circle. A cream
+# plate with the red ring gives a lighter option for pale timelines.
+write("avatar-red.svg", app_icon(RED, WHITE, 0.16))
+write("avatar-navy.svg", app_icon(NAVY, WHITE, 0.16))
+write("avatar-cream.svg", app_icon(CREAM, RED, 0.16))
 
 
 # ----------------------------------------------------------------- 4. lockups
@@ -261,6 +280,12 @@ def build_rasters():
     print("  favicon.ico  (%s)" % ", ".join(str(s) for s in sizes))
 
     png("logo.svg", "logo-96.png", 96)                     # older clients
+
+    # Social profile pictures at 1000px (upload size; platforms downscale).
+    png("avatar-red.svg", "avatar-red-1000.png", 1000)
+    png("avatar-navy.svg", "avatar-navy-1000.png", 1000)
+    png("avatar-cream.svg", "avatar-cream-1000.png", 1000)
+    print("avatars      (red, navy, cream @ 1000px)")
     print("done")
 
 
