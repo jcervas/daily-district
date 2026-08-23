@@ -121,6 +121,7 @@ both too — no dark flip. `favicon.svg` is the one exception: it lifts to `#FF3
 
 ```bash
 python3 brand/build.py      # regenerates every SVG here + all rasters in dist/
+python3 brand/make_spec.py  # regenerates spec.html (the presentation sheet)
 ```
 
 `build.py` embeds the canonical Split Ring path data and reads only the tracked
@@ -129,12 +130,8 @@ can't drift out of sync. It rasterises with the first of `inkscape`, `rsvg-conve
 the `cairosvg` module that the machine has. The `.ico` is assembled by hand — Pillow's
 ICO writer silently collapses multi-frame input to a single frame, so each size is
 rendered from vector at its own resolution instead, small cut at 16/24/32 and display
-cut from 48px up.
-
-> **`make_spec.py` / `spec.html` are Ghost-D-era.** The technical spec sheet still
-> dimensions the old square frame and imports geometry keys (`frame` / `d1` / `d2`)
-> that no longer exist, so it will not run against the Split Ring `build.py` until it
-> is redrawn. Pending.
+cut from 48px up. `make_spec.py` imports `build` for its geometry and embeds real
+rasters (not scaled vectors) so `spec.html` shows what actually ships.
 
 ## History
 
