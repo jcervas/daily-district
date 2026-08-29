@@ -20,32 +20,42 @@ diagonal or radiating stays off the table.
 
 ### Geometry
 
-100 × 100 units. Three strokes, one colour:
+100 × 100 units. Three strokes plus a filled accent, one colour:
 
 | Element | Spec |
 | --- | --- |
-| Ring | `<circle cx="50" cy="50" r="44">`, stroked |
-| Stem | `<line x1="50" y1="6" x2="50" y2="94">` |
-| Spine | `M50 6 C 70 6 78 16 78 28 C 78 40 68 50 50 50 C 32 50 22 60 22 72 C 22 84 30 94 50 94` |
+| Ring | `<circle cx="50" cy="50" r="40">`, stroked |
+| Stem | `<line x1="50" y1="10" x2="50" y2="90">` |
+| Spine | `M50 10 C 84.3 10 84.3 50 50 50 C 15.7 50 15.7 90 50 90` — one continuous path, top-centre to bottom-centre |
+| Flourish | A small tapered accent at each spine tip, filled, display cut only — see below |
 | Caps / joins | `stroke-linecap="round"`, `stroke-linejoin="round"` |
 
 Stem and spine are both 180°-rotationally symmetric about the centre `(50,50)`, so the
-two D's are one shape and its turn. All three parts share the stroke — **6** units in
-the display cut. The path data lives in `build.py` (`DISPLAY` / `SMALL`) and is never
-redrawn — assets only scale and tint it.
+two D's are one shape and its turn. All three strokes share width — **9** units in the
+display cut. The path data lives in `build.py` (`DISPLAY` / `SMALL`) and is never
+redrawn by hand — assets only scale and tint it. The two flourish paths are reproduced
+verbatim from a Claude Design export (see [History](#history)), not hand-drawn either.
+
+The display cut's ring, stem and spine, plus the flourish tips, sit inside a `clip-path`
+circle at `r 44.5` (`r + stroke/2`, exactly the ring's own outer edge) — without it the
+stem's round caps and the flourish would poke a hair past the ring at 12 and 6 o'clock
+and break the circular silhouette. `glyph()` gives every embed of the mark its own clip
+`id`, since `og-image.svg` embeds the mark twice in one document and a repeated id would
+silently clobber the first instance.
 
 ### Optical sizes
 
-The display cut carries the ring and spine in thin strokes, the first thing lost to a
+The flourish is a thin filled accent, and thin detail is the first thing lost to a
 raster. So there are two cuts, the way a type family has optical sizes:
 
-| Cut | Ring | Stroke | Use at |
-| --- | --- | --- | --- |
-| Display | r 44 | 6 | above 24px |
-| Small | r 45 | 9 | 24px and below |
+| Cut | Ring | Stroke | Flourish | Use at |
+| --- | --- | --- | --- | --- |
+| Display | r 40 | 9 | yes | above 32px |
+| Small | r 42 | 12 | no | 32px and below |
 
-**The small cut is redrawn, not shrunk.** Below 24px the thin strokes silt up and the
-interior closes to a solid disc; the small cut fattens the ring and the spine and pulls
+**The small cut is redrawn, not shrunk.** Below 32px the flourish turns to noise —
+confirmed against a real 16px render, not assumed — so the small cut drops it outright
+rather than shrinking it into a smear, and also fattens the ring and stroke and pulls
 the spine's shoulders wider so the two D's stay open. Verified against true 16px
 rasters, not scaled-down vectors.
 
@@ -56,7 +66,7 @@ Clear space is one ring stroke on all four sides.
 | File | Use |
 | --- | --- |
 | `mark.svg` | **Primary** — `currentColor`, one colour; inline it and set `color` |
-| `mark-small.svg` | Small cut, `currentColor`. At or below 24px |
+| `mark-small.svg` | Small cut, `currentColor`. At or below 32px |
 | `mark-red.svg`, `mark-navy.svg`, `mark-white.svg` | The mark baked CMU Red (site primary) / navy (alternate) / white (dark grounds) |
 | `mark-solved.svg` | In-product *solved* state — one D region filled, ring drawn over |
 | `logo.svg` | The mark baked in **CMU Red** for `<img src>`, to match the red wordmark it sits beside. **This is what the site's `logo.svg` is** |
@@ -110,13 +120,17 @@ both too — no dark flip. `favicon.svg` is the one exception: it lifts to `#FF3
   `manifest.json` maskable entry are all copies of this mark's output.
 - Every `?v=` cache-busting parameter on the affected brand filenames — across
   `index.html`, the district pages, `mica.html`, `demo.html` and `manifest.json` —
-  was bumped to `?v=11` with the swap. Assets on their own version numbers were left
-  alone.
+  was bumped to `?v=13` with this refinement. Assets on their own version numbers
+  (`style.css`, `backend.js`, etc.) were left alone; `VERSION_NUMBER` in `script.js`
+  moved to `2.3`.
 - `og:image` / `twitter:image` point at `og-image.png` (a real 1200×630 card) with
   `twitter:card` set to `summary_large_image`.
 - The mark (`.game-logo` header, `.teaser-logo`) is CMU Red and holds `#C41230` in
   both themes — the red wordmark beside it does not shift, so the mark doesn't either.
-  All sit above the display cut's 24px floor.
+  `/logo.svg` is always the display cut regardless of on-page size (there's no
+  size-aware swap for an `<img>`), and the smallest real usage — 26px on the mobile
+  header — was checked against a true render: the flourish fades away cleanly there
+  rather than turning to mush, so no swap was needed.
 
 ## Rebuilding
 
@@ -155,13 +169,19 @@ In order:
    Replaced the lattice; shipped.
 7. **This mark — Split Ring.** A ring bisected by a vertical S-spine, reading as two
    interlocking D's. Replaced Ghost D. Kept upright (a diagonal cut would read as a
-   radiating split — see #2); red drops to the in-product *solved* fill.
+   radiating split — see #2); red drops to the in-product *solved* fill. Later
+   refined via a Claude Design export (`explorations/design-canvas-export/`): the
+   ring tightened from r44/stroke6 to r40/stroke9, a small flourish accent was added
+   at each spine tip (clipped to the ring's true edge so it can't break the
+   silhouette), and the small-cut threshold moved from 24px to 32px to match — the
+   thicker display stroke made the mark hold up larger than before, but the added
+   flourish is what actually needed the extra headroom.
 
 `explorations/` holds the contact sheets for the earlier rounds. Each candidate is
 rendered large and again as a true 16px raster, since a scaled-down vector always
 flatters a mark and only a real raster tells you whether it survives.
 
-The Split Ring design handoff (the brand sheet and the delivered asset set) is the
-reference `build.py`'s output was checked against: the path data is byte-for-byte, and
-the app-icon transforms match apart from number formatting (build.py centres the mark
-exactly — `translate(96 96) scale(3.2)` — where the handoff rounded to `97 / 3.18`).
+The current geometry — ring, stem, spine and both flourish paths — is reproduced
+byte-for-byte from the Claude Design export archived at
+`explorations/design-canvas-export/mark-red.svg`; rendering `build.py`'s `logo.svg`
+output side by side with that file at 512px confirmed an exact match before it shipped.

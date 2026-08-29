@@ -9,15 +9,26 @@ THE MARK
     round caps and joins. Red (#C41230) is the site primary and the in-product
     "solved" fill; never a two-colour split.
 
+    The display cut adds a small flourish accent at each tip of the spine — a
+    tapered flick reading like a pennant or a compass flourish, fitting for a
+    civics game. It is CLIPPED to a circle matching the ring's true outer edge, so
+    it (and the stem's round caps, which would otherwise poke a hair past the ring
+    at 12 and 6 o'clock) never break the mark's circular silhouette. This came from
+    a Claude Design export (`brand/explorations/design-canvas-export/`) — the ring,
+    stem, spine and flourish path data there are reproduced verbatim as DISPLAY's
+    geometry, not redrawn by hand.
+
     Drawn on a 100 x 100 grid. This file is the source of truth for the geometry
     (the two cuts below); it reproduces every asset byte-for-byte.
 
 OPTICAL SIZES
     Two cuts, like a type family's optical sizes:
-      DISPLAY  ring r44, stroke 6   above 24px
-      SMALL    ring r45, stroke 9   24px and below
-    The small cut fattens the ring and strokes and pushes the spine's shoulders
-    wider so the interior stays open at favicon sizes instead of silting up.
+      DISPLAY  ring r40, stroke 9, flourish   above 32px
+      SMALL    ring r42, stroke 12, no flourish   32px and below
+    The flourish is the first thing lost to a raster — by 16px it's noise, verified
+    against a real render, not assumed — so the small cut drops it entirely rather
+    than shrinking it into a smear. It also fattens the ring and stroke and widens
+    the spine's shoulders so the two D counters stay open instead of silting up.
 
     python3 brand/build.py
 
@@ -50,19 +61,75 @@ INK = "#15171B"
 # half and left across the bottom, closing against the stem into the bowl of a D —
 # one upright, one rotated 180°. Three strokes (ring, stem, spine), one colour,
 # round caps/joins. These strings ARE the mark — never redrawn, only scaled/tinted.
+
+# The two flourish accents, verbatim from the Claude Design export (see the module
+# docstring) — a flattened curve, not hand-simplified, since this is someone else's
+# approved artwork being reproduced exactly, not redrawn.
+_FLOURISH_NE = (
+    "M 65.43 13.56 L 66.07 13.79 L 66.71 14.05 L 67.34 14.33 L 67.97 14.63 "
+    "L 68.59 14.95 L 69.2 15.29 L 69.81 15.65 L 70.4 16.04 L 70.99 16.45 "
+    "L 71.56 16.88 L 72.12 17.33 L 72.67 17.81 L 73.21 18.31 L 73.73 18.83 "
+    "L 74.23 19.37 L 74.72 19.94 L 75.18 20.52 L 75.63 21.13 L 76.06 21.76 "
+    "L 76.46 22.41 L 76.84 23.07 L 77.2 23.76 L 77.53 24.46 L 77.84 25.18 "
+    "L 78.12 25.91 L 78.38 26.66 L 78.6 27.42 L 78.8 28.2 L 78.96 28.99 "
+    "L 79.1 29.78 L 79.2 30.59 L 79.28 31.4 L 79.32 32.22 L 79.33 33.05 "
+    "L 79.31 33.88 L 79.25 34.71 L 79.17 35.54 L 79.05 36.37 L 78.9 37.2 "
+    "L 78.71 38.03 L 78.84 37.72 L 78.98 37.42 L 79.12 37.12 L 79.28 36.82 "
+    "L 79.44 36.53 L 79.6 36.24 L 79.79 35.96 L 79.98 35.69 L 80.19 35.44 "
+    "L 80.43 35.2 L 80.7 35.01 L 81.01 34.87 L 81.34 34.84 L 81.66 34.93 "
+    "L 81.94 35.11 L 82.18 35.34 L 82.39 35.6 L 82.57 35.88 L 82.74 36.17 "
+    "L 82.89 36.46 L 83.02 36.77 L 83.15 37.08 L 83.27 37.39 L 83.38 37.7 "
+    "L 83.49 38.02 L 83.59 38.34 L 83.69 38.65 L 83.78 38.98 L 83.87 39.3 "
+    "L 83.95 39.62 L 85.85 38 L 87.73 36.35 L 89.59 34.69 L 91.43 32.99 "
+    "L 93.23 31.27 L 95.01 29.51 L 96.74 27.71 L 98.41 25.85 L 100.02 23.94 "
+    "L 101.52 21.94 L 102.87 19.84 L 103.95 17.6 L 104.53 15.17 L 104.05 12.76 "
+    "L 102.29 11.02 L 99.99 10.09 L 97.54 9.62 L 95.05 9.42 L 92.55 9.4 "
+    "L 90.05 9.5 L 87.56 9.69 L 85.08 9.96 L 82.6 10.28 L 80.13 10.65 "
+    "L 77.67 11.07 L 75.21 11.51 L 72.76 11.99 L 70.31 12.49 L 67.87 13.01 "
+    "L 65.43 13.56 Z")
+_FLOURISH_SW = (  # the NE flourish rotated 180° about (50,50) — same shape, same turn
+    "M 34.57 86.44 L 33.93 86.21 L 33.29 85.95 L 32.66 85.67 L 32.03 85.37 "
+    "L 31.41 85.05 L 30.80 84.71 L 30.19 84.35 L 29.60 83.96 L 29.01 83.55 "
+    "L 28.44 83.12 L 27.88 82.67 L 27.33 82.19 L 26.79 81.69 L 26.27 81.17 "
+    "L 25.77 80.63 L 25.28 80.06 L 24.82 79.48 L 24.37 78.87 L 23.94 78.24 "
+    "L 23.54 77.59 L 23.16 76.93 L 22.80 76.24 L 22.47 75.54 L 22.16 74.82 "
+    "L 21.88 74.09 L 21.62 73.34 L 21.40 72.58 L 21.20 71.80 L 21.04 71.01 "
+    "L 20.90 70.22 L 20.80 69.41 L 20.72 68.60 L 20.68 67.78 L 20.67 66.95 "
+    "L 20.69 66.12 L 20.75 65.29 L 20.83 64.46 L 20.95 63.63 L 21.10 62.80 "
+    "L 21.29 61.97 L 21.16 62.28 L 21.02 62.58 L 20.88 62.88 L 20.72 63.18 "
+    "L 20.56 63.47 L 20.40 63.76 L 20.21 64.04 L 20.02 64.31 L 19.81 64.56 "
+    "L 19.57 64.80 L 19.30 64.99 L 18.99 65.13 L 18.66 65.16 L 18.34 65.07 "
+    "L 18.06 64.89 L 17.82 64.66 L 17.61 64.40 L 17.43 64.12 L 17.26 63.83 "
+    "L 17.11 63.54 L 16.98 63.23 L 16.85 62.92 L 16.73 62.61 L 16.62 62.30 "
+    "L 16.51 61.98 L 16.41 61.66 L 16.31 61.35 L 16.22 61.02 L 16.13 60.70 "
+    "L 16.05 60.38 L 14.15 62.00 L 12.27 63.65 L 10.41 65.31 L 8.57 67.01 "
+    "L 6.77 68.73 L 4.99 70.49 L 3.26 72.29 L 1.59 74.15 L -0.02 76.06 "
+    "L -1.52 78.06 L -2.87 80.16 L -3.95 82.40 L -4.53 84.83 L -4.05 87.24 "
+    "L -2.29 88.98 L 0.01 89.91 L 2.46 90.38 L 4.95 90.58 L 7.45 90.60 "
+    "L 9.95 90.50 L 12.44 90.31 L 14.92 90.04 L 17.40 89.72 L 19.87 89.35 "
+    "L 22.33 88.93 L 24.79 88.49 L 27.24 88.01 L 29.69 87.51 L 32.13 86.99 "
+    "L 34.57 86.44 Z")
+
 DISPLAY = {
-    "r": 44,
-    "spine": ("M50 6 C 70 6 78 16 78 28 C 78 40 68 50 50 50 "
-              "C 32 50 22 60 22 72 C 22 84 30 94 50 94"),
-    "stem": (6, 94),
-    "stroke": 6,
-}
-SMALL = {   # 24px and below: fuller ring, thicker strokes so it holds at favicon sizes
-    "r": 45,
-    "spine": ("M50 5 C 72 5 81 16 81 28 C 81 41 68 50 50 50 "
-              "C 32 50 19 59 19 72 C 19 84 28 95 50 95"),
-    "stem": (5, 95),
+    "r": 40,
+    # One continuous path, top-centre to bottom-centre (not two subpaths, even
+    # though the export drew it as two) — glyph_solved()'s fill-outline math walks
+    # this string as a single curve, so it has to stay one.
+    "spine": "M50 10 C 84.3 10 84.3 50 50 50 C 15.7 50 15.7 90 50 90",
+    "stem": (10, 90),
     "stroke": 9,
+    # Trims the stem's round caps (which overshoot the ring by stroke/2 at 12 and 6
+    # o'clock) and the flourish tips flush with the ring's own true outer edge —
+    # r + stroke/2 exactly, so the ring's own stroke is untouched by the clip.
+    "clip_r": 44.5,
+    "flourish": (_FLOURISH_NE, _FLOURISH_SW),
+}
+SMALL = {   # 32px and below: fuller ring, thicker strokes, no flourish — see OPTICAL SIZES
+    "r": 42,
+    "spine": "M50 8 C 88 8 88 50 50 50 C 12 50 12 92 50 92",
+    "stem": (8, 92),
+    "stroke": 12,
+    "clip_r": 48,
 }
 G = 100.0  # grid size
 
@@ -71,6 +138,16 @@ def num(v):
     """Trim a number: whole stays whole, else up to 4 decimals."""
     s = f"{v:.4f}".rstrip("0").rstrip(".")
     return s or "0"
+
+
+_clip_n = [0]
+
+
+def _clip_id():
+    """A fresh id per call — some documents (og-image.svg) embed the mark twice, and
+    a repeated <clipPath id> would silently clobber the first instance."""
+    _clip_n[0] += 1
+    return f"src{_clip_n[0]}"
 
 
 def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
@@ -86,6 +163,14 @@ def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
             f'<path d="{cut["spine"]}"></path>'
             f'<line x1="50" y1="{num(cut["stem"][0])}" x2="50" '
             f'y2="{num(cut["stem"][1])}"></line></g>')
+    if cut.get("flourish"):
+        body += "".join(f'<path fill="{color}" stroke="{color}" stroke-width="0.3" '
+                        f'd="{d}"></path>' for d in cut["flourish"])
+    if cut.get("clip_r"):
+        cid = _clip_id()
+        body = (f'<defs><clipPath id="{cid}"><circle cx="50" cy="50" '
+                f'r="{num(cut["clip_r"])}"></circle></clipPath></defs>'
+                f'<g clip-path="url(#{cid})">{body}</g>')
     if size == G and x == 0 and y == 0:
         return indent + body
     s = size / G

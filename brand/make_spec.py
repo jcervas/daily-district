@@ -44,11 +44,14 @@ def mark(color, cut=B.DISPLAY):
             + B.glyph(cut=cut, color=color) + '</svg>')
 
 
-# On-curve anchor points of the S-spine per cut: top, right shoulder, centre,
-# left shoulder, bottom. The spine is two mirrored cubics meeting at the centre.
+# On-curve anchor points of the S-spine per cut: top, centre, bottom — the only
+# points actually ON the curve. (78,28)-style "shoulder" points are off-curve
+# bezier CONTROL points, not path vertices, so they're not marked as anchors.
 CUTS = {
-    "display": dict(cut=B.DISPLAY, anchors=[(50, 6), (78, 28), (50, 50), (22, 72), (50, 94)]),
-    "small":   dict(cut=B.SMALL,   anchors=[(50, 5), (81, 28), (50, 50), (19, 72), (50, 95)]),
+    "display": dict(cut=B.DISPLAY, anchors=[(50, B.DISPLAY["stem"][0]), (50, 50),
+                                            (50, B.DISPLAY["stem"][1])]),
+    "small":   dict(cut=B.SMALL,   anchors=[(50, B.SMALL["stem"][0]), (50, 50),
+                                            (50, B.SMALL["stem"][1])]),
 }
 
 
@@ -242,11 +245,11 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="cuts">
       <div class="panel cut">
-        <div class="cap">Display cut &middot; ring r44, stroke 6</div>
+        <div class="cap">Display cut &middot; ring r{B.DISPLAY["r"]}, stroke {B.DISPLAY["stroke"]}</div>
         {construction_svg("display")}
       </div>
       <div class="panel cut">
-        <div class="cap">Small cut &middot; ring r45, stroke 9</div>
+        <div class="cap">Small cut &middot; ring r{B.SMALL["r"]}, stroke {B.SMALL["stroke"]}</div>
         {construction_svg("small")}
       </div>
     </div>
@@ -255,7 +258,10 @@ HTML = f'''<title>Daily District — Logo System</title>
     spine (two mirrored cubic B&eacute;zier curves that meet at the centre and land on
     the ring at top and bottom). Because both stem and spine are 180&deg;-rotationally
     symmetric about the centre, the two D regions are one shape and its turn. Dots mark
-    the spine's five on-curve anchors; the dashed circle is the ring's centreline.</p>
+    the spine's three on-curve anchors &mdash; top, centre, bottom; the dashed circle is
+    the ring's centreline. The display cut also carries a small flourish accent at each
+    spine tip, clipped to the ring's true outer edge so it can't break the circular
+    silhouette (see Optical sizes, below, for why the small cut drops it).</p>
     <p class="note">Kept upright. A prior mark's diagonal variant was flagged as reading
     too close to a hate symbol and pulled immediately; since then, anything set on a
     diagonal or with a radiating structure is off the table. Never rotate the mark to a
@@ -268,18 +274,19 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="eyebrow">Optical sizes</div>
       <h2>The small cut is redrawn, not shrunk</h2>
     </div>
-    <p>The display cut carries the ring and spine in thin strokes, and thin strokes are
-    the first thing lost to a raster. Below 24px the strokes silt up and the interior
-    closes to a solid disc. The small cut fattens the ring (r45) and the strokes (to 9)
-    and pulls the spine's shoulders wider, so the two D's stay open at favicon
+    <p>The display cut's flourish accents are the first thing lost to a raster &mdash;
+    by 16px they're noise, confirmed against a real render rather than assumed. The
+    small cut drops them entirely instead of shrinking them into a smear, and also
+    fattens the ring (r{B.SMALL["r"]}) and the stroke (to {B.SMALL["stroke"]}) and
+    pulls the spine's shoulders wider, so the two D's stay open at favicon
     sizes.</p>
     <div class="vs">
       <div class="panel mock">
-        <div class="cap">Display cut below 24px &mdash; silts up</div>
+        <div class="cap">Display cut below 32px &mdash; flourish turns to noise</div>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
-            <div class="cap">{s}px</div></div>""" for s in (16, 20, 24))}
+            <div class="cap">{s}px</div></div>""" for s in (16, 24, 32))}
         </div>
       </div>
       <div class="panel mock">
@@ -287,7 +294,7 @@ HTML = f'''<title>Daily District — Logo System</title>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{SMALL[s]}" width="72" height="72" alt="">
-            <div class="cap">{s}px</div></div>""" for s in (16, 20, 24))}
+            <div class="cap">{s}px</div></div>""" for s in (16, 24, 32))}
         </div>
       </div>
     </div>
