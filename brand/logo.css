@@ -1,4 +1,4 @@
-/* Daily District — Split Ring mark. Drop-in tokens + mark helpers. */
+/* Daily District — Isoline mark. Drop-in tokens + mark helpers. */
 :root {
   --dd-red: #C41230;
   --dd-red-dark: #FF3B57;
@@ -8,7 +8,9 @@
   --dd-bg: #F4F3F1;
 }
 
-/* Mark as a tintable mask: colour it with `color`, size it with width/height. */
+/* Tintable mask: colour with `color`, size with width/height.
+   Note: CSS masks do not survive screenshot / PDF / PPTX capture — for anything
+   that gets exported, inline the SVG and tint via currentColor instead. */
 .dd-mark {
   display: inline-block;
   aspect-ratio: 1;
