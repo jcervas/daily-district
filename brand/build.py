@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
-"""Generate the Daily District "Isoline" logo system from one parametric source.
+"""Generate the Daily District "Polygon" logo system from one parametric source.
 
 THE MARK
-    A wireframe globe: the limb (a stroked circle), the polar axis (a straight
-    vertical line through the center), and one or two meridians east of the axis
-    (elliptical arcs sharing the limb's own curvature). Both hidden letters share
-    the axis as their stem — the inner meridian closes a narrow D, the outer one a
-    wider D around it. Every line is one a cartographer would already draw, so the
-    letters are there once you look for them and invisible until you do.
+    A ring holding an irregular 28-sided figure. The polygon is the boundary from
+    the centre of Gomillion v. Lightfoot (1960) — the "uncouth twenty-eight-sided
+    figure" drawn to fence Tuskegee's Black voters out of town — here sitting whole
+    inside the circle: the district, held. 28 vertices at equal angles from 12
+    o'clock, base radius 31.7 with fixed per-vertex offsets so it reads as surveyed,
+    not geared.
 
     Drawn on a 100 x 100 grid, centered on (50, 50). One color throughout — never a
-    two-color split, never a gradient. This file is the source of truth for the
-    geometry; it reproduces every asset byte-for-byte.
+    two-color split of ring and figure, never a gradient. This file is the source
+    of truth for the geometry; it reproduces every asset byte-for-byte.
 
 OPTICAL SIZES
     Two cuts, like a type family's optical sizes:
-      DISPLAY  ring r44, stroke 6   above 24px    two meridians (rx 20, 35)
-      SMALL    ring r45, stroke 8   24px and below   one meridian (rx 28)
-    Below 24px the three concentric curves (axis + two meridians) converge at both
-    poles and start to merge, so the small cut drops the outer meridian and
-    thickens everything — one D survives instead of two.
+      DISPLAY  ring r44, stroke 5.3   above 24px      figure filled
+      SMALL    ring r45, stroke 6     24px and below  figure outlined (stroke 4)
+    The filled figure becomes a blot below 24px, so the small cut outlines it (and
+    scales it out to radius 33.3) to keep the 28 sides legible.
 
     python3 brand/build.py
 
@@ -47,11 +46,6 @@ CREAM = "#F4F3F1"       # --dd-bg     light ground
 INK = "#15171B"
 
 # ------------------------------------------------------------------- geometry
-# Canonical "Isoline" geometry on the 100-unit grid. `meridians` lists the
-# elliptical arcs' semi-minor axes (rx), east of the polar axis, sharing the
-# limb's own radius as ry — the only way an arc meets the limb exactly tangent.
-DISPLAY = {"r": 44, "ring": 6, "axis": 5, "meridians": [20, 35], "mer": 5}
-SMALL = {"r": 45, "ring": 8, "axis": 6, "meridians": [28], "mer": 6}
 G = 100.0  # grid size
 
 
@@ -61,27 +55,59 @@ def num(v):
     return s or "0"
 
 
+def scale_path(d, k, cx=50.0, cy=50.0):
+    """Scale every coordinate pair in an absolute M/L path about (cx, cy) by k."""
+    toks = re.findall(r"[A-Za-z]|-?\d*\.?\d+", d)
+    out, i = [], 0
+    while i < len(toks):
+        t = toks[i]
+        if t.isalpha():
+            out.append(t); i += 1
+        else:
+            x, y = float(t), float(toks[i + 1])
+            out.append(f"{cx + (x - cx) * k:.2f} {cy + (y - cy) * k:.2f}")
+            i += 2
+    return " ".join(out)
+
+
+# Canonical "Polygon" geometry on the 100-unit grid, centered on (50, 50). A ring
+# holding an irregular 28-sided figure — the boundary from Gomillion v. Lightfoot
+# (1960), the "uncouth twenty-eight-sided figure" drawn to fence Tuskegee's Black
+# voters out of town, here held whole inside the circle. 28 vertices at equal
+# angles from 12 o'clock, base radius 31.7 with fixed per-vertex offsets so it
+# reads as surveyed, not geared. This path IS the mark — never redrawn, only
+# scaled/tinted.
+FIGURE = ("M50.00 18.32 L57.54 16.95 L62.92 23.17 L71.73 22.75 L75.26 29.85 "
+          "L75.97 37.49 L82.43 42.60 L85.16 50.00 L79.65 56.77 L78.83 63.88 "
+          "L76.75 71.33 L68.37 73.03 L64.57 80.26 L56.84 79.96 L50.00 84.53 "
+          "L43.30 79.34 L35.84 79.40 L31.83 72.79 L24.24 70.54 L22.03 63.47 "
+          "L16.03 57.75 L20.22 50.00 L18.50 42.81 L19.46 35.29 L27.46 32.03 "
+          "L29.26 23.99 L36.39 21.74 L42.39 16.64 Z")
+DISPLAY = {"r": 44, "ring": 5.3, "figure": FIGURE, "fill": True}
+# Small cut: the filled figure blots shut, so outline it. Same polygon scaled about
+# the centre to base radius 33.3 (33.3/31.7), so the 28 sides stay legible.
+SMALL = {"r": 45, "ring": 6, "figure": scale_path(FIGURE, 33.3 / 31.7),
+         "fill": False, "fstroke": 4}
+# Outline treatment at display proportions (alternate to the filled primary).
+OUTLINE = {"r": 44, "ring": 5.3, "figure": FIGURE, "fill": False, "fstroke": 4}
+
+
 def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
     """The mark at `size`, top-left at (x, y), in one colour.
 
-    Limb: a plain stroked circle. Axis: a straight round-capped stroke through the
-    center, top to bottom. Meridians: elliptical arcs sharing the limb's own radius
-    as ry, so each one meets the limb exactly tangent at both poles — no seam to
-    align, because an arc and its parent circle sharing a radius can't fail to
-    match there.
+    Ring: a plain stroked circle — the district, held whole. Figure: the 28-sided
+    Gomillion polygon, filled in the display cut and outlined in the small cut,
+    where a fill would close to a blot.
     """
-    r = cut["r"]
-    top, bot = num(50 - r), num(50 + r)
-    limb = (f'<circle cx="50" cy="50" r="{num(r)}" fill="none" stroke="{color}" '
-            f'stroke-width="{num(cut["ring"])}"></circle>')
-    axis = (f'<line x1="50" y1="{top}" x2="50" y2="{bot}" fill="none" stroke="{color}" '
-            f'stroke-width="{num(cut["axis"])}" stroke-linecap="round"></line>')
-    meridians = "".join(
-        f'<path d="M50 {top} A {num(rx)} {num(r)} 0 0 1 50 {bot}" fill="none" '
-        f'stroke="{color}" stroke-width="{num(cut["mer"])}" stroke-linecap="round">'
-        f'</path>'
-        for rx in cut["meridians"])
-    body = limb + axis + meridians
+    ring = (f'<circle cx="50" cy="50" r="{num(cut["r"])}" fill="none" '
+            f'stroke="{color}" stroke-width="{num(cut["ring"])}"></circle>')
+    if cut["fill"]:
+        figure = f'<path d="{cut["figure"]}" fill="{color}"></path>'
+    else:
+        figure = (f'<path d="{cut["figure"]}" fill="none" stroke="{color}" '
+                  f'stroke-width="{num(cut["fstroke"])}" stroke-linejoin="round" '
+                  f'stroke-linecap="round"></path>')
+    body = ring + figure
     if size == G and x == 0 and y == 0:
         return indent + body
     s = size / G
@@ -100,8 +126,9 @@ def write(name, text):
 
 
 # ---------------------------------------------------------------- 1. the mark
-write("mark.svg", svg(glyph()))                                 # primary, currentColor
-write("mark-small.svg", svg(glyph(cut=SMALL)))
+write("mark.svg", svg(glyph()))                                 # primary, currentColor (filled)
+write("mark-outline.svg", svg(glyph(cut=OUTLINE)))             # display outline alternate
+write("mark-small.svg", svg(glyph(cut=SMALL)))                 # small cut (outlined)
 write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked navy (alternate)
 write("mark-red.svg", svg(glyph(color=RED)))                    # baked red (site primary)
 write("mark-small-red.svg", svg(glyph(cut=SMALL, color=RED)))

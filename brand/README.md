@@ -1,61 +1,51 @@
 # Daily District — logo system
 
-**Live on the site.** The Isoline mark. It replaces the Split Ring — see
+**Live on the site.** The Polygon mark. It replaces the Isoline mark — see
 [History](#history) before reaching for any earlier direction again.
 
 ## The mark
 
-**A wireframe globe.** The limb (a stroked circle), the polar axis (a straight
-vertical line through the center), and one or two meridians east of the axis
-(elliptical arcs sharing the limb's own radius). Both hidden letters share the
-axis as their stem — the inner meridian closes a narrow D, the outer one a wider D
-around it. Every line is one a cartographer would already draw, so the letters are
-there once you look for them and invisible until you do. One weight, one color.
+**A ring holding an irregular 28-sided figure.** The polygon is the boundary from
+*Gomillion v. Lightfoot* (1960) — the "uncouth twenty-eight-sided figure" drawn to
+fence Tuskegee's Black voters out of town — here sitting whole inside the circle:
+the district, held. 28 vertices at equal angles from 12 o'clock, on a base radius of
+31.7 with fixed per-vertex offsets so it reads as surveyed, not geared. One weight,
+one color.
 
-**One color.** The limb, axis and meridians are always the same color. Red
-(`#C41230`) is the site primary; never a two-color split, never a gradient.
+**One color.** The ring and the figure are always the same color. Red (`#C41230`) is
+the site primary; never a two-color split of ring and figure, never a gradient.
 
-**Kept upright.** The axis is polar and stays vertical — don't rotate the mark to a
-diagonal, mirror the meridians to the west side, or stretch the circle to an
-ellipse. See [History](#history) for why anything diagonal or radiating stays off
-the table.
+**Kept upright.** Vertex 1 sits at 12 o'clock — don't rotate the mark to a diagonal,
+regularise the polygon, or stretch the circle to an ellipse. See [History](#history)
+for why anything diagonal or radiating stays off the table.
 
 ### Geometry
 
-100 × 100 units, one color, three kinds of stroked line, all sharing the limb's own
-radius as their curvature:
+100 × 100 units, one color. A stroked ring and a 28-sided figure:
 
 | Element | Construction |
 | --- | --- |
-| Limb | `<circle cx="50" cy="50" r="44">`, stroked, width 6 in the display cut |
-| Axis | A straight vertical line, `x1=x2=50`, `y 6` to `y 94`, round-capped |
-| Meridians | Elliptical arcs `M50 6 A rx 44 0 0 1 50 94`, one per semi-minor axis, round-capped |
+| Ring | `<circle cx="50" cy="50" r="44">`, stroked, width 5.3 in the display cut |
+| Figure | 28-gon, filled: `M50.00 18.32 L57.54 16.95 … Z` — 28 vertices at equal angles from 12 o'clock, base radius 31.7 with fixed per-vertex offsets |
 
-A meridian's `ry` is always the limb's own radius, so every arc meets the limb
-exactly tangent at both poles — the two curves aren't independently drawn and
-nudged into alignment; sharing a radius makes them tangent by construction, the
-same way the Split Ring's tapered ribbons came to a literal point at the ring
-instead of patching an accent onto it (see [History](#history)).
-
-Both meridians (display cut) sit **east** of the axis — that asymmetry is what
-gives the mark direction. Mirroring them to the west, or splitting one to each
-side, breaks the two-D reading.
+The figure path is canonical and lives in `build.py` (`FIGURE`), never redrawn; the
+small cut is the same polygon scaled about the centre to radius 33.3 and outlined.
+The per-vertex offsets (−9%…+11%) are what make it read as a surveyed boundary rather
+than a regular gear — never regularise them.
 
 ### Optical sizes
 
 Two cuts, like a type family's optical sizes:
 
-| Cut | Ring | Axis | Meridians | Use at |
-| --- | --- | --- | --- | --- |
-| Display | r 44, stroke 6 | stroke 5 | 20 and 35, stroke 5 | above 24px |
-| Small | r 45, stroke 8 | stroke 6 | 28 only, stroke 6 | 24px and below |
+| Cut | Ring | Figure | Use at |
+| --- | --- | --- | --- |
+| Display | r 44, stroke 5.3 | filled, radius 31.7 | above 24px |
+| Small | r 45, stroke 6 | outlined, stroke 4, radius 33.3 | 24px and below |
 
-Below 24px the three concentric curves (axis + two meridians) converge at both
-poles and start to merge, closing the counters. The small cut drops the outer
-meridian entirely rather than just thickening strokes — one D survives instead of
-two blurring into each other — and bumps the ring and remaining meridian bolder for
-the smallest real use on the site, the browser-tab favicon. Confirmed against real
-16/24/32px renders, not a scaled-down vector.
+Below 24px the filled figure closes to a solid blot and the 28 sides vanish. The
+small cut outlines the figure and scales it out to radius 33.3, keeping the sides
+countable at the smallest real use on the site, the browser-tab favicon. Confirmed
+against real 16/24/32px renders, not a scaled-down vector.
 
 Never re-weight either cut to fake an intermediate size; pick the nearer cut.
 
@@ -65,8 +55,9 @@ Clear space is one ring stroke on all four sides.
 
 | File | Use |
 | --- | --- |
-| `mark.svg` | **Primary** — `currentColor`, one color; inline it and set `color` |
-| `mark-small.svg` | Small cut, `currentColor`. At or below 24px |
+| `mark.svg` | **Primary** — filled figure, `currentColor`; inline it and set `color` |
+| `mark-outline.svg` | Outline treatment at display proportions, `currentColor` |
+| `mark-small.svg` | Small cut (outlined), `currentColor`. At or below 24px |
 | `mark-red.svg`, `mark-small-red.svg`, `mark-navy.svg`, `mark-white.svg` | The mark baked CMU Red (display + small cuts) / navy (alternate) / white (dark grounds) |
 | `logo.svg` | The mark baked in **CMU Red** for `<img src>`, to match the red wordmark it sits beside. **This is what the site's `logo.svg` is** |
 | `favicon.svg` | Small cut in CMU Red; lifts to `#FF3B57` under the browser's dark mode |
@@ -86,8 +77,8 @@ Because the mark is a single `currentColor` plate, there are no `-mono` /
 `-reversed` / `-knockout` colorway files: mono *is* `mark.svg`, and reversed is the
 same file with `color` set to cream on a dark ground. There is no in-product
 "solved" fill file for this mark (the Split Ring's `mark-solved.svg` was a brand-kit
-extra, never referenced by site code, and the Isoline spec doesn't define an
-equivalent) — dropped rather than carried forward unused.
+extra, never referenced by site code, and neither the Isoline nor the Polygon spec
+defines an equivalent) — dropped rather than carried forward unused.
 
 `dist/` holds `favicon.ico` (6 frames, 16–128), `icon-192.png`, `icon-512.png`,
 `apple-touch-icon.png`, `icon-maskable-512.png`, `og-image.png`, `logo-96.png`, and
@@ -141,7 +132,7 @@ python3 brand/build.py      # regenerates every SVG here + all rasters in dist/
 python3 brand/make_spec.py  # regenerates spec.html (the presentation sheet)
 ```
 
-`build.py` embeds the canonical Isoline geometry and reads only the tracked
+`build.py` embeds the canonical Polygon geometry and reads only the tracked
 `wordmark.svg`, so it reproduces every asset without the handoff present — the family
 can't drift out of sync. It rasterises with the first of `inkscape`, `rsvg-convert` or
 the `cairosvg` module that the machine has. The `.ico` is assembled by hand — Pillow's
@@ -176,11 +167,15 @@ In order:
    amplified, and rotated variant; none of those held up (a 35° rotation in particular
    read as a prohibition/cancel symbol) and the direction was abandoned in favor of
    something more geometrically disciplined.
-8. **This mark — Isoline.** A wireframe globe: limb, polar axis, and meridians east of
-   the axis, sharing the limb's own curvature so every arc meets it exactly tangent —
-   no separate accent, no offset ribbon, nothing that has to be nudged into alignment.
-   Replaced Split Ring. Kept upright for the same reason as #2/#7: the axis is polar,
-   so rotating it away from vertical breaks the metaphor as well as the alignment.
+8. **Isoline** — a wireframe globe: limb, polar axis, and meridians east of the axis,
+   sharing the limb's own curvature so every arc meets it exactly tangent. Replaced
+   Split Ring; shipped, then set aside for a mark tied more directly to redistricting
+   than to cartography in general.
+9. **This mark — Polygon.** A ring holding the irregular 28-sided figure from
+   *Gomillion v. Lightfoot* (1960) — the "uncouth twenty-eight-sided figure" of the
+   Tuskegee gerrymander — held whole inside the circle. Replaced Isoline. Kept upright
+   for the same reason as #2/#7: vertex 1 sits at 12 o'clock, and setting the mark on a
+   diagonal is off the table.
 
 `explorations/` holds the contact sheets for the earlier rounds. Each candidate is
 rendered large and again as a true 16px raster, since a scaled-down vector always
