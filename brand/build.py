@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
-"""Generate the Daily District "Polygon" logo system from one parametric source.
+"""Generate the Daily District "Split-D Polygon" logo system from one parametric
+source.
 
 THE MARK
-    A ring holding an irregular 28-sided figure. The polygon is the boundary from
-    the centre of Gomillion v. Lightfoot (1960) — the "uncouth twenty-eight-sided
-    figure" drawn to fence Tuskegee's Black voters out of town — here sitting whole
-    inside the circle: the district, held. 28 vertices at equal angles from 12
-    o'clock, base radius 31.7 with fixed per-vertex offsets so it reads as surveyed,
-    not geared.
+    A ring holding two half-figures: a D on the right, a reversed D on the left,
+    split by a vertical channel. Each half is a straight stem plus 13 surveyed
+    edges — 14 sides each, 28 in total, after the "uncouth twenty-eight-sided
+    figure" at the centre of Gomillion v. Lightfoot (1960), the boundary drawn to
+    fence Tuskegee's Black voters out of town. Here the figure sits inside a whole
+    circle — the district, held.
+
+    The channel between the stems and the gap between figure and ring both equal
+    the ring stroke. The two halves are deliberately not mirror images: different
+    vertex offsets, slightly different arc spans (164 degrees right, 158 left).
 
     Drawn on a 100 x 100 grid, centered on (50, 50). One color throughout — never a
-    two-color split of ring and figure, never a gradient. This file is the source
-    of truth for the geometry; it reproduces every asset byte-for-byte.
+    two-color split of ring and figures, never a gradient. The RIGHT/LEFT path data
+    below IS the mark for each cut — never redrawn, only tinted. This file is the
+    source of truth for the geometry; it reproduces every asset byte-for-byte.
 
 OPTICAL SIZES
     Two cuts, like a type family's optical sizes:
-      DISPLAY  ring r44, stroke 5.3   above 24px      figure filled
-      SMALL    ring r45, stroke 6     24px and below  figure outlined (stroke 4)
-    The filled figure becomes a blot below 24px, so the small cut outlines it (and
-    scales it out to radius 33.3) to keep the 28 sides legible.
+      DISPLAY  ring r44, stroke 5.28   above 24px
+      SMALL    ring r44, stroke 7.9    24px and below
+    The small cut's figures are their own hand-tuned coordinates (stems at +-3.96
+    instead of +-2.64, outer extent 32.1 instead of 36.1) rather than a scaled
+    DISPLAY figure, so the channel and the ring gap keep tracking the heavier
+    small-cut stroke width instead of thinning out.
 
     python3 brand/build.py
 
@@ -55,59 +63,41 @@ def num(v):
     return s or "0"
 
 
-def scale_path(d, k, cx=50.0, cy=50.0):
-    """Scale every coordinate pair in an absolute M/L path about (cx, cy) by k."""
-    toks = re.findall(r"[A-Za-z]|-?\d*\.?\d+", d)
-    out, i = [], 0
-    while i < len(toks):
-        t = toks[i]
-        if t.isalpha():
-            out.append(t); i += 1
-        else:
-            x, y = float(t), float(toks[i + 1])
-            out.append(f"{cx + (x - cx) * k:.2f} {cy + (y - cy) * k:.2f}")
-            i += 2
-    return " ".join(out)
-
-
-# Canonical "Polygon" geometry on the 100-unit grid, centered on (50, 50). A ring
-# holding an irregular 28-sided figure — the boundary from Gomillion v. Lightfoot
-# (1960), the "uncouth twenty-eight-sided figure" drawn to fence Tuskegee's Black
-# voters out of town, here held whole inside the circle. 28 vertices at equal
-# angles from 12 o'clock, base radius 31.7 with fixed per-vertex offsets so it
-# reads as surveyed, not geared. This path IS the mark — never redrawn, only
-# scaled/tinted.
-FIGURE = ("M50.00 18.32 L57.54 16.95 L62.92 23.17 L71.73 22.75 L75.26 29.85 "
-          "L75.97 37.49 L82.43 42.60 L85.16 50.00 L79.65 56.77 L78.83 63.88 "
-          "L76.75 71.33 L68.37 73.03 L64.57 80.26 L56.84 79.96 L50.00 84.53 "
-          "L43.30 79.34 L35.84 79.40 L31.83 72.79 L24.24 70.54 L22.03 63.47 "
-          "L16.03 57.75 L20.22 50.00 L18.50 42.81 L19.46 35.29 L27.46 32.03 "
-          "L29.26 23.99 L36.39 21.74 L42.39 16.64 Z")
-DISPLAY = {"r": 44, "ring": 5.3, "figure": FIGURE, "fill": True}
-# Small cut: the filled figure blots shut, so outline it. Same polygon scaled about
-# the centre to base radius 33.3 (33.3/31.7), so the 28 sides stay legible.
-SMALL = {"r": 45, "ring": 6, "figure": scale_path(FIGURE, 33.3 / 31.7),
-         "fill": False, "fstroke": 4}
-# Outline treatment at display proportions (alternate to the filled primary).
-OUTLINE = {"r": 44, "ring": 5.3, "figure": FIGURE, "fill": False, "fstroke": 4}
+# Canonical "Split-D Polygon" geometry on the 100-unit grid, centered on (50, 50).
+# Each half is a straight stem plus 13 surveyed edges, after the Gomillion v.
+# Lightfoot boundary. Not mirror images of each other — different vertex offsets,
+# different arc spans — so never derive one half from the other.
+RIGHT_DISPLAY = ("M52.64 20.06 L63.93 20.00 L68.38 25.97 L76.29 27.04 L78.93 33.87 "
+                  "L78.95 40.98 L84.20 46.51 L85.70 53.65 L80.10 59.41 L78.93 66.13 "
+                  "L75.85 72.54 L68.22 73.78 L63.71 79.43 L52.64 79.94 Z")
+LEFT_DISPLAY = ("M47.36 20.22 L35.91 23.22 L28.43 23.26 L24.79 29.29 L23.02 35.73 "
+                "L15.67 39.56 L18.10 46.89 L15.69 53.37 L15.96 60.34 L22.76 64.42 "
+                "L24.56 70.92 L28.60 76.49 L36.03 76.50 L47.36 79.78 Z")
+# Small cut: its own hand-tuned coordinates (not a scaled DISPLAY figure) so the
+# channel and the ring gap keep tracking the heavier stroke width.
+RIGHT_SMALL = ("M53.96 24.35 L63.63 24.30 L67.45 29.41 L74.22 30.33 L76.48 36.18 "
+               "L76.51 42.27 L81.00 47.01 L82.28 53.13 L77.49 58.07 L76.48 63.82 "
+               "L73.85 69.31 L67.30 70.37 L63.45 75.22 L53.96 75.65 Z")
+LEFT_SMALL = ("M46.04 24.46 L36.22 27.03 L29.80 27.07 L26.67 32.23 L25.16 37.76 "
+              "L18.85 41.05 L20.94 47.33 L18.87 52.89 L19.10 58.87 L24.94 62.37 "
+              "L26.48 67.94 L29.95 72.72 L36.32 72.73 L46.04 75.54 Z")
+DISPLAY = {"r": 44, "ring": 5.28, "right": RIGHT_DISPLAY, "left": LEFT_DISPLAY}
+SMALL = {"r": 44, "ring": 7.9, "right": RIGHT_SMALL, "left": LEFT_SMALL}
 
 
 def glyph(size=G, x=0.0, y=0.0, cut=DISPLAY, color="currentColor", indent=""):
     """The mark at `size`, top-left at (x, y), in one colour.
 
-    Ring: a plain stroked circle — the district, held whole. Figure: the 28-sided
-    Gomillion polygon, filled in the display cut and outlined in the small cut,
-    where a fill would close to a blot.
+    Ring: a plain stroked circle — the district, held whole. Figures: the two
+    surveyed half-polygons, always filled (never outlined — unlike an earlier
+    single-figure Polygon draft, splitting into two smaller figures keeps each one
+    legible without needing an outline fallback at small sizes).
     """
     ring = (f'<circle cx="50" cy="50" r="{num(cut["r"])}" fill="none" '
             f'stroke="{color}" stroke-width="{num(cut["ring"])}"></circle>')
-    if cut["fill"]:
-        figure = f'<path d="{cut["figure"]}" fill="{color}"></path>'
-    else:
-        figure = (f'<path d="{cut["figure"]}" fill="none" stroke="{color}" '
-                  f'stroke-width="{num(cut["fstroke"])}" stroke-linejoin="round" '
-                  f'stroke-linecap="round"></path>')
-    body = ring + figure
+    figures = (f'<path d="{cut["right"]}" fill="{color}"></path>'
+               f'<path d="{cut["left"]}" fill="{color}"></path>')
+    body = ring + figures
     if size == G and x == 0 and y == 0:
         return indent + body
     s = size / G
@@ -126,9 +116,8 @@ def write(name, text):
 
 
 # ---------------------------------------------------------------- 1. the mark
-write("mark.svg", svg(glyph()))                                 # primary, currentColor (filled)
-write("mark-outline.svg", svg(glyph(cut=OUTLINE)))             # display outline alternate
-write("mark-small.svg", svg(glyph(cut=SMALL)))                 # small cut (outlined)
+write("mark.svg", svg(glyph()))                                 # primary, currentColor
+write("mark-small.svg", svg(glyph(cut=SMALL)))
 write("mark-navy.svg", svg(glyph(color=NAVY)))                  # baked navy (alternate)
 write("mark-red.svg", svg(glyph(color=RED)))                    # baked red (site primary)
 write("mark-small-red.svg", svg(glyph(cut=SMALL, color=RED)))
@@ -142,7 +131,7 @@ write("logo.svg", svg(glyph(color=RED)))
 # ------------------------------------------------------- 2. favicon (SVG, ICO)
 # Small cut, lifting to #FF3B57 under the browser's own dark mode (plain #C41230
 # goes muddy on a dark tab bar). Drawn with currentColor and an explicit `color` on
-# the root, so one CSS declaration recolours the limb, axis and meridian together —
+# the root, so one CSS declaration recolours the ring and both figures together —
 # no separate hooks needed for the two attribute types.
 write("favicon.svg", svg(
     f'<style>:root{{color:{RED}}} '
@@ -157,7 +146,7 @@ write("favicon-display-red.svg", svg(glyph(color=RED)))
 def app_icon(plate, mark_color, pad):
     """A square plate in `plate`, the mark inset by `pad` (fraction of the tile).
 
-    The limb insets well inside the plate — it never bleeds to the edge, or a
+    The ring insets well inside the plate — it never bleeds to the edge, or a
     rounded tile would clip it.
     """
     inset = 512 * pad
@@ -171,8 +160,8 @@ write("app-icon-maskable.svg", app_icon(RED, WHITE, 0.27))   # Android safe circ
 write("app-icon-navy.svg", app_icon(NAVY, WHITE, 0.1875))  # alternate / event skin
 
 # Social avatars — the same plated mark, tuned for a platform's circle crop
-# (X/Instagram/etc.). The limb sits well inside the inscribed circle. A cream
-# plate with the red limb gives a lighter option for pale timelines.
+# (X/Instagram/etc.). The ring sits well inside the inscribed circle. A cream
+# plate with the red ring gives a lighter option for pale timelines.
 write("avatar-red.svg", app_icon(RED, WHITE, 0.16))
 write("avatar-navy.svg", app_icon(NAVY, WHITE, 0.16))
 write("avatar-cream.svg", app_icon(CREAM, RED, 0.16))
@@ -183,16 +172,20 @@ _wm = open(os.path.join(ROOT, "wordmark.svg")).read()
 WORDMARK_D = re.search(r'\sd="([^"]+)"', _wm).group(1)
 WM_W, WM_H = 260.0, 56.0                 # wordmark.svg viewBox
 
-# Horizontal: mark 100 tall, 24-unit gap, wordmark at native size, vertically
-# centred. Stacked: mark centred over the wordmark set to the full 180 width.
-GAP_H, GAP_V = 24.0, 20.0
+# Horizontal: mark 100 tall, wordmark set at 1.13x native size so its x-height
+# reads level with the ring's own stroke weight — a plain unscaled placement (as a
+# naive "gap + native size" formula would produce) sits the wordmark too light
+# next to this heavier two-figure mark. Stacked: mark centred over the wordmark
+# set to the full 180 width.
+LOCKUP_WX, LOCKUP_WY, LOCKUP_WS = 126.0, 22.0, 1.13
+GAP_V = 20.0
 
 
 def lockup_horizontal(color):
-    wx, wy = G + GAP_H, (G - WM_H) / 2
-    w = wx + WM_W
+    w = 420.0
     return svg(glyph(color=color)
-               + f'<g transform="translate({num(wx)} {num(wy)})">'
+               + f'<g transform="translate({num(LOCKUP_WX)} {num(LOCKUP_WY)}) '
+               f'scale({num(LOCKUP_WS)})">'
                f'<path fill="{color}" d="{WORDMARK_D}"></path></g>',
                vb=f"0 0 {num(w)} {num(G)}")
 
@@ -218,24 +211,15 @@ write("wordmark.svg", _wm)
 
 # ------------------------------------------------------------- 5. social card
 def og_card():
+    """Red plate, white mark + white wordmark, centred — no tagline. Matches the
+    lockup's own 1.13x wordmark scale in spirit (the mark and wordmark sizes here
+    are picked independently, tuned to fill the 1200x630 card)."""
     w, h = 1200.0, 630.0
-    lock = lockup_horizontal(RED)
-    lvw = float(re.search(r'viewBox="0 0 ([\d.]+)', lock).group(1))
-    inner = re.search(r'">(.*)</svg>', lock, re.S).group(1)
-    ls = 660.0 / lvw
-    ly = (h - 100 * ls) / 2 - 34
-    gs, gx = 500.0, 860.0
-    gy = (h - gs) / 2
     return svg(
-        f'<rect width="{w:.0f}" height="{h:.0f}" fill="{CREAM}"></rect>'
-        f'<g opacity="0.1">{glyph(gs, gx, gy, color=RED)}</g>'
-        f'<g transform="translate(96 {ly:.1f}) scale({ls:.4f})">{inner}</g>'
-        f'<text x="98" y="{h / 2 + 82:.0f}" font-family="Space Grotesk, Barlow, '
-        f'Helvetica, Arial, sans-serif" font-size="40" font-weight="500" '
-        f'fill="{INK}">Name the congressional district from its shape.</text>'
-        f'<text x="98" y="{h / 2 + 136:.0f}" font-family="JetBrains Mono, Barlow, '
-        f'Helvetica, Arial, sans-serif" font-size="30" font-weight="700" '
-        f'fill="{RED}" letter-spacing="2">A NEW ONE EVERY DAY</text>',
+        f'<rect width="{w:.0f}" height="{h:.0f}" fill="{RED}"></rect>'
+        f'<g transform="translate(430 130) scale(3.4)">{glyph(color=WHITE)}</g>'
+        f'<g transform="translate(340 500) scale(1.98)">'
+        f'<path fill="{WHITE}" d="{WORDMARK_D}"></path></g>',
         vb=f"0 0 {w:.0f} {h:.0f}")
 
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Assemble brand/spec.html — the presentation sheet for the Polygon logo system.
+"""Assemble brand/spec.html — the presentation sheet for the Split-D Polygon logo
+system.
 
 Small-size renders are embedded as base64 of the ACTUAL rasters build.py produces, not
 as scaled-down vectors. A scaled vector always looks fine; only a real 16px raster tells
@@ -7,6 +8,7 @@ you whether the mark survives.
 """
 import base64
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PX = os.path.join(HERE, "dist", "px")
@@ -44,24 +46,21 @@ def mark(color, cut=B.DISPLAY):
             + B.glyph(cut=cut, color=color) + '</svg>')
 
 
-import re as _re
-
-
 def poly_vertices(d):
-    n = _re.findall(r"-?\d*\.?\d+", d)
+    n = re.findall(r"-?\d*\.?\d+", d)
     return [(float(n[i]), float(n[i + 1])) for i in range(0, len(n), 2)]
 
 
-BASE_R = {"display": 31.7, "small": 33.3}     # the figure's base (inscribing) radius
+CUTS = {"display": B.DISPLAY, "small": B.SMALL}
 
 
 def construction_svg(name):
-    """The mark as a technical drawing: the bounding box and centre cross ruled through
-    it, a dashed guide circle on the figure's base radius, the ring radius dimensioned,
-    and the polygon's 28 vertices dotted."""
-    cut = B.DISPLAY if name == "display" else B.SMALL
+    """The mark as a technical drawing: the bounding box and centre cross ruled
+    through it, the ring radius dimensioned, and both figures' 14 vertices each
+    dotted."""
+    cut = CUTS[name]
     r = cut["r"]
-    verts = poly_vertices(cut["figure"])
+    verts = poly_vertices(cut["right"]) + poly_vertices(cut["left"])
     c = 3.6                                    # px per unit
     ox, oy = 34.0, 26.0
     W = ox * 2 + G * c
@@ -79,25 +78,21 @@ def construction_svg(name):
         f'<line x1="{cx:.1f}" y1="{Y(0):.1f}" x2="{cx:.1f}" y2="{Y(100):.1f}"/>',
         f'<line x1="{X(0):.1f}" y1="{cy:.1f}" x2="{X(100):.1f}" y2="{cy:.1f}"/>',
     ]
-    guide = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{BASE_R[name] * c:.1f}" '
-             f'fill="none" stroke-dasharray="3 4"/>')
 
-    # Ring radius, dimensioned along the left centreline.
+    # Ring radius, dimensioned along the top-left diagonal-free centreline.
     rx = X(50 - r)
     radius = (f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{rx:.1f}" y2="{cy:.1f}"/>'
               f'<line x1="{rx:.1f}" y1="{cy - 5:.1f}" x2="{rx:.1f}" y2="{cy + 5:.1f}"/>'
               f'<text x="{(cx + rx) / 2:.1f}" y="{cy - 8:.1f}" text-anchor="middle">'
               f'r{r}</text>')
 
-    # The 28 vertices — equal angles from 12 o'clock, offset radii off the base circle.
+    # The 28 vertices (14 per half) — every point actually on one of the two figures.
     dots = ''.join(f'<circle cx="{X(vx):.1f}" cy="{Y(vy):.1f}" r="2.4" class="anchor"/>'
                    for vx, vy in verts)
 
-    # Ring + outlined figure, so the sides and vertices read in the drawing.
-    inkcut = B.OUTLINE if name == "display" else B.SMALL
-    glyph = B.glyph(G * c, ox, oy, cut=inkcut, color="var(--ink)", indent="    ")
+    glyph = B.glyph(G * c, ox, oy, cut=cut, color="var(--ink)", indent="    ")
     return f'''<svg viewBox="0 0 {W:.0f} {oy + G * c + 26:.0f}" class="cons" aria-hidden="true">
-  <g class="grid">{''.join(grid)}{guide}</g>
+  <g class="grid">{''.join(grid)}</g>
   <g class="mk">
 {glyph}
   </g>
@@ -231,13 +226,14 @@ HTML = f'''<title>Daily District — Logo System</title>
   <header class="hero">
     <div>
       <div class="eyebrow">Logo system</div>
-      <h1>A district, held whole.</h1>
-      <p class="lede" style="margin-top:14px">The Polygon mark is a ring holding an
-      irregular 28-sided figure &mdash; the boundary from <em>Gomillion v.
-      Lightfoot</em> (1960), the "uncouth twenty-eight-sided figure" drawn to fence
-      Tuskegee's Black voters out of town, here sitting whole inside the circle. 28
-      vertices at equal angles from 12 o'clock, offset so it reads as surveyed, not
-      geared. One weight, one colour.</p>
+      <h1>A district, split in two.</h1>
+      <p class="lede" style="margin-top:14px">The Split-D Polygon mark is a ring
+      holding two half-figures &mdash; a D on the right, a reversed D on the left,
+      split by a vertical channel. Each half is 14 sides after the "uncouth
+      twenty-eight-sided figure" at the centre of <em>Gomillion v. Lightfoot</em>
+      (1960), the boundary drawn to fence Tuskegee's Black voters out of town, held
+      whole inside the circle. The two halves are deliberately not mirror images.
+      One weight, one colour.</p>
     </div>
     <div class="mk">{mark("var(--red)")}</div>
   </header>
@@ -245,45 +241,47 @@ HTML = f'''<title>Daily District — Logo System</title>
   <section>
     <div class="head">
       <div class="eyebrow">Construction</div>
-      <h2>Ring and figure</h2>
+      <h2>Ring and two figures</h2>
     </div>
     <div class="cuts">
       <div class="panel cut">
-        <div class="cap">Display cut &middot; ring r{B.DISPLAY["r"]}, stroke {B.DISPLAY["ring"]} &middot; figure filled</div>
+        <div class="cap">Display cut &middot; ring r{B.DISPLAY["r"]}, stroke {B.DISPLAY["ring"]}</div>
         {construction_svg("display")}
       </div>
       <div class="panel cut">
-        <div class="cap">Small cut &middot; ring r{B.SMALL["r"]}, stroke {B.SMALL["ring"]} &middot; figure outlined</div>
+        <div class="cap">Small cut &middot; ring r{B.SMALL["r"]}, stroke {B.SMALL["ring"]}</div>
         {construction_svg("small")}
       </div>
     </div>
     <p>100&times;100 units, centred on (50,&nbsp;50). The ring is a plain stroked
-    circle. The figure is a 28-gon: 28 vertices at equal angles from 12 o'clock, on a
-    base radius of 31.7 with a fixed per-vertex offset (&minus;9%&hellip;+11%), so it
-    reads as a surveyed boundary rather than a regular gear. Dots mark the 28 vertices;
-    the dashed circle is the base radius they are offset from. The display cut fills the
-    figure; the small cut outlines it (scaled out to radius 33.3) so the sides stay
-    legible where a fill would blot shut.</p>
-    <p class="note">Kept upright &mdash; vertex 1 sits at 12 o'clock. A prior mark's
-    diagonal variant was flagged as reading too close to a hate symbol and pulled
-    immediately, so anything on a diagonal stays off the table. Never regularise the
-    polygon (the irregularity is the point), rotate the mark, fill the ring, stretch
-    the circle to an ellipse, or split the ring and figure into two colours.</p>
+    circle. Each half is a straight stem plus 13 surveyed edges &mdash; 14 sides,
+    28 dotted vertices in total across both figures. The channel between the two
+    stems and the gap between each figure and the ring both equal the ring's own
+    stroke width. The two halves are deliberately not mirror images of each other
+    &mdash; different vertex offsets, different arc spans &mdash; the asymmetry is
+    the point.</p>
+    <p class="note">Kept upright. A prior mark's diagonal variant was flagged as
+    reading too close to a hate symbol and pulled immediately, so anything on a
+    diagonal stays off the table. Never mirror one half to make the other, widen or
+    narrow the channel, rotate the mark, fill the ring, stretch the circle to an
+    ellipse, or split the ring and figures into two colours.</p>
   </section>
 
   <section>
     <div class="head">
       <div class="eyebrow">Optical sizes</div>
-      <h2>The figure outlines, not just bolds</h2>
+      <h2>Two smaller figures instead of one that blots</h2>
     </div>
-    <p>Below 24px the filled figure closes to a solid blot and the 28 sides vanish. So
-    the small cut outlines the figure (stroke 4) rather than just bolding the display
-    cut, scales it out to radius 33.3, and thickens the ring (r{B.SMALL["r"]},
-    stroke {B.SMALL["ring"]}) &mdash; the sides stay countable at the smallest real use
-    on the site, the browser-tab favicon.</p>
+    <p>The previous single-figure Polygon mark closed to a solid blot below 24px,
+    so its small cut had to fall back to an outline. Splitting the figure into two
+    smaller halves keeps each one legible on its own, so <strong>both cuts stay
+    filled</strong> here. The small cut's figures are their own hand-set
+    coordinates (stems at &plusmn;3.96 instead of &plusmn;2.64) rather than a
+    scaled copy of the display figures, so the channel and the ring gap keep
+    tracking the heavier stroke instead of thinning out.</p>
     <div class="vs">
       <div class="panel mock">
-        <div class="cap">Display cut &mdash; filled, silts up</div>
+        <div class="cap">Display cut</div>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{DISPLAY[s]}" width="72" height="72" alt="">
@@ -291,7 +289,7 @@ HTML = f'''<title>Daily District — Logo System</title>
         </div>
       </div>
       <div class="panel mock">
-        <div class="cap">Small cut &mdash; outlined, holds</div>
+        <div class="cap">Small cut &mdash; own coordinates, bolder</div>
         <div class="ladder">
           {''.join(f"""<div class="rung">
             <img class="mag" src="{SMALL[s]}" width="72" height="72" alt="">
@@ -391,10 +389,11 @@ HTML = f'''<title>Daily District — Logo System</title>
       <div class="panel lk-row">{LOCKUP}<span class="tag">Primary<br>lockup-horizontal.svg</span></div>
       <div class="panel lk-row stack">{LOCKUP_STACK}<span class="tag">Stacked<br>lockup-stacked.svg</span></div>
     </div>
-    <p class="note">Horizontal: mark at full height, wordmark at native size 24 units
-    clear of it, vertically centred (viewBox 0 0 384 100). Stacked: mark centred above
-    the wordmark set to the full width, 20-unit gap. Both are <code>currentColor</code>
-    &mdash; inline them and set <code>color</code>.</p>
+    <p class="note">Horizontal: mark at full height, wordmark set to 1.13&times; its
+    native size so its weight reads level with the mark, 26 units clear of it
+    (viewBox 0 0 420 100). Stacked: mark centred above the wordmark set to the full
+    width, 20-unit gap. Both are <code>currentColor</code> &mdash; inline them and
+    set <code>color</code>.</p>
   </section>
 
   <section>
@@ -433,7 +432,7 @@ HTML = f'''<title>Daily District — Logo System</title>
       <tr><td>Clear space</td><td class="f">1 ring stroke on all sides</td>
           <td>Keeps the ring from fusing with any rule or box it sits against.</td></tr>
       <tr><td>Minimum, small cut</td><td class="f">16px</td>
-          <td>Below this the strokes silt up and the interior closes to a disc.</td></tr>
+          <td>Below this the strokes silt up and the channel closes.</td></tr>
       <tr><td>Switch cuts at</td><td class="f">24px</td>
           <td>Display cut above, small cut at and below.</td></tr>
       <tr><td>Minimum stroke</td><td class="f">1 device pixel</td>
@@ -441,9 +440,9 @@ HTML = f'''<title>Daily District — Logo System</title>
       <tr><td>Minimum, full lockup</td><td class="f">120px wide</td>
           <td>Set by the wordmark's counters, not the mark.</td></tr>
       <tr><td>Never</td><td class="f">&mdash;</td>
-          <td>Regularise the polygon, set the mark on a diagonal, rotate it off the
-              12 o'clock vertex, fill the ring, stretch the circle to an ellipse, or
-              split the ring and figure into two colours.</td></tr>
+          <td>Mirror one half to make the other, widen or narrow the channel, set
+              the mark on a diagonal, fill the ring, stretch the circle to an
+              ellipse, or split the ring and figures into two colours.</td></tr>
     </table></div>
   </section>
 
@@ -454,8 +453,8 @@ HTML = f'''<title>Daily District — Logo System</title>
     </div>
     <div class="scroll"><table>
       <tr><th>File</th><th>Use</th></tr>
-      <tr><td class="f">mark.svg</td><td>Primary &mdash; filled figure, <code>currentColor</code>. Inline it and set <code>color</code>.</td></tr>
-      <tr><td class="f">mark-outline.svg / mark-small.svg</td><td>Outline treatment (display) / small cut, <code>currentColor</code>. At or below 24px use the small cut.</td></tr>
+      <tr><td class="f">mark.svg</td><td>Primary &mdash; <code>currentColor</code>, one colour. Inline it and set <code>color</code>.</td></tr>
+      <tr><td class="f">mark-small.svg</td><td>Small cut, <code>currentColor</code>. At or below 24px.</td></tr>
       <tr><td class="f">mark-red / -small-red / -navy / -white.svg</td><td>Baked CMU Red (display + small cuts), navy (alternate), white (dark grounds).</td></tr>
       <tr><td class="f">logo.svg</td><td>The red mark for <code>&lt;img src&gt;</code>. This is what the site's <code>logo.svg</code> is.</td></tr>
       <tr><td class="f">favicon.svg</td><td>Small cut in CMU Red; lifts to <code>#FF3B57</code> in the browser's dark mode.</td></tr>
@@ -464,7 +463,7 @@ HTML = f'''<title>Daily District — Logo System</title>
       <tr><td class="f">app-icon-navy.svg</td><td>Navy plate, white mark &mdash; alternate / event skins.</td></tr>
       <tr><td class="f">avatar-*.svg</td><td>Social profile pictures &mdash; red / navy / cream, 16% inset.</td></tr>
       <tr><td class="f">lockup-*.svg</td><td>Horizontal (currentColor / red / white) and stacked (currentColor).</td></tr>
-      <tr><td class="f">og-image.svg</td><td>1200&times;630 social card.</td></tr>
+      <tr><td class="f">og-image.svg</td><td>1200&times;630 social card &mdash; solid red plate, white mark + wordmark.</td></tr>
       <tr><td class="f">logo.css</td><td>Palette tokens + <code>.dd-mark</code> / <code>.dd-wordmark</code> mask helpers.</td></tr>
       <tr><td class="f">dist/</td><td>Rendered PNGs, the avatars at 1000px, and a 6-frame favicon.ico (16&ndash;128).</td></tr>
       <tr><td class="f">build.py</td><td>Regenerates everything above from the canonical path data.</td></tr>
