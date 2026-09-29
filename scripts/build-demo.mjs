@@ -45,8 +45,14 @@ html = html.replace(/<body(\s[^>]*)?>/, (m, attrs = '') => {
 //    hides the auth UI (there's nothing to sign into in demo). Injected before </body>.
 const demoChrome = `
 <style>
+  /* Reserve the floating bar's footprint so it never covers game content (the
+     state-chip grid sits at the very bottom of the 100dvh layout). */
+  body.demo { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  /* The game-over profile sheet is absolutely positioned to the viewport bottom, so it
+     needs its own clearance for its last row to scroll out from under the bar. */
+  body.demo .gameover-census-body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   body.demo #demo-bar {
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 4000;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 4000;
     display: flex; align-items: center; gap: 10px;
     background: rgba(20,22,28,.94); color: #fff; padding: 8px 10px 8px 14px; border-radius: 999px;
     box-shadow: 0 6px 22px rgba(0,0,0,.32); font: 500 13px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -58,7 +64,7 @@ const demoChrome = `
   body.demo #demo-bar .demo-text { color: #cdd0d6; }
   body.demo #demo-new-btn {
     background: #c41230; color: #fff; border: 0; padding: 7px 13px; border-radius: 999px;
-    font: 600 13px system-ui, sans-serif; cursor: pointer;
+    font: 600 13px system-ui, sans-serif; cursor: pointer; white-space: nowrap;
   }
   body.demo #demo-new-btn:hover { filter: brightness(1.08); }
   body.demo #demo-new-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

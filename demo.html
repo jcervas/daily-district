@@ -27,8 +27,8 @@
        district topojson (districts-core / districts-overlay / counties-lines) is
        NO LONGER fetched by the client and should be removed from the deploy as the
        final fingerprint-hardening step (it still carries district geometry). -->
-  <link rel="preload" href="states.topojson?v=2" as="fetch" />
-  <link rel="preload" href="district-names.json" as="fetch" />
+  <link rel="preload" href="states.topojson?v=2" as="fetch" crossorigin />
+  <link rel="preload" href="district-names.json" as="fetch" crossorigin />
   <meta name="google-adsense-account" content="ca-pub-2164002681613672">
   <!-- Google AdSense loader (once, globally). Ad units are placed inline as <ins> and
        push()'d from JS only when their container is actually visible. -->
@@ -377,6 +377,7 @@
       <li>A new district appears every day — same for all players.</li>
       <li>Click a state on the reference map to guess it first.</li>
       <li>Once you nail the state, pick the district number.</li>
+      <li>Guessing the <strong>correct state is free</strong> — only wrong state picks and district picks use up a guess.</li>
       <li>Your timer starts when you submit your first guess.</li>
       <li><strong>Sign in</strong> to track your statistics and compare with other players.</li>
       <li>Come back tomorrow for a new district!</li>
@@ -739,11 +740,17 @@
 <script src="globe.js?v=2.2.17" defer></script>
 <script src="backend.js?v=24" defer></script>
 <script src="login.js?v=21" defer></script>
-<script src="script.js?v=2.15.0" defer></script>
+<script src="script.js?v=2.22.1" defer></script>
 
 <style>
+  /* Reserve the floating bar's footprint so it never covers game content (the
+     state-chip grid sits at the very bottom of the 100dvh layout). */
+  body.demo { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  /* The game-over profile sheet is absolutely positioned to the viewport bottom, so it
+     needs its own clearance for its last row to scroll out from under the bar. */
+  body.demo .gameover-census-body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   body.demo #demo-bar {
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 4000;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 4000;
     display: flex; align-items: center; gap: 10px;
     background: rgba(20,22,28,.94); color: #fff; padding: 8px 10px 8px 14px; border-radius: 999px;
     box-shadow: 0 6px 22px rgba(0,0,0,.32); font: 500 13px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -755,7 +762,7 @@
   body.demo #demo-bar .demo-text { color: #cdd0d6; }
   body.demo #demo-new-btn {
     background: #c41230; color: #fff; border: 0; padding: 7px 13px; border-radius: 999px;
-    font: 600 13px system-ui, sans-serif; cursor: pointer;
+    font: 600 13px system-ui, sans-serif; cursor: pointer; white-space: nowrap;
   }
   body.demo #demo-new-btn:hover { filter: brightness(1.08); }
   body.demo #demo-new-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

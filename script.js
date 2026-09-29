@@ -547,7 +547,7 @@ function currentGameSettings() {
   return {
     hardMode: localStorage.getItem('districtguess_hardMode') === '1',
     theme: localStorage.getItem('districtguess_theme') || 'system',
-    confirmSelection: localStorage.getItem('districtguess_confirmMode') === '1',
+    confirmSelection: _confirmModeDefault(),
   };
 }
 // reason: 'snapshot' (passive, once per session) | 'change' (a toggle was flipped).
@@ -1072,14 +1072,19 @@ function showLaunchScreen() {
 
 // Launch a server-backed archive replay for a past date. Fetches the puzzle, sets up
 // the board the same way as the daily, but with local validation (isArchiveGame).
+let _roundGen = 0;   // bumped per archive/demo/one-off round; see startServerArchive
 async function startServerArchive(date, num, label, opts = {}) {
   const demo = !!opts.demo;     // demo mode: random practice district, nothing recorded
   const oneoff = !!opts.oneoff; // one-off mode: fixed "special edition" district, outcome recorded
   showBuildLoader();   // CSS loader animates through the whole fetch + build (no freeze)
+  // Newest round wins: a round started while this one is still fetching or building
+  // supersedes it, so this one must not touch the DOM or globals after that point.
+  const gen = ++_roundGen;
   let data = opts.data;
   if (!data) {
     try { data = await window.DistrictBackend.archivePuzzle(date); }
-    catch (err) { hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
+    catch (err) { if (gen === _roundGen) hideBuildLoader(); console.error('archive load failed:', err); alert('Could not load that archive puzzle.'); return; }
+    if (gen !== _roundGen) return;
   }
 
   // Snapshot the daily so we can return to it WITHOUT a reload. The resets below replace
@@ -1122,6 +1127,15 @@ async function startServerArchive(date, num, label, opts = {}) {
   guessHistory       = [];
   guessCount         = 0;
   elapsedSeconds     = 0;
+  // A new round must also stop any still-running clock (e.g. "New district" clicked
+  // mid-round) and repaint the header timer — it lives outside the rebuilt game
+  // section, so it would otherwise keep showing the previous round's time.
+  stopTimer();
+  {
+    const t = formatTime(0);
+    const tv = document.getElementById('timer-value');        if (tv) tv.textContent = t;
+    const ti = document.getElementById('timer-value-inline'); if (ti) ti.textContent = t;
+  }
   gameOver           = false;
   correctStateGuessed = false;
   // Reset the map-imagery stage — it's a persistent "highest stage reached" ratchet, so
@@ -1169,9 +1183,10 @@ async function startServerArchive(date, num, label, opts = {}) {
   // single frame can measure a 0-size container right after the rebuild, which makes
   // the projection fail to fit the screen.
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (gen !== _roundGen) return;   // superseded by a newer round before layout settled
     // initUSRefMap now builds across frames (loader globe keeps spinning); pull the loader
     // only once its last stage finishes, plus one frame so the finished map paints first.
-    initUSRefMap(() => requestAnimationFrame(() => hideBuildLoader()));
+    initUSRefMap(() => requestAnimationFrame(() => { if (gen === _roundGen) hideBuildLoader(); }));
     if (map) map.invalidateSize();
   }));
 
@@ -1184,11 +1199,17 @@ async function startServerArchive(date, num, label, opts = {}) {
 // Demo mode: fetch a RANDOM district from the `demo` endpoint and launch it through the
 // same unofficial-replay path as the archive (local validation, no /guess, no saved
 // result). Nothing is recorded; safe to call repeatedly for a fresh practice district.
+// Repeat clicks while a district is still fetching are ignored — each would otherwise
+// start its own fetch and the rounds would race to build the board.
+let _demoLoading = false;
 async function startDemoGame() {
+  if (_demoLoading) return;
+  _demoLoading = true;
   let data;
   showBuildLoader();
   try { data = await window.DistrictBackend.demoPuzzle(); }
-  catch (err) { hideBuildLoader(); console.error('demo load failed:', err); alert('Could not load a demo district.'); return; }
+  catch (err) { _demoLoading = false; hideBuildLoader(); console.error('demo load failed:', err); alert('Could not load a demo district.'); return; }
+  _demoLoading = false;
   return startServerArchive(data.date || 'demo', data.puzzleNumber, 'Demo', { data, demo: true });
 }
 if (typeof window !== 'undefined') window.startDemoGame = startDemoGame;
@@ -2702,7 +2723,11 @@ function pctBar(value, key, pctl, opts = {}) {
     const tail = p >= 100 ? 'every other district' : `${p}% of districts`;
     rank = `<div class="mp-rank">${verb} than ${tail}</div>`;
   }
-  return `<div class="mp-wrap">${bar}<div class="mp-ends"><span>${m.f(m.r[0])}</span><span>${m.f(m.r[1])}</span></div>${rank}</div>`;
+  // When the tick is placed by percentile rank, raw min/max values under the ends are
+  // misleading (a 20% district at the 80th percentile sits right beside "56%") and,
+  // uncaptioned, read as stray stats — so label the ends as ranks instead.
+  const ends = rank ? ['Lowest', 'Highest'] : [m.f(m.r[0]), m.f(m.r[1])];
+  return `<div class="mp-wrap">${bar}<div class="mp-ends"><span>${ends[0]}</span><span>${ends[1]}</span></div>${rank}</div>`;
 }
 // Party emblem — official party marks (Democratic donkey, Republican disc) from
 // Wikimedia Commons (public domain); a neutral star for Independents/other. Each
@@ -2828,8 +2853,14 @@ async function fetchAndRenderCensusPanel(districtData) {
   const asPct    = total > 0 ? Math.round(parseInt(d.asian,    10) / total * 100) : 0;
   const bachPlus = parseInt(d.bach, 10) + parseInt(d.master, 10);
   const edu25    = parseInt(d.edu_total, 10);
-  const eduPct   = edu25 > 0 ? Math.round(bachPlus / edu25 * 100)
-                 : total > 0 ? Math.round(bachPlus / total * 100) : 0;
+  // Share of adults 25+ with a bachelor's or higher. Without the 25+ denominator we
+  // can't compute it honestly (dividing by total population understates it while the
+  // card still says "adults 25+"), so show "—" rather than a misleading number.
+  const eduPct   = edu25 > 0 ? Math.round(bachPlus / edu25 * 100) : null;
+  // Same measure for the whole state, so players don't read the state-level hint
+  // ("Bachelor's degree+ (state)") against this district figure as a contradiction.
+  const eduStateAcs = await getStateAcs(districtData.state);
+  const eduStatePct = eduStateAcs && eduStateAcs.bachPlus_pct != null ? eduStateAcs.bachPlus_pct : null;
   // ACS percentages arrive pre-computed (e.g. 38.6); show — when absent.
   const pv = (v, suf = '%') => (v == null || v === '') ? '—' : v + suf;
 
@@ -3024,9 +3055,9 @@ async function fetchAndRenderCensusPanel(districtData) {
       </div>
       <div class="census-card">
         <div class="label">Bachelor's Degree+</div>
-        <div class="value">${eduPct}%</div>
-        <div class="sub">of adults 25+ have a bachelor's degree or more education</div>
-        ${pctBar(eduPct, 'edu', pct.edu)}
+        <div class="value">${eduPct != null ? eduPct + '%' : '—'}</div>
+        <div class="sub">of adults 25+ have a bachelor's degree or more education${eduStatePct != null ? ` (${STATE_NAMES[districtData.state] || districtData.state}: ${eduStatePct}%)` : ''}</div>
+        ${eduPct != null ? pctBar(eduPct, 'edu', pct.edu) : ''}
       </div>
       <div class="census-card">
         <div class="label">Mean Commute</div>
@@ -3233,7 +3264,7 @@ function renderGuessHistory() {
       return `<div class="guess-row ${cls}">
         <span class="guess-icon guess-icon-state-slot" data-state="${stateAbbr}">${svgIcon(iconName,'guess-icon-svg')}</span>
         <span class="guess-label">${label}</span>
-        <span class="guess-hint hot">Correct state!</span>
+        <span class="guess-hint hot">Correct state! · free guess</span>
       </div>`;
     }
 
@@ -3324,7 +3355,15 @@ let hardMode = localStorage.getItem('districtguess_hardMode') === '1';
 let gameHardMode = hardMode;
 
 // ---- Confirm-selection mode ----
-let confirmInputMode   = localStorage.getItem('districtguess_confirmMode') === '1';
+// Unset → on for touch screens: on a phone-sized map a fingertip easily lands on a
+// neighbor (tap AR, get LA), and an unconfirmed mis-tap costs a guess. An explicit
+// choice in settings ('1'/'0') always wins.
+function _confirmModeDefault() {
+  const saved = localStorage.getItem('districtguess_confirmMode');
+  if (saved === '1' || saved === '0') return saved === '1';
+  return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+}
+let confirmInputMode   = _confirmModeDefault();
 let _pendingConfirmAbbr = null;
 
 function setConfirmPending(abbr) {
@@ -3933,6 +3972,7 @@ function resyncUSRefViewBox() {
 function initUSRefMap(onDone) {
   if (usRefMap) { if (onDone) onDone(); return; }
   const container = document.getElementById('us-ref-map');
+  if (!container) { if (onDone) onDone(); return; }   // game section gone — nothing to build into
 
   // Use actual container dimensions so the projection fills the container without letterboxing.
   const W = container.offsetWidth  || REF_VB_W;
@@ -3954,6 +3994,9 @@ function initUSRefMap(onDone) {
 
   // D3 zoom — allow user to pan & scroll-zoom the reference map
   usRefZoom = d3.zoom()
+    // D3's default clickDistance is 0: a 1px jitter between press and release becomes a
+    // pan and the click is swallowed — which made small district tiles ignore taps.
+    .clickDistance(6)
     .scaleExtent([0.3, Infinity])
     .on('zoom', (event) => {
       const root = d3.select(usRefMapGroup);
@@ -4206,7 +4249,11 @@ function initUSRefMap(onDone) {
   // Run the stages one per frame so the loader globe paints between them, then signal done.
   const stages = [stageBasemap, stageStates, stageBorders, stageCallouts];
   let si = 0;
+  const ownSvg = usRefMap;
   (function runStage() {
+    // A newer round rebuilt the game section (and reset usRefMap) mid-build: stop, or the
+    // remaining stages would write this detached map's paths into the new round's globals.
+    if (usRefMap !== ownSvg) return;
     if (si >= stages.length) { if (onDone) onDone(); return; }
     try { stages[si++](); } catch (e) { reportClientError('usrefmap_stage', e); }
     requestAnimationFrame(runStage);
